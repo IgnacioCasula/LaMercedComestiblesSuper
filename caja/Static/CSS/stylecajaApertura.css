@@ -1,0 +1,213 @@
+body{
+    font-family: 'Roboto', sans-serif;
+    background-color: #f5f7fa;
+    color: #333;
+    line-height: 1.6;
+}
+
+.MargenesCaja {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.EncabezadoCajaApertura {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #ecf0f1;
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.TituloEncabezadoCajaAper h2 {
+    color: var(--primary-color);
+    font-size: 28px;
+    font-weight: 700;
+}
+
+.SubtituloSuper {
+    color: var(--text-light);
+    font-size: 14px;
+}
+
+.EncabezadoInfoUsu {
+    text-align: right;
+}
+
+.UsuarioInfo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+}
+
+.IconoUsu {
+    font-size: 18px;
+}
+
+.UsuarioFecha {
+    font-size: 14px;
+    color: var(--text-light);
+}
+
+.EstadoCaja, .AperturaPanel {
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    margin-bottom: 25px;
+    overflow: hidden;
+}
+#AperturaPanelID {
+    margin-bottom: 0px;
+}
+
+.PanelAperEncabezado {
+    background-color: #2c3e50;
+    color: white;
+    padding: 15px 20px;
+}
+
+.PanelAperEncabezado h2 {
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.AperturaPanelCuerpo {
+    padding: 20px;
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.EstadoCajaEncabezado {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.EstadoIndicador {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.EstadoCirculo {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #e74c3c;
+}
+
+.EstadoIndicador.abierta .EstadoCirculo {
+    background-color: var(--success-color);
+}
+
+.EstadoIndicador.abierta .EstadoTexto {
+    color: var(--success-color);
+}
+
+.EstadoTexto {
+    font-weight: 500;
+    color: var(--danger-color);
+}
+
+.EstadoDetalles {
+    padding: 0 5px;
+}
+
+.EstadoMensaje {
+    margin-bottom: 10px;
+}
+
+.UltimaOperacion {
+    font-size: 14px;
+    color: var(--text-light);
+}
+
+.FormularioMontoIni {
+    margin-bottom: 20px;
+}
+
+.FormularioMontoIni label{
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--dark-color);
+}
+
+.FormularioInputMontoIni { 
+    display: flex;
+    align-items: center;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.FormularioInputMontoIni .divisa {
+    padding: 0 12px;
+    background-color: #f8f9fa;
+    color: var(--text-light);
+    font-weight: 500;
+}
+
+
+.FormularioInputMontoIni input {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    outline: none;
+    font-size: 16px;
+}
+
+textarea { 
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    resize: vertical;
+    font-family: 'Roboto', sans-serif;
+    font-size: 14px;
+}
+
+.boton { 
+    padding: 12px 20px;
+    border: none;
+    border-radius: 5px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+}
+
+.boton1 {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.boton-primario {
+    background-color: rgb(32, 178, 44);
+    color: black;
+}
+
+.boton-primario:hover {
+    background-color: green;
+}
+
+.abajo {
+    color: #000;
+    background-color: #f0f2f5;
+}
+
+
+
+
