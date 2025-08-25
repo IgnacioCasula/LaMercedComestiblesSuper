@@ -1,0 +1,22 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Página de Inicio</title>
+    <link rel="stylesheet" href="{% static 'CSS/login_styles.css' %}">
+</head>
+<body>
+    <div class="login-container">
+        <h1>Bienvenido al Sistema</h1>
+        {% if request.session.nombre_usuario %}
+            <p>Has iniciado sesión como: <strong>{{ request.session.nombre_usuario }}</strong></p>
+            <p>Puesto seleccionado: <strong>{{ request.session.rol_nombre }}</strong></p>
+        {% else %}
+            <p>No has iniciado sesión.</p>
+        {% endif %}
+        <br>
+        <a href="{% url 'logout' %}">Cerrar Sesión</a>
+    </div>
+</body>
+</html>

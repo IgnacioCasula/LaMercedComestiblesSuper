@@ -1,0 +1,35 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seleccionar Puesto - Comestible La Merced</title>
+    <link rel="stylesheet" href="{% static 'CSS/login_styles.css' %}">
+</head>
+<body>
+    <div class="login-container">
+        <form class="login-form" method="post" action="{% url 'seleccionar_rol' %}">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="rol">Puesto</label>
+                <select id="rol" name="rol_id" required>
+                    <option value="" disabled selected>Selecciona un puesto...</option>
+                    {% for relacion in roles_usuario %}
+                    <option value="{{ relacion.rol.idroles }}">{{ relacion.rol.nombrerol }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            {% if error %}
+            <div class="error-message">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            <button type="submit" class="submit-btn">Entrar</button>
+        </form>
+    </div>
+</body>
+</html>

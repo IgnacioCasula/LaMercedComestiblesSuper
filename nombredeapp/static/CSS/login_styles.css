@@ -1,0 +1,95 @@
+body {
+    background-color: #4a4a4a;
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    color: #333;
+}
+
+.login-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.login-form {
+    background-color: #e0e0e0;
+    padding: 30px 40px;
+    border-radius: 15px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.form-group input, .form-group select {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    background-color: #cdcdcd;
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+
+.submit-btn {
+    background-color: #cdcdcd;
+    border: 1px solid #b0b0b0;
+    padding: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    align-self: center;
+    width: 50%;
+    margin-top: 10px;
+}
+
+.submit-btn:hover {
+    background-color: #b9b9b9;
+}
+
+.forgot-password {
+    margin-top: 20px;
+    color: #e0e0e0;
+    text-align: center;
+}
+
+.forgot-btn {
+    background-color: #cdcdcd;
+    border: 1px solid #b0b0b0;
+    padding: 5px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+.error-message {
+    background-color: #ffdddd;
+    color: #d8000c;
+    border: 1px solid #d8000c;
+    padding: 10px;
+    border-radius: 5px;
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+h1, p {
+    text-align: center;
+}
+
+a {
+    color: #e0e0e0;
+}
