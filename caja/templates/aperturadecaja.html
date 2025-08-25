@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/caja/Static/CSS/stylecajaApertura.css">
+    <title>Apertura de Caja</title>
+</head>
+<body>
+    <div class="MargenesCaja">
+        <div class="EncabezadoCajaApertura">
+            <div class="TituloEncabezadoCajaAper">
+                <h2>🛒 SuperMercado La Merced</h2>
+                <p class="SubtituloSuper">Apertura de Caja</p>
+            </div>
+            <div class="EncabezadoInfoUsu">
+                <div class="UsuarioInfo">
+                    <span class="IconoUsu">👤</span>
+                    <span id="nombreusuario">Cajero: (nombreusuario)</span>
+                </div>
+                <div class="UsuarioFecha">
+                    <span id="fecha-actual">(99/99/9999)</span>
+                </div>
+            </div>
+        </div>
+        <div class="EstadoCaja" id="EstadoCaja">
+            <div class="EstadoCajaEncabezado">
+                <h2>ESTADO DE CAJA</h2>
+                <div class="EstadoIndicador" id="EstadoIndicador">
+                    <span class="EstadoCirculo"></span>
+                    <span class="EstadoTexto">CERRADA</span>
+                </div>
+            </div>
+            <div class="EstadoDetalles">
+                <p id="EstadoMensaje">(Texto con info de faltante o sobrante)</p>
+                <div class="UltimaOperacion" id="UltimaOperacion">🕒 Ultimo cierre: (99:99) - (NombreUsuario) 
+                </div>
+
+            </div>
+        </div>
+
+        <div class="AperturaPanel" id="AperturaPanelID">
+            <div class="PanelAperEncabezado">
+                <h2>📋 Apertura de Caja</h2>
+            </div>
+        </div>
+        <div class="AperturaPanelCuerpo">
+            <div class="FormularioMontoIni"> 
+                <label for="fondo-inicial">
+                    💰 Fondo Inicial
+                </label>
+                <div class="FormularioInputMontoIni">
+                    <span class="divisa">$</span>
+                    <input type="number" id="MontoIni" step="0.01" min="0" placeholder="0.00">
+                </div>
+            </div>
+            <div class="FormularioMontoIni">
+                <label for="observaciones-apertura">📝 Observaciones:</label>
+                <textarea id="observaciones-apertura" rows="3" placeholder="Turno, cajero, notas..."></textarea>
+            </div>
+            <div class="boton1">
+                 <button id="boton-apertura" class="boton boton-primario">🚀 Registrar Apertura</button>
+            </div>
+            
+        </div>
+
+        <div class="abajo">
+
+        </div>
+        <div class="notification" id="notification" style="display: none;"></div>
+    </div>
+
+
+</body>
+</html>
+
+
+
