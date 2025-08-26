@@ -1,77 +1,156 @@
-# This is an auto-generated Django model module.
-# You'll have to do the following manually to clean this up:
-#   * Rearrange models' order
-#   * Make sure each model has one field with primary_key=True
-#   * Make sure each ForeignKey and OneToOneField has `on_delete` set to the desired behavior
-#   * Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
-# Feel free to rename the models, but don't rename db_table values or field names.
+# nombredeapp/models.py
+# CÓDIGO COMPLETO, CORREGIDO Y ESTANDARIZADO A ESPAÑOL
+
 from django.db import models
 import uuid
 
-# Se han eliminado los modelos duplicados de auth_* y django_* para resolver el conflicto.
+# --- MODELOS PRINCIPALES ---
 
-class Roles(models.Model):
+class Rol(models.Model):
     idroles = models.AutoField(db_column='IdRoles', primary_key=True)
-    nombrerol = models.CharField(db_column='NombreRol', max_length=50)
-    descripcionrol = models.CharField(db_column='DescripcionRol', max_length=200, blank=True, null=True)
+    nombrerol = models.CharField(db_column='NombreRol', max_length=50, verbose_name="Nombre del Rol")
+    descripcionrol = models.CharField(db_column='DescripcionRol', max_length=200, blank=True, null=True, verbose_name="Descripción del Rol")
 
     class Meta:
-        managed = True
+        verbose_name = "Rol"
+        verbose_name_plural = "Roles"
         db_table = 'roles'
 
     def __str__(self):
         return self.nombrerol
 
-class Usuarios(models.Model):
+class Usuario(models.Model):
     idusuarios = models.AutoField(db_column='IdUsuarios', primary_key=True)
-    nombreusuario = models.CharField(db_column='NombreUsuario', max_length=30, unique=True)
-    apellidousuario = models.CharField(db_column='ApellidoUsuario', max_length=30)
-    emailusuario = models.CharField(db_column='EmailUsuario', max_length=50, unique=True)
-    passwordusuario = models.CharField(db_column='PasswordUsuario', max_length=255)
-    fecharegistrousuario = models.DateField(db_column='FechaRegistroUsuario')
-    dniusuario = models.BigIntegerField(db_column='DNIUsuario', unique=True)
-    telefono = models.CharField(max_length=20, blank=True, null=True) 
-    roles = models.ManyToManyField(Roles, through='Usuariosxrol')
+    nombreusuario = models.CharField(db_column='NombreUsuario', max_length=30, unique=True, verbose_name="Nombre de Usuario")
+    apellidousuario = models.CharField(db_column='ApellidoUsuario', max_length=30, verbose_name="Apellido")
+    emailusuario = models.CharField(db_column='EmailUsuario', max_length=50, unique=True, verbose_name="Email")
+    passwordusuario = models.CharField(db_column='PasswordUsuario', max_length=255, verbose_name="Contraseña")
+    fecharegistrousuario = models.DateField(db_column='FechaRegistroUsuario', verbose_name="Fecha de Registro")
+    dniusuario = models.BigIntegerField(db_column='DNIUsuario', unique=True, verbose_name="DNI")
+    telefono = models.CharField(max_length=20, blank=True, null=True, verbose_name="Teléfono")
+    roles = models.ManyToManyField(Rol, through='UsuarioRol')
 
     class Meta:
-        managed = True
+        verbose_name = "Usuario"
+        verbose_name_plural = "Usuarios"
         db_table = 'usuarios'
 
     def __str__(self):
         return f'{self.nombreusuario} {self.apellidousuario}'
 
-class Empleados(models.Model):
-    ESTADO_CHOICES = [
-        ('Trabajando', 'Trabajando'),
-        ('Despedido', 'Despedido'),
-        ('Renuncio', 'Renunció'),
-    ]
+class Empleado(models.Model):
+    class Estado(models.TextChoices):
+        TRABAJANDO = 'Trabajando', 'Trabajando'
+        DESPEDIDO = 'Despedido', 'Despedido'
+        RENUNCIO = 'Renuncio', 'Renunció'
+
     idempleado = models.AutoField(db_column='IdEmpleado', primary_key=True)
-    usuario = models.OneToOneField(Usuarios, models.CASCADE, db_column='IdUsuarios')
-    salarioempleado = models.FloatField(db_column='SalarioEmpleado')
-    fechacontratado = models.DateField(db_column='FechaContratado')
-    cargoempleado = models.CharField(db_column='CargoEmpleado', max_length=100)
-    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Trabajando')
+    usuario = models.OneToOneField(Usuario, models.CASCADE, db_column='IdUsuarios')
+    salarioempleado = models.FloatField(db_column='SalarioEmpleado', verbose_name="Salario")
+    fechacontratado = models.DateField(db_column='FechaContratado', verbose_name="Fecha de Contratación")
+    cargoempleado = models.CharField(db_column='CargoEmpleado', max_length=100, verbose_name="Cargo")
+    estado = models.CharField(max_length=20, choices=Estado.choices, default=Estado.TRABAJANDO)
 
     class Meta:
-        managed = True
+        verbose_name = "Empleado"
+        verbose_name_plural = "Empleados"
         db_table = 'empleados'
 
     def __str__(self):
         return f'{self.usuario.nombreusuario} {self.usuario.apellidousuario}'
 
-class Asistencias(models.Model):
-    idasistencia = models.AutoField(db_column='IdAsistencia', primary_key=True)
-    empleado = models.ForeignKey(Empleados, models.DO_NOTHING, db_column='IdEmpleado')
-    fechaasistencia = models.DateField(db_column='FechaAsistencia')
-    horaentrada = models.TimeField(db_column='HoraEntrada')
-    horasalida = models.TimeField(db_column='HoraSalida', blank=True, null=True)
+# --- MODELOS RELACIONADOS CON LA UBICACIÓN ---
+
+class CodigoPostal(models.Model):
+    idcodigopostal = models.AutoField(db_column='IdCodigoPostal', primary_key=True)
+    codigopostal = models.BigIntegerField(db_column='CodigoPostal')
+    nombrelocalidad = models.CharField(db_column='NombreLocalidad', max_length=30)
 
     class Meta:
-        managed = True
-        db_table = 'asistencias'
+        db_table = 'codigopostal'
 
-class Cajas(models.Model):
+    def __str__(self):
+        return f'{self.codigopostal} - {self.nombrelocalidad}'
+
+class Ubicacion(models.Model):
+    idubicacion = models.AutoField(db_column='IdUbicacion', primary_key=True)
+    codigopostal = models.ForeignKey(CodigoPostal, models.DO_NOTHING, db_column='IdCodigoPostal')
+    ciudad = models.CharField(db_column='Ciudad', max_length=50)
+    nombrecalle = models.CharField(db_column='NombreCalle', max_length=50)
+    barrio = models.CharField(db_column='Barrio', max_length=50)
+
+    class Meta:
+        db_table = 'ubicaciones'
+
+    def __str__(self):
+        return f'{self.nombrecalle}, {self.barrio}, {self.ciudad}'
+
+class Sucursal(models.Model):
+    idsucursal = models.AutoField(db_column='IdSucursal', primary_key=True)
+    ubicacion = models.ForeignKey(Ubicacion, models.DO_NOTHING, db_column='IdUbicacion')
+    nombresucursal = models.CharField(db_column='NombreSucursal', max_length=30)
+    telefonosucursal = models.BigIntegerField(db_column='TelefonoSucursal')
+
+    class Meta:
+        db_table = 'sucursales'
+
+    def __str__(self):
+        return self.nombresucursal
+
+# --- MODELOS RELACIONADOS CON PRODUCTOS Y STOCK ---
+
+class Categoria(models.Model):
+    idcategoria = models.AutoField(db_column='IdCategoria', primary_key=True)
+    nombrecategoria = models.CharField(db_column='NombreCategoria', max_length=30)
+    descripcioncategoria = models.CharField(db_column='DescripcionCategoria', max_length=50)
+
+    class Meta:
+        db_table = 'categorias'
+    
+    def __str__(self):
+        return self.nombrecategoria
+
+class Producto(models.Model):
+    idproducto = models.AutoField(db_column='IdProducto', primary_key=True)
+    categoria = models.ForeignKey(Categoria, models.DO_NOTHING, db_column='IdCategoria')
+    nombreproductos = models.CharField(db_column='NombreProductos', max_length=50)
+    precioproducto = models.FloatField(db_column='PrecioProducto')
+    marcaproducto = models.CharField(db_column='MarcaProducto', max_length=50)
+    codigobarraproducto = models.BigIntegerField(db_column='CodigoBarraProducto', unique=True)
+
+    class Meta:
+        db_table = 'productos'
+
+    def __str__(self):
+        return f'{self.nombreproductos} ({self.marcaproducto})'
+
+class Inventario(models.Model):
+    idinventario = models.AutoField(db_column='IdInventario', primary_key=True)
+    producto = models.ForeignKey(Producto, models.DO_NOTHING, db_column='IdProducto')
+    sucursal = models.ForeignKey(Sucursal, models.DO_NOTHING, db_column='IdSucursal')
+    stockactual = models.IntegerField(db_column='StockActual')
+    stockminimo = models.IntegerField(db_column='StockMinimo')
+    fechareposicion = models.DateField(db_column='FechaReposicion', blank=True, null=True)
+
+    class Meta:
+        db_table = 'inventarios'
+
+# --- MODELOS DE PROVEEDORES Y COMPRAS ---
+
+class Proveedor(models.Model):
+    idproveedor = models.AutoField(db_column='IdProveedor', primary_key=True)
+    nombreproveedor = models.CharField(db_column='NombreProveedor', max_length=30)
+    telefonoproveedor = models.BigIntegerField(db_column='TelefonoProveedor')
+    emailprov = models.CharField(db_column='EmailProv', max_length=30)
+    cuitproveedor = models.BigIntegerField(db_column='CUITProveedor')
+
+    class Meta:
+        db_table = 'proveedores'
+
+    def __str__(self):
+        return self.nombreproveedor
+
+class Caja(models.Model):
     idcaja = models.AutoField(db_column='IdCaja', primary_key=True)
     nombrecaja = models.CharField(db_column='NombreCaja', max_length=50)
     horaaperturacaja = models.TimeField(db_column='HoraAperturaCaja')
@@ -80,180 +159,46 @@ class Cajas(models.Model):
     fechacierrecaja = models.DateField(db_column='FechaCierreCaja')
     montoinicialcaja = models.FloatField(db_column='MontoInicialCaja')
     montofinalcaja = models.FloatField(db_column='MontoFinalCaja')
-    sucursal = models.ForeignKey('Sucursales', models.DO_NOTHING, db_column='IdSucursal')
-    usuario = models.ForeignKey(Usuarios, models.DO_NOTHING, db_column='IdUsuarios')
+    sucursal = models.ForeignKey(Sucursal, models.DO_NOTHING, db_column='IdSucursal')
+    usuario = models.ForeignKey(Usuario, models.DO_NOTHING, db_column='IdUsuarios')
 
     class Meta:
-        managed = True
         db_table = 'cajas'
     
     def __str__(self):
         return self.nombrecaja
 
-class Categorias(models.Model):
-    idcategoria = models.AutoField(db_column='IdCategoria', primary_key=True)
-    nombrecategoria = models.CharField(db_column='NombreCategoria', max_length=30)
-    descripcioncategoria = models.CharField(db_column='DescripcionCategoria', max_length=50)
-
-    class Meta:
-        managed = True
-        db_table = 'categorias'
-    
-    def __str__(self):
-        return self.nombrecategoria
-
-class Codigopostal(models.Model):
-    idcodigopostal = models.AutoField(db_column='IdCodigoPostal', primary_key=True)
-    codigopostal = models.BigIntegerField(db_column='CodigoPostal')
-    nombrelocalidad = models.CharField(db_column='NombreLocalidad', max_length=30)
-
-    class Meta:
-        managed = True
-        db_table = 'codigopostal'
-
-    def __str__(self):
-        return f'{self.codigopostal} - {self.nombrelocalidad}'
-
-class Proveedores(models.Model):
-    idproveedor = models.AutoField(db_column='IdProveedor', primary_key=True)
-    nombreproveedor = models.CharField(db_column='NombreProveedor', max_length=30)
-    telefonoproveedor = models.BigIntegerField(db_column='TelefonoProveedor')
-    emailprov = models.CharField(db_column='EmailProv', max_length=30)
-    cuitproveedor = models.BigIntegerField(db_column='CUITProveedor')
-
-    class Meta:
-        managed = True
-        db_table = 'proveedores'
-
-    def __str__(self):
-        return self.nombreproveedor
-
-class Compras(models.Model):
+class Compra(models.Model):
     idcompras = models.AutoField(db_column='IdCompras', primary_key=True)
-    proveedor = models.ForeignKey(Proveedores, models.DO_NOTHING, db_column='IdProveedor')
-    caja = models.ForeignKey(Cajas, models.DO_NOTHING, db_column='IdCaja')
+    proveedor = models.ForeignKey(Proveedor, models.DO_NOTHING, db_column='IdProveedor')
+    caja = models.ForeignKey(Caja, models.DO_NOTHING, db_column='IdCaja')
     fechacompra = models.DateField(db_column='FechaCompra')
     horacompra = models.TimeField(db_column='HoraCompra')
     totalcompra = models.FloatField(db_column='TotalCompra')
     estadocompra = models.CharField(db_column='EstadoCompra', max_length=50)
 
     class Meta:
-        managed = True
         db_table = 'compras'
 
     def __str__(self):
         return f'Compra #{self.idcompras} a {self.proveedor.nombreproveedor}'
 
-class Productos(models.Model):
-    idproducto = models.AutoField(db_column='IdProducto', primary_key=True)
-    categoria = models.ForeignKey(Categorias, models.DO_NOTHING, db_column='IdCategoria')
-    nombreproductos = models.CharField(db_column='NombreProductos', max_length=50)
-    precioproducto = models.FloatField(db_column='PrecioProducto')
-    marcaproducto = models.CharField(db_column='MarcaProducto', max_length=50)
-    codigobarraproducto = models.BigIntegerField(db_column='CodigoBarraProducto', unique=True)
-
-    class Meta:
-        managed = True
-        db_table = 'productos'
-
-    def __str__(self):
-        return f'{self.nombreproductos} ({self.marcaproducto})'
-
-class Detallecompras(models.Model):
+class DetalleCompra(models.Model):
     iddetallecompras = models.AutoField(db_column='IdDetalleCompras', primary_key=True)
-    compra = models.ForeignKey(Compras, models.DO_NOTHING, db_column='IdCompras')
-    producto = models.ForeignKey(Productos, models.DO_NOTHING, db_column='IdProducto')
+    compra = models.ForeignKey(Compra, models.DO_NOTHING, db_column='IdCompras')
+    producto = models.ForeignKey(Producto, models.DO_NOTHING, db_column='IdProducto')
     cantidadcompra = models.IntegerField(db_column='CantidadCompra')
     preciounitariodc = models.FloatField(db_column='PrecioUnitarioDC')
     subtotaldc = models.FloatField(db_column='SubtotalDC')
 
     class Meta:
-        managed = True
         db_table = 'detallecompras'
 
-class Pedidos(models.Model):
-    idpedidos = models.AutoField(db_column='IdPedidos', primary_key=True)
-    usuario = models.ForeignKey(Usuarios, models.DO_NOTHING, db_column='IdUsuarios')
-    sucursal = models.ForeignKey('Sucursales', models.DO_NOTHING, db_column='IdSucursal')
-    fechapedido = models.DateField(db_column='FechaPedido')
-    fechamaxretiro = models.DateField(db_column='FechaMaxRetiro')
-    estadopedido = models.CharField(db_column='EstadoPedido', max_length=30)
-    codigoretiro = models.CharField(db_column='CodigoRetiro', max_length=50)
+# --- MODELOS DE VENTAS Y PEDIDOS ---
 
-    class Meta:
-        managed = True
-        db_table = 'pedidos'
-
-    def __str__(self):
-        return f'Pedido #{self.idpedidos} de {self.usuario.nombreusuario}'
-
-class Detallepedido(models.Model):
-    iddetallepedido = models.AutoField(db_column='IdDetallePedido', primary_key=True)
-    pedido = models.ForeignKey(Pedidos, models.DO_NOTHING, db_column='IdPedidos')
-    producto = models.ForeignKey(Productos, models.DO_NOTHING, db_column='IdProducto')
-    cantidadpedido = models.IntegerField(db_column='CantidadPedido')
-    preciounitariopedido = models.FloatField(db_column='PrecioUnitarioPedido')
-
-    class Meta:
-        managed = True
-        db_table = 'detallepedido'
-
-class Ventas(models.Model):
-    idventa = models.AutoField(db_column='IdVenta', primary_key=True)
-    usuario = models.ForeignKey(Usuarios, models.DO_NOTHING, db_column='IdUsuarios')
-    caja = models.ForeignKey(Cajas, models.DO_NOTHING, db_column='IdCaja')
-    oferta = models.ForeignKey('Ofertas', models.DO_NOTHING, db_column='IdOfertas', blank=True, null=True)
-    totalventa = models.FloatField(db_column='TotalVenta')
-    metodopago = models.CharField(db_column='MetodoPago', max_length=50)
-    estadoventa = models.CharField(db_column='EstadoVenta', max_length=50)
-    fechaventa = models.DateField(db_column='FechaVenta')
-    horaventa = models.TimeField(db_column='HoraVenta')
-
-    class Meta:
-        managed = True
-        db_table = 'ventas'
-
-    def __str__(self):
-        return f'Venta #{self.idventa}'
-
-class Detalleventas(models.Model):
-    iddetalleventas = models.AutoField(db_column='IdDetalleVentas', primary_key=True)
-    venta = models.ForeignKey(Ventas, models.DO_NOTHING, db_column='IdVenta')
-    producto = models.ForeignKey(Productos, models.DO_NOTHING, db_column='IdPrducto') # Ojo: nombre de columna original es IdPrducto
-    cantidadvendida = models.IntegerField(db_column='CantidadVendida')
-    preciounitariodv = models.FloatField(db_column='PrecioUnitarioDV')
-    subtotaldv = models.FloatField(db_column='SubtotalDV')
-
-    class Meta:
-        managed = True
-        db_table = 'detalleventas'
-
-class Empleadosxsucursales(models.Model):
-    idempleadosucursales = models.AutoField(db_column='IdEmpleadoSucursales', primary_key=True)
-    empleado = models.ForeignKey(Empleados, models.DO_NOTHING, db_column='IdEmpleado')
-    sucursal = models.ForeignKey('Sucursales', models.DO_NOTHING, db_column='IdSucursal')
-    fechaaltaempleado = models.DateField(db_column='FechaAltaEmpleado')
-    fechabajaempleado = models.DateField(db_column='FechaBajaEmpleado', blank=True, null=True)
-
-    class Meta:
-        managed = True
-        db_table = 'empleadosxsucursales'
-
-class Inventarios(models.Model):
-    idinventario = models.AutoField(db_column='IdInventario', primary_key=True)
-    producto = models.ForeignKey(Productos, models.DO_NOTHING, db_column='IdProducto')
-    sucursal = models.ForeignKey('Sucursales', models.DO_NOTHING, db_column='IdSucursal')
-    stockactual = models.IntegerField(db_column='StockActual')
-    stockminimo = models.IntegerField(db_column='StockMinimo')
-    fechareposicion = models.DateField(db_column='FechaReposicion', blank=True, null=True)
-
-    class Meta:
-        managed = True
-        db_table = 'inventarios'
-
-class Ofertas(models.Model):
+class Oferta(models.Model):
     idofertas = models.AutoField(db_column='IdOfertas', primary_key=True)
-    producto = models.ForeignKey(Productos, models.DO_NOTHING, db_column='IdProducto')
+    producto = models.ForeignKey(Producto, models.DO_NOTHING, db_column='IdProducto')
     nombreoferta = models.CharField(db_column='NombreOferta', max_length=30)
     descripcionoferta = models.CharField(db_column='DescripcionOferta', max_length=50)
     fechainiciooferta = models.DateField(db_column='FechaInicioOferta')
@@ -261,98 +206,145 @@ class Ofertas(models.Model):
     valordescuento = models.FloatField(db_column='ValorDescuento')
 
     class Meta:
-        managed = True
         db_table = 'ofertas'
 
     def __str__(self):
         return self.nombreoferta
 
-class Proveedorxproductos(models.Model):
+class Venta(models.Model):
+    idventa = models.AutoField(db_column='IdVenta', primary_key=True)
+    usuario = models.ForeignKey(Usuario, models.DO_NOTHING, db_column='IdUsuarios')
+    caja = models.ForeignKey(Caja, models.DO_NOTHING, db_column='IdCaja')
+    oferta = models.ForeignKey(Oferta, models.DO_NOTHING, db_column='IdOfertas', blank=True, null=True)
+    totalventa = models.FloatField(db_column='TotalVenta')
+    metodopago = models.CharField(db_column='MetodoPago', max_length=50)
+    estadoventa = models.CharField(db_column='EstadoVenta', max_length=50)
+    fechaventa = models.DateField(db_column='FechaVenta')
+    horaventa = models.TimeField(db_column='HoraVenta')
+
+    class Meta:
+        db_table = 'ventas'
+
+    def __str__(self):
+        return f'Venta #{self.idventa}'
+
+class DetalleVenta(models.Model):
+    iddetalleventas = models.AutoField(db_column='IdDetalleVentas', primary_key=True)
+    venta = models.ForeignKey(Venta, models.DO_NOTHING, db_column='IdVenta')
+    producto = models.ForeignKey(Producto, models.DO_NOTHING, db_column='IdProducto')
+    cantidadvendida = models.IntegerField(db_column='CantidadVendida')
+    preciounitariodv = models.FloatField(db_column='PrecioUnitarioDV')
+    subtotaldv = models.FloatField(db_column='SubtotalDV')
+
+    class Meta:
+        db_table = 'detalleventas'
+
+class Pedido(models.Model):
+    idpedidos = models.AutoField(db_column='IdPedidos', primary_key=True)
+    usuario = models.ForeignKey(Usuario, models.DO_NOTHING, db_column='IdUsuarios')
+    sucursal = models.ForeignKey(Sucursal, models.DO_NOTHING, db_column='IdSucursal')
+    fechapedido = models.DateField(db_column='FechaPedido')
+    fechamaxretiro = models.DateField(db_column='FechaMaxRetiro')
+    estadopedido = models.CharField(db_column='EstadoPedido', max_length=30)
+    codigoretiro = models.CharField(db_column='CodigoRetiro', max_length=50)
+
+    class Meta:
+        db_table = 'pedidos'
+
+    def __str__(self):
+        return f'Pedido #{self.idpedidos} de {self.usuario.nombreusuario}'
+
+class DetallePedido(models.Model):
+    iddetallepedido = models.AutoField(db_column='IdDetallePedido', primary_key=True)
+    pedido = models.ForeignKey(Pedido, models.DO_NOTHING, db_column='IdPedidos')
+    producto = models.ForeignKey(Producto, models.DO_NOTHING, db_column='IdProducto')
+    cantidadpedido = models.IntegerField(db_column='CantidadPedido')
+    preciounitariopedido = models.FloatField(db_column='PrecioUnitarioPedido')
+
+    class Meta:
+        db_table = 'detallepedido'
+
+# --- TABLAS DE UNIÓN Y REGISTROS ---
+
+class Asistencia(models.Model):
+    idasistencia = models.AutoField(db_column='IdAsistencia', primary_key=True)
+    empleado = models.ForeignKey(Empleado, models.DO_NOTHING, db_column='IdEmpleado')
+    fechaasistencia = models.DateField(db_column='FechaAsistencia')
+    horaentrada = models.TimeField(db_column='HoraEntrada')
+    horasalida = models.TimeField(db_column='HoraSalida', blank=True, null=True)
+
+    class Meta:
+        db_table = 'asistencias'
+
+class EmpleadoPorSucursal(models.Model):
+    idempleadosucursales = models.AutoField(db_column='IdEmpleadoSucursales', primary_key=True)
+    empleado = models.ForeignKey(Empleado, models.DO_NOTHING, db_column='IdEmpleado')
+    sucursal = models.ForeignKey(Sucursal, models.DO_NOTHING, db_column='IdSucursal')
+    fechaaltaempleado = models.DateField(db_column='FechaAltaEmpleado')
+    fechabajaempleado = models.DateField(db_column='FechaBajaEmpleado', blank=True, null=True)
+
+    class Meta:
+        db_table = 'empleadosxsucursales'
+
+class ProveedorPorProducto(models.Model):
     idproveedorxproducto = models.AutoField(db_column='IdProveedorxProducto', primary_key=True)
-    proveedor = models.ForeignKey(Proveedores, models.DO_NOTHING, db_column='IdProveedor')
-    producto = models.ForeignKey(Productos, models.DO_NOTHING, db_column='IdProducto')
+    proveedor = models.ForeignKey(Proveedor, models.DO_NOTHING, db_column='IdProveedor')
+    producto = models.ForeignKey(Producto, models.DO_NOTHING, db_column='IdProducto')
     descripcionpxp = models.CharField(db_column='DescripcionPxP', max_length=50)
 
     class Meta:
-        managed = True
         db_table = 'proveedorxproductos'
 
-class Proveedorxsucursales(models.Model):
+class ProveedorPorSucursal(models.Model):
     idproveedorsucursal = models.AutoField(db_column='IdProveedorSucursal', primary_key=True)
-    proveedor = models.ForeignKey(Proveedores, models.DO_NOTHING, db_column='IdProveedor')
-    sucursal = models.ForeignKey('Sucursales', models.DO_NOTHING, db_column='IdSucursal')
+    proveedor = models.ForeignKey(Proveedor, models.DO_NOTHING, db_column='IdProveedor')
+    sucursal = models.ForeignKey(Sucursal, models.DO_NOTHING, db_column='IdSucursal')
     fechavisita = models.DateField(db_column='FechaVisita')
 
     class Meta:
-        managed = True
         db_table = 'proveedorxsucursales'
 
-class Ubicaciones(models.Model):
-    idubicacion = models.AutoField(db_column='IdUbicacion', primary_key=True)
-    codigopostal = models.ForeignKey(Codigopostal, models.DO_NOTHING, db_column='IdCodigoPostal')
-    ciudad = models.CharField(db_column='Ciudad', max_length=50)
-    nombrecalle = models.CharField(db_column='NombreCalle', max_length=50)
-    barrio = models.CharField(db_column='Barrio', max_length=50)
-
-    class Meta:
-        managed = True
-        db_table = 'ubicaciones'
-
-    def __str__(self):
-        return f'{self.nombrecalle}, {self.barrio}, {self.ciudad}'
-
-class Sucursales(models.Model):
-    idsucursal = models.AutoField(db_column='IdSucursal', primary_key=True)
-    ubicacion = models.ForeignKey(Ubicaciones, models.DO_NOTHING, db_column='IdUbicacion')
-    nombresucursal = models.CharField(db_column='NombreSucursal', max_length=30)
-    telefonosucursal = models.BigIntegerField(db_column='TelefonoSucursal')
-
-    class Meta:
-        managed = True
-        db_table = 'sucursales'
-
-    def __str__(self):
-        return self.nombresucursal
-
-class Usuariosxrol(models.Model):
+class UsuarioRol(models.Model):
     idusuariorol = models.AutoField(db_column='IdUsuarioRol', primary_key=True)
-    usuario = models.ForeignKey(Usuarios, models.DO_NOTHING, db_column='IdUsuarios')
-    rol = models.ForeignKey(Roles, models.DO_NOTHING, db_column='IdRoles')
+    usuario = models.ForeignKey(Usuario, models.DO_NOTHING, db_column='IdUsuarios')
+    rol = models.ForeignKey(Rol, models.DO_NOTHING, db_column='IdRoles')
 
     class Meta:
-        managed = True
         db_table = 'usuariosxrol'
         unique_together = (('usuario', 'rol'),)
 
-class Usuarioxsucursales(models.Model):
+class UsuarioPorSucursal(models.Model):
     idusuariosucursales = models.AutoField(db_column='IdUsuarioSucursales', primary_key=True)
-    usuario = models.ForeignKey(Usuarios, models.DO_NOTHING, db_column='IdUsuarios')
-    sucursal = models.ForeignKey(Sucursales, models.DO_NOTHING, db_column='IdSucursal')
+    usuario = models.ForeignKey(Usuario, models.DO_NOTHING, db_column='IdUsuarios')
+    sucursal = models.ForeignKey(Sucursal, models.DO_NOTHING, db_column='IdSucursal')
 
     class Meta:
-        managed = True
         db_table = 'usuarioxsucursales'
 
-class SecurityLog(models.Model):
+# --- MODELOS DE SEGURIDAD Y AUTENTICACIÓN ---
+
+class RegistroSeguridad(models.Model):
     id = models.AutoField(primary_key=True)
-    ip_address = models.CharField(max_length=50)
-    username_attempt = models.CharField(max_length=100)
-    password_attempt = models.CharField(max_length=100)
+    direccion_ip = models.CharField(max_length=50)
+    intento_usuario = models.CharField(max_length=100)
+    intento_contrasena = models.CharField(max_length=100)
     timestamp = models.DateTimeField(auto_now_add=True)
-    reason = models.CharField(max_length=255)
+    motivo = models.CharField(max_length=255)
 
-    def __str__(self):
-        return f'Intento fallido de {self.username_attempt} en {self.timestamp}'
+    class Meta:
+        verbose_name = "Registro de Seguridad"
+        verbose_name_plural = "Registros de Seguridad"
 
-class PasswordResetToken(models.Model):
+class TokenRecuperacion(models.Model):
     id = models.AutoField(primary_key=True)
-    usuario = models.ForeignKey(Usuarios, on_delete=models.CASCADE)
-    sms_code = models.CharField(max_length=5, blank=True, null=True)
-    sms_code_expires_at = models.DateTimeField(blank=True, null=True)
-    email_token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    email_token_expires_at = models.DateTimeField()
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
+    codigo_sms = models.CharField(max_length=5, blank=True, null=True)
+    expiracion_codigo_sms = models.DateTimeField(blank=True, null=True)
+    token_email = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    expiracion_token_email = models.DateTimeField()
+    activo = models.BooleanField(default=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return f"Token para {self.usuario.nombreusuario}"
+    class Meta:
+        verbose_name = "Token de Recuperación"
+        verbose_name_plural = "Tokens de Recuperación"
