@@ -93,3 +93,54 @@ h1, p {
 a {
     color: #e0e0e0;
 }
+
+.password-wrapper {
+    position: relative;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    width: 20px;
+    height: auto;
+    margin-top: 12px;
+}
+
+.code-inputs {
+    display: flex;
+    justify-content: space-between;
+    margin: 20px 0;
+}
+
+.code-inputs input {
+    width: 45px;
+    height: 55px;
+    text-align: center;
+    font-size: 24px;
+    border-radius: 8px;
+    border: 1px solid #b0b0b0;
+    background-color: #fff;
+}
+
+.resend-btn {
+    display: block;
+    width: 100%;
+    background-color: #f0f0f0;
+    border: 1px solid #b0b0b0;
+    padding: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    text-align: center;
+    margin-top: 15px;
+    text-decoration: none;
+    color: #333;
+}
+
+.resend-btn:hover {
+    background-color: #e0e0e0;
+}
+
