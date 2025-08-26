@@ -6,8 +6,8 @@
 #   * Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
 # Feel free to rename the models, but don't rename db_table values or field names.
 from django.db import models
+import uuid
 
-# --- MODELOS DE LA APLICACIÓN ---
 # Se han eliminado los modelos duplicados de auth_* y django_* para resolver el conflicto.
 
 class Roles(models.Model):
@@ -26,10 +26,11 @@ class Usuarios(models.Model):
     idusuarios = models.AutoField(db_column='IdUsuarios', primary_key=True)
     nombreusuario = models.CharField(db_column='NombreUsuario', max_length=30, unique=True)
     apellidousuario = models.CharField(db_column='ApellidoUsuario', max_length=30)
-    emailusuario = models.CharField(db_column='EmailUsuario', max_length=50)
+    emailusuario = models.CharField(db_column='EmailUsuario', max_length=50, unique=True)
     passwordusuario = models.CharField(db_column='PasswordUsuario', max_length=255)
     fecharegistrousuario = models.DateField(db_column='FechaRegistroUsuario')
     dniusuario = models.BigIntegerField(db_column='DNIUsuario', unique=True)
+    telefono = models.CharField(max_length=20, blank=True, null=True) 
     roles = models.ManyToManyField(Roles, through='Usuariosxrol')
 
     class Meta:
@@ -342,3 +343,16 @@ class SecurityLog(models.Model):
 
     def __str__(self):
         return f'Intento fallido de {self.username_attempt} en {self.timestamp}'
+
+class PasswordResetToken(models.Model):
+    id = models.AutoField(primary_key=True)
+    usuario = models.ForeignKey(Usuarios, on_delete=models.CASCADE)
+    sms_code = models.CharField(max_length=5, blank=True, null=True)
+    sms_code_expires_at = models.DateTimeField(blank=True, null=True)
+    email_token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    email_token_expires_at = models.DateTimeField()
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Token para {self.usuario.nombreusuario}"
