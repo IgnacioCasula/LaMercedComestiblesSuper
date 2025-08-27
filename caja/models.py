@@ -1,421 +1,289 @@
-# This is an auto-generated Django model module.
-# You'll have to do the following manually to clean this up:
-#   * Rearrange models' order
-#   * Make sure each model has one field with primary_key=True
-#   * Make sure each ForeignKey and OneToOneField has `on_delete` set to the desired behavior
-#   * Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
-# Feel free to rename the models, but don't rename db_table values or field names.
+# caja/models.py (Versión Definitiva, Limpia y Completa)
+
 from django.db import models
+import uuid
 
+# --- MODELOS DE ESTRUCTURA ORGANIZATIVA ---
 
-class Asistencias(models.Model):
-    idasistencia = models.AutoField(db_column='IdAsistencia', primary_key=True)  # Field name made lowercase.
-    fechaasistencia = models.DateField(db_column='FechaAsistencia')  # Field name made lowercase.
-    horaentrada = models.TimeField(db_column='HoraEntrada')  # Field name made lowercase.
-    horasalida = models.TimeField(db_column='HoraSalida')  # Field name made lowercase.
-    idempleado = models.ForeignKey('Empleados', models.DO_NOTHING, db_column='IdEmpleado')  # Field name made lowercase.
-
-    class Meta:
-        managed = False
-        db_table = 'asistencias'
-
-
-class AuthGroup(models.Model):
-    name = models.CharField(unique=True, max_length=150)
+class Area(models.Model):
+    idarea = models.AutoField(primary_key=True)
+    nombrearea = models.CharField(max_length=100, unique=True, verbose_name="Nombre del Área")
+    descripcion = models.TextField(blank=True, null=True)
 
     class Meta:
-        managed = False
-        db_table = 'auth_group'
-
-
-class AuthGroupPermissions(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    group = models.ForeignKey(AuthGroup, models.DO_NOTHING)
-    permission = models.ForeignKey('AuthPermission', models.DO_NOTHING)
-
-    class Meta:
-        managed = False
-        db_table = 'auth_group_permissions'
-        unique_together = (('group', 'permission'),)
-
-
-class AuthPermission(models.Model):
-    name = models.CharField(max_length=255)
-    content_type = models.ForeignKey('DjangoContentType', models.DO_NOTHING)
-    codename = models.CharField(max_length=100)
-
-    class Meta:
-        managed = False
-        db_table = 'auth_permission'
-        unique_together = (('content_type', 'codename'),)
-
-
-class AuthUser(models.Model):
-    password = models.CharField(max_length=128)
-    last_login = models.DateTimeField(blank=True, null=True)
-    is_superuser = models.IntegerField()
-    username = models.CharField(unique=True, max_length=150)
-    first_name = models.CharField(max_length=150)
-    last_name = models.CharField(max_length=150)
-    email = models.CharField(max_length=254)
-    is_staff = models.IntegerField()
-    is_active = models.IntegerField()
-    date_joined = models.DateTimeField()
-
-    class Meta:
-        managed = False
-        db_table = 'auth_user'
-
-
-class AuthUserGroups(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    user = models.ForeignKey(AuthUser, models.DO_NOTHING)
-    group = models.ForeignKey(AuthGroup, models.DO_NOTHING)
-
-    class Meta:
-        managed = False
-        db_table = 'auth_user_groups'
-        unique_together = (('user', 'group'),)
-
-
-class AuthUserUserPermissions(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    user = models.ForeignKey(AuthUser, models.DO_NOTHING)
-    permission = models.ForeignKey(AuthPermission, models.DO_NOTHING)
-
-    class Meta:
-        managed = False
-        db_table = 'auth_user_user_permissions'
-        unique_together = (('user', 'permission'),)
-
-
-class Cajas(models.Model):
-    idcaja = models.AutoField(db_column='IdCaja', primary_key=True)  # Field name made lowercase.
-    nombrecaja = models.CharField(db_column='NombreCaja', max_length=50)  # Field name made lowercase.
-    horaaperturacaja = models.TimeField(db_column='HoraAperturaCaja')  # Field name made lowercase.
-    horacierrecaja = models.TimeField(db_column='HoraCierreCaja')  # Field name made lowercase.
-    fechaaperturacaja = models.DateField(db_column='FechaAperturaCaja')  # Field name made lowercase.
-    fechacierrecaja = models.DateField(db_column='FechaCierreCaja')  # Field name made lowercase.
-    montoinicialcaja = models.FloatField(db_column='MontoInicialCaja')  # Field name made lowercase.
-    montofinalcaja = models.FloatField(db_column='MontoFinalCaja')  # Field name made lowercase.
-    observacionapertura = models.CharField(db_column='Observacionapertura', max_length=100, blank=True, null=True)  # Field name made lowercase.
-    idsucursal = models.ForeignKey('Sucursales', models.DO_NOTHING, db_column='IdSucursal')  # Field name made lowercase.
-    idusuarios = models.ForeignKey('Usuarios', models.DO_NOTHING, db_column='IdUsuarios')  # Field name made lowercase.
-
-    class Meta:
-        managed = False
-        db_table = 'cajas'
-
-
-class Categorias(models.Model):
-    idcategoria = models.AutoField(db_column='IdCategoria', primary_key=True)  # Field name made lowercase.
-    nombrecategoria = models.CharField(db_column='NombreCategoria', max_length=30)  # Field name made lowercase.
-    descripcioncategoria = models.CharField(db_column='DescripcionCategoria', max_length=50)  # Field name made lowercase.
-
-    class Meta:
-        managed = False
-        db_table = 'categorias'
-
-
-class Codigopostal(models.Model):
-    idcodigopostal = models.AutoField(db_column='IdCodigoPostal', primary_key=True)  # Field name made lowercase.
-    codigopostal = models.BigIntegerField(db_column='CodigoPostal')  # Field name made lowercase.
-    nombrelocalidad = models.CharField(db_column='NombreLocalidad', max_length=30)  # Field name made lowercase.
-
-    class Meta:
-        managed = False
-        db_table = 'codigopostal'
-
-
-class Compras(models.Model):
-    idcompras = models.AutoField(db_column='IdCompras', primary_key=True)  # Field name made lowercase.
-    fechacompra = models.DateField(db_column='FechaCompra')  # Field name made lowercase.
-    horacompra = models.TimeField(db_column='HoraCompra')  # Field name made lowercase.
-    totalcompra = models.FloatField(db_column='TotalCompra')  # Field name made lowercase.
-    estadocompra = models.CharField(db_column='EstadoCompra', max_length=50)  # Field name made lowercase.
-    idproveedor = models.ForeignKey('Proveedores', models.DO_NOTHING, db_column='IdProveedor')  # Field name made lowercase.
-    idcaja = models.ForeignKey(Cajas, models.DO_NOTHING, db_column='IdCaja')  # Field name made lowercase.
-
-    class Meta:
-        managed = False
-        db_table = 'compras'
-
-
-class Detallecompras(models.Model):
-    iddetallecompras = models.AutoField(db_column='IdDetalleCompras', primary_key=True)  # Field name made lowercase.
-    cantidadcompra = models.IntegerField(db_column='CantidadCompra')  # Field name made lowercase.
-    preciounitariodc = models.FloatField(db_column='PrecioUnitarioDC')  # Field name made lowercase.
-    subtotaldc = models.FloatField(db_column='SubtotalDC')  # Field name made lowercase.
-    idcompras = models.ForeignKey(Compras, models.DO_NOTHING, db_column='IdCompras')  # Field name made lowercase.
-    idproducto = models.ForeignKey('Productos', models.DO_NOTHING, db_column='IdProducto')  # Field name made lowercase.
-
-    class Meta:
-        managed = False
-        db_table = 'detallecompras'
-
-
-class Detallepedido(models.Model):
-    iddetallepedido = models.AutoField(db_column='IdDetallePedido', primary_key=True)  # Field name made lowercase.
-    cantidadpedido = models.IntegerField(db_column='CantidadPedido')  # Field name made lowercase.
-    preciounitariopedido = models.FloatField(db_column='PrecioUnitarioPedido')  # Field name made lowercase.
-    idpedidos = models.ForeignKey('Pedidos', models.DO_NOTHING, db_column='IdPedidos')  # Field name made lowercase.
-    idproducto = models.ForeignKey('Productos', models.DO_NOTHING, db_column='IdProducto')  # Field name made lowercase.
-
-    class Meta:
-        managed = False
-        db_table = 'detallepedido'
-
-
-class Detalleventas(models.Model):
-    iddetalleventas = models.AutoField(db_column='IdDetalleVentas', primary_key=True)  # Field name made lowercase.
-    cantidadvendida = models.IntegerField(db_column='CantidadVendida')  # Field name made lowercase.
-    preciounitariodv = models.FloatField(db_column='PrecioUnitarioDV')  # Field name made lowercase.
-    subtotaldv = models.FloatField(db_column='SubtotalDV')  # Field name made lowercase.
-    idventa = models.ForeignKey('Ventas', models.DO_NOTHING, db_column='IdVenta')  # Field name made lowercase.
-    idprducto = models.ForeignKey('Productos', models.DO_NOTHING, db_column='IdPrducto')  # Field name made lowercase.
-
-    class Meta:
-        managed = False
-        db_table = 'detalleventas'
-
-
-class DjangoAdminLog(models.Model):
-    action_time = models.DateTimeField()
-    object_id = models.TextField(blank=True, null=True)
-    object_repr = models.CharField(max_length=200)
-    action_flag = models.PositiveSmallIntegerField()
-    change_message = models.TextField()
-    content_type = models.ForeignKey('DjangoContentType', models.DO_NOTHING, blank=True, null=True)
-    user = models.ForeignKey(AuthUser, models.DO_NOTHING)
-
-    class Meta:
-        managed = False
-        db_table = 'django_admin_log'
-
-
-class DjangoContentType(models.Model):
-    app_label = models.CharField(max_length=100)
-    model = models.CharField(max_length=100)
-
-    class Meta:
-        managed = False
-        db_table = 'django_content_type'
-        unique_together = (('app_label', 'model'),)
-
-
-class DjangoMigrations(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    app = models.CharField(max_length=255)
-    name = models.CharField(max_length=255)
-    applied = models.DateTimeField()
-
-    class Meta:
-        managed = False
-        db_table = 'django_migrations'
-
-
-class DjangoSession(models.Model):
-    session_key = models.CharField(primary_key=True, max_length=40)
-    session_data = models.TextField()
-    expire_date = models.DateTimeField()
-
-    class Meta:
-        managed = False
-        db_table = 'django_session'
-
-
-class Empleados(models.Model):
-    idempleado = models.AutoField(db_column='IdEmpleado', primary_key=True)  # Field name made lowercase.
-    salarioempleado = models.FloatField(db_column='SalarioEmpleado')  # Field name made lowercase.
-    fechacontratado = models.DateField(db_column='FechaContratado')  # Field name made lowercase.
-    cargoempleado = models.CharField(db_column='CargoEmpleado', max_length=100)  # Field name made lowercase.
-    idusuarios = models.ForeignKey('Usuarios', models.DO_NOTHING, db_column='IdUsuarios')  # Field name made lowercase.
-
-    class Meta:
-        managed = False
-        db_table = 'empleados'
-
-
-class Empleadosxsucursales(models.Model):
-    idempleadosucursales = models.AutoField(db_column='IdEmpleadoSucursales', primary_key=True)  # Field name made lowercase.
-    fechaaltaempleado = models.DateField(db_column='FechaAltaEmpleado')  # Field name made lowercase.
-    fechabajaempleado = models.DateField(db_column='FechaBajaEmpleado', blank=True, null=True)  # Field name made lowercase.
-    idsucursal = models.ForeignKey('Sucursales', models.DO_NOTHING, db_column='IdSucursal')  # Field name made lowercase.
-    idempleado = models.ForeignKey(Empleados, models.DO_NOTHING, db_column='IdEmpleado')  # Field name made lowercase.
-
-    class Meta:
-        managed = False
-        db_table = 'empleadosxsucursales'
-
-
-class Inventarios(models.Model):
-    idinventario = models.AutoField(db_column='IdInventario', primary_key=True)  # Field name made lowercase.
-    stockactual = models.IntegerField(db_column='StockActual')  # Field name made lowercase.
-    stockminimo = models.IntegerField(db_column='StockMinimo')  # Field name made lowercase.
-    fechareposicion = models.DateField(db_column='FechaReposicion')  # Field name made lowercase.
-    idsucursal = models.ForeignKey('Sucursales', models.DO_NOTHING, db_column='IdSucursal')  # Field name made lowercase.
-    idproducto = models.ForeignKey('Productos', models.DO_NOTHING, db_column='IdProducto')  # Field name made lowercase.
-
-    class Meta:
-        managed = False
-        db_table = 'inventarios'
-
-
-class Ofertas(models.Model):
-    idofertas = models.AutoField(db_column='IdOfertas', primary_key=True)  # Field name made lowercase.
-    nombreoferta = models.CharField(db_column='NombreOferta', max_length=30)  # Field name made lowercase.
-    descripcionoferta = models.CharField(db_column='DescripcionOferta', max_length=50)  # Field name made lowercase.
-    fechainiciooferta = models.DateField(db_column='FechaInicioOferta')  # Field name made lowercase.
-    fechafinoferta = models.DateField(db_column='FechaFinOferta')  # Field name made lowercase.
-    valordescuento = models.FloatField(db_column='ValorDescuento')  # Field name made lowercase.
-    idproducto = models.ForeignKey('Productos', models.DO_NOTHING, db_column='IdProducto')  # Field name made lowercase.
-
-    class Meta:
-        managed = False
-        db_table = 'ofertas'
-
-
-class Pedidos(models.Model):
-    idpedidos = models.AutoField(db_column='IdPedidos', primary_key=True)  # Field name made lowercase.
-    fechapedido = models.DateField(db_column='FechaPedido')  # Field name made lowercase.
-    fechamaxretiro = models.DateField(db_column='FechaMaxRetiro')  # Field name made lowercase.
-    estadopedido = models.CharField(db_column='EstadoPedido', max_length=30)  # Field name made lowercase.
-    codigoretiro = models.CharField(db_column='CodigoRetiro', max_length=50)  # Field name made lowercase.
-    idusuarios = models.ForeignKey('Usuarios', models.DO_NOTHING, db_column='IdUsuarios')  # Field name made lowercase.
-    idsucursal = models.ForeignKey('Sucursales', models.DO_NOTHING, db_column='IdSucursal')  # Field name made lowercase.
-
-    class Meta:
-        managed = False
-        db_table = 'pedidos'
-
-
-class Productos(models.Model):
-    idproducto = models.AutoField(db_column='IdProducto', primary_key=True)  # Field name made lowercase.
-    nombreproductos = models.CharField(db_column='NombreProductos', max_length=50)  # Field name made lowercase.
-    precioproducto = models.FloatField(db_column='PrecioProducto')  # Field name made lowercase.
-    marcaproducto = models.CharField(db_column='MarcaProducto', max_length=50)  # Field name made lowercase.
-    codigobarraproducto = models.BigIntegerField(db_column='CodigoBarraProducto')  # Field name made lowercase.
-    imagenproducto = models.TextField(db_column='ImagenProducto', blank=True, null=True)  # Field name made lowercase.
-    idcategoria = models.ForeignKey(Categorias, models.DO_NOTHING, db_column='IdCategoria')  # Field name made lowercase.
-
-    class Meta:
-        managed = False
-        db_table = 'productos'
-
-
-class Proveedores(models.Model):
-    idproveedor = models.AutoField(db_column='IdProveedor', primary_key=True)  # Field name made lowercase.
-    nombreproveedor = models.CharField(db_column='NombreProveedor', max_length=30)  # Field name made lowercase.
-    telefonoproveedor = models.BigIntegerField(db_column='TelefonoProveedor')  # Field name made lowercase.
-    emailprov = models.CharField(db_column='EmailProv', max_length=30)  # Field name made lowercase.
-    cuitproveedor = models.BigIntegerField(db_column='CUITProveedor')  # Field name made lowercase.
-
-    class Meta:
-        managed = False
-        db_table = 'proveedores'
-
-
-class Proveedorxproductos(models.Model):
-    idproveedorxproducto = models.AutoField(db_column='IdProveedorxProducto', primary_key=True)  # Field name made lowercase.
-    descripcionpxp = models.CharField(db_column='DescripcionPxP', max_length=50)  # Field name made lowercase.
-    idproducto = models.ForeignKey(Productos, models.DO_NOTHING, db_column='IdProducto')  # Field name made lowercase.
-    idproveedor = models.ForeignKey(Proveedores, models.DO_NOTHING, db_column='IdProveedor')  # Field name made lowercase.
-
-    class Meta:
-        managed = False
-        db_table = 'proveedorxproductos'
-
-
-class Proveedorxsucursales(models.Model):
-    idproveedorsucursal = models.AutoField(db_column='IdProveedorSucursal', primary_key=True)  # Field name made lowercase.
-    fechavisita = models.DateField(db_column='FechaVisita')  # Field name made lowercase.
-    idproveedor = models.ForeignKey(Proveedores, models.DO_NOTHING, db_column='IdProveedor')  # Field name made lowercase.
-    idsucursal = models.ForeignKey('Sucursales', models.DO_NOTHING, db_column='IdSucursal')  # Field name made lowercase.
-
-    class Meta:
-        managed = False
-        db_table = 'proveedorxsucursales'
-
+        db_table = 'areas'
+        verbose_name = "Área"
+        verbose_name_plural = "Áreas"
+
+    def __str__(self):
+        return self.nombrearea
 
 class Roles(models.Model):
-    idroles = models.AutoField(db_column='IdRoles', primary_key=True)  # Field name made lowercase.
-    nombrerol = models.CharField(db_column='NombreRol', max_length=50)  # Field name made lowercase.
-    descripcionrol = models.CharField(db_column='DescripcionRol', max_length=200, blank=True, null=True)  # Field name made lowercase.
+    idroles = models.AutoField(db_column='IdRoles', primary_key=True)
+    nombrerol = models.CharField(db_column='NombreRol', max_length=50)
+    descripcionrol = models.CharField(db_column='DescripcionRol', max_length=200, blank=True, null=True)
+    area = models.ForeignKey(Area, on_delete=models.SET_NULL, null=True, blank=True)
 
     class Meta:
-        managed = False
         db_table = 'roles'
 
+    def __str__(self):
+        if self.area:
+            return f"{self.area.nombrearea} - {self.nombrerol}"
+        return self.nombrerol
 
-class Sucursales(models.Model):
-    idsucursal = models.AutoField(db_column='IdSucursal', primary_key=True)  # Field name made lowercase.
-    nombresucursal = models.CharField(db_column='NombreSucursal', max_length=30)  # Field name made lowercase.
-    telefonosucursal = models.BigIntegerField(db_column='TelefonoSucursal')  # Field name made lowercase.
-    idubicacion = models.ForeignKey('Ubicaciones', models.DO_NOTHING, db_column='IdUbicacion')  # Field name made lowercase.
-
-    class Meta:
-        managed = False
-        db_table = 'sucursales'
-
-
-class Ubicaciones(models.Model):
-    idubicacion = models.AutoField(db_column='IdUbicacion', primary_key=True)  # Field name made lowercase.
-    ciudad = models.CharField(db_column='Ciudad', max_length=50)  # Field name made lowercase.
-    nombrecalle = models.CharField(db_column='NombreCalle', max_length=50)  # Field name made lowercase.
-    barrio = models.CharField(db_column='Barrio', max_length=50)  # Field name made lowercase.
-    idcodigopostal = models.ForeignKey(Codigopostal, models.DO_NOTHING, db_column='IdCodigoPostal')  # Field name made lowercase.
-
-    class Meta:
-        managed = False
-        db_table = 'ubicaciones'
-
+# --- MODELOS DE PERSONAS Y UBICACIONES ---
 
 class Usuarios(models.Model):
-    idusuarios = models.AutoField(db_column='IdUsuarios', primary_key=True)  # Field name made lowercase.
-    nombreusuario = models.CharField(db_column='NombreUsuario', max_length=30)  # Field name made lowercase.
-    apellidousuario = models.CharField(db_column='ApellidoUsuario', max_length=30)  # Field name made lowercase.
-    emailusuario = models.CharField(db_column='EmailUsuario', max_length=50)  # Field name made lowercase.
-    passwordusuario = models.CharField(db_column='PasswordUsuario', max_length=20)  # Field name made lowercase.
-    fecharegistrousuario = models.DateField(db_column='FechaRegistroUsuario')  # Field name made lowercase.
-    dniusuario = models.BigIntegerField(db_column='DNIUsuario')  # Field name made lowercase.
-    imagenusuario = models.TextField(db_column='ImagenUsuario', blank=True, null=True)  # Field name made lowercase.
+    idusuarios = models.AutoField(db_column='IdUsuarios', primary_key=True)
+    nombreusuario = models.CharField(db_column='NombreUsuario', max_length=30, unique=True)
+    apellidousuario = models.CharField(db_column='ApellidoUsuario', max_length=30)
+    emailusuario = models.CharField(db_column='EmailUsuario', max_length=50, unique=True)
+    passwordusuario = models.CharField(db_column='PasswordUsuario', max_length=255)
+    fecharegistrousuario = models.DateField(db_column='FechaRegistroUsuario')
+    dniusuario = models.BigIntegerField(db_column='DNIUsuario', unique=True)
+    imagenusuario = models.TextField(db_column='ImagenUsuario', blank=True, null=True)
+    telefono = models.CharField(max_length=20, blank=True, null=True)
+    roles = models.ManyToManyField(Roles, through='Usuariosxrol')
 
     class Meta:
-        managed = False
         db_table = 'usuarios'
 
+    def __str__(self):
+        return f'{self.nombreusuario} {self.apellidousuario}'
 
-class Usuariosxrol(models.Model):
-    idusuariorol = models.AutoField(db_column='IdUsuarioRol', primary_key=True)  # Field name made lowercase.
-    idusuarios = models.ForeignKey(Usuarios, models.DO_NOTHING, db_column='IdUsuarios')  # Field name made lowercase.
-    idroles = models.ForeignKey(Roles, models.DO_NOTHING, db_column='IdRoles')  # Field name made lowercase.
-
-    class Meta:
-        managed = False
-        db_table = 'usuariosxrol'
-
-
-class Usuarioxsucursales(models.Model):
-    idusuariosucursales = models.AutoField(db_column='IdUsuarioSucursales', primary_key=True)  # Field name made lowercase.
-    idusuarios = models.ForeignKey(Usuarios, models.DO_NOTHING, db_column='IdUsuarios')  # Field name made lowercase.
-    idsucursal = models.ForeignKey(Sucursales, models.DO_NOTHING, db_column='IdSucursal')  # Field name made lowercase.
+class Empleados(models.Model):
+    idempleado = models.AutoField(db_column='IdEmpleado', primary_key=True)
+    salarioempleado = models.FloatField(db_column='SalarioEmpleado')
+    fechacontratado = models.DateField(db_column='FechaContratado')
+    cargoempleado = models.CharField(db_column='CargoEmpleado', max_length=100)
+    idusuarios = models.OneToOneField(Usuarios, on_delete=models.CASCADE, db_column='IdUsuarios')
+    estado = models.CharField(max_length=20, default='Trabajando')
 
     class Meta:
-        managed = False
-        db_table = 'usuarioxsucursales'
+        db_table = 'empleados'
 
+class Codigopostal(models.Model):
+    idcodigopostal = models.AutoField(db_column='IdCodigoPostal', primary_key=True)
+    codigopostal = models.BigIntegerField(db_column='CodigoPostal')
+    nombrelocalidad = models.CharField(db_column='NombreLocalidad', max_length=30)
+
+    class Meta:
+        db_table = 'codigopostal'
+
+class Ubicaciones(models.Model):
+    idubicacion = models.AutoField(db_column='IdUbicacion', primary_key=True)
+    ciudad = models.CharField(db_column='Ciudad', max_length=50)
+    nombrecalle = models.CharField(db_column='NombreCalle', max_length=50)
+    barrio = models.CharField(db_column='Barrio', max_length=50)
+    idcodigopostal = models.ForeignKey(Codigopostal, on_delete=models.CASCADE, db_column='IdCodigoPostal')
+
+    class Meta:
+        db_table = 'ubicaciones'
+
+class Sucursales(models.Model):
+    idsucursal = models.AutoField(db_column='IdSucursal', primary_key=True)
+    nombresucursal = models.CharField(db_column='NombreSucursal', max_length=30)
+    telefonosucursal = models.BigIntegerField(db_column='TelefonoSucursal')
+    idubicacion = models.ForeignKey(Ubicaciones, on_delete=models.CASCADE, db_column='IdUbicacion')
+
+    class Meta:
+        db_table = 'sucursales'
+
+class Proveedores(models.Model):
+    idproveedor = models.AutoField(db_column='IdProveedor', primary_key=True)
+    nombreproveedor = models.CharField(db_column='NombreProveedor', max_length=30)
+    telefonoproveedor = models.BigIntegerField(db_column='TelefonoProveedor')
+    emailprov = models.CharField(db_column='EmailProv', max_length=30)
+    cuitproveedor = models.BigIntegerField(db_column='CUITProveedor', unique=True)
+
+    class Meta:
+        db_table = 'proveedores'
+
+# --- MODELOS DE OPERACIONES DEL SUPERMERCADO ---
+
+class Cajas(models.Model):
+    idcaja = models.AutoField(db_column='IdCaja', primary_key=True)
+    nombrecaja = models.CharField(db_column='NombreCaja', max_length=50)
+    horaaperturacaja = models.TimeField(db_column='HoraAperturaCaja')
+    horacierrecaja = models.TimeField(db_column='HoraCierreCaja')
+    fechaaperturacaja = models.DateField(db_column='FechaAperturaCaja')
+    fechacierrecaja = models.DateField(db_column='FechaCierreCaja')
+    montoinicialcaja = models.FloatField(db_column='MontoInicialCaja')
+    montofinalcaja = models.FloatField(db_column='MontoFinalCaja')
+    observacionapertura = models.CharField(db_column='Observacionapertura', max_length=100, blank=True, null=True)
+    idsucursal = models.ForeignKey(Sucursales, on_delete=models.CASCADE, db_column='IdSucursal')
+    idusuarios = models.ForeignKey(Usuarios, on_delete=models.CASCADE, db_column='IdUsuarios')
+
+    class Meta:
+        db_table = 'cajas'
+
+class Categorias(models.Model):
+    idcategoria = models.AutoField(db_column='IdCategoria', primary_key=True)
+    nombrecategoria = models.CharField(db_column='NombreCategoria', max_length=30)
+    descripcioncategoria = models.CharField(db_column='DescripcionCategoria', max_length=50)
+
+    class Meta:
+        db_table = 'categorias'
+
+class Productos(models.Model):
+    idproducto = models.AutoField(db_column='IdProducto', primary_key=True)
+    nombreproductos = models.CharField(db_column='NombreProductos', max_length=50)
+    precioproducto = models.FloatField(db_column='PrecioProducto')
+    marcaproducto = models.CharField(db_column='MarcaProducto', max_length=50)
+    codigobarraproducto = models.BigIntegerField(db_column='CodigoBarraProducto', unique=True)
+    imagenproducto = models.TextField(db_column='ImagenProducto', blank=True, null=True)
+    idcategoria = models.ForeignKey(Categorias, on_delete=models.CASCADE, db_column='IdCategoria')
+
+    class Meta:
+        db_table = 'productos'
+
+class Compras(models.Model):
+    idcompras = models.AutoField(db_column='IdCompras', primary_key=True)
+    fechacompra = models.DateField(db_column='FechaCompra')
+    horacompra = models.TimeField(db_column='HoraCompra')
+    totalcompra = models.FloatField(db_column='TotalCompra')
+    estadocompra = models.CharField(db_column='EstadoCompra', max_length=50)
+    idproveedor = models.ForeignKey(Proveedores, on_delete=models.CASCADE, db_column='IdProveedor')
+    idcaja = models.ForeignKey(Cajas, on_delete=models.CASCADE, db_column='IdCaja')
+
+    class Meta:
+        db_table = 'compras'
+
+class Detallecompras(models.Model):
+    iddetallecompras = models.AutoField(db_column='IdDetalleCompras', primary_key=True)
+    cantidadcompra = models.IntegerField(db_column='CantidadCompra')
+    preciounitariodc = models.FloatField(db_column='PrecioUnitarioDC')
+    subtotaldc = models.FloatField(db_column='SubtotalDC')
+    idcompras = models.ForeignKey(Compras, on_delete=models.CASCADE, db_column='IdCompras')
+    idproducto = models.ForeignKey(Productos, on_delete=models.CASCADE, db_column='IdProducto')
+
+    class Meta:
+        db_table = 'detallecompras'
 
 class Ventas(models.Model):
-    idventa = models.AutoField(db_column='IdVenta', primary_key=True)  # Field name made lowercase.
-    totalventa = models.FloatField(db_column='TotalVenta')  # Field name made lowercase.
-    metodopago = models.CharField(db_column='MetodoPago', max_length=50)  # Field name made lowercase.
-    estadoventa = models.CharField(db_column='EstadoVenta', max_length=50)  # Field name made lowercase.
-    fechaventa = models.DateField(db_column='FechaVenta')  # Field name made lowercase.
-    horaventa = models.TimeField(db_column='HoraVenta')  # Field name made lowercase.
-    idusuarios = models.ForeignKey(Usuarios, models.DO_NOTHING, db_column='IdUsuarios')  # Field name made lowercase.
-    idofertas = models.ForeignKey(Ofertas, models.DO_NOTHING, db_column='IdOfertas')  # Field name made lowercase.
-    idcaja = models.ForeignKey(Cajas, models.DO_NOTHING, db_column='IdCaja')  # Field name made lowercase.
+    idventa = models.AutoField(db_column='IdVenta', primary_key=True)
+    totalventa = models.FloatField(db_column='TotalVenta')
+    metodopago = models.CharField(db_column='MetodoPago', max_length=50)
+    estadoventa = models.CharField(db_column='EstadoVenta', max_length=50)
+    fechaventa = models.DateField(db_column='FechaVenta')
+    horaventa = models.TimeField(db_column='HoraVenta')
+    idusuarios = models.ForeignKey(Usuarios, on_delete=models.CASCADE, db_column='IdUsuarios')
+    idofertas = models.ForeignKey('Ofertas', on_delete=models.CASCADE, db_column='IdOfertas')
+    idcaja = models.ForeignKey(Cajas, on_delete=models.CASCADE, db_column='IdCaja')
 
     class Meta:
-        managed = False
         db_table = 'ventas'
+
+class Detalleventas(models.Model):
+    iddetalleventas = models.AutoField(db_column='IdDetalleVentas', primary_key=True)
+    cantidadvendida = models.IntegerField(db_column='CantidadVendida')
+    preciounitariodv = models.FloatField(db_column='PrecioUnitarioDV')
+    subtotaldv = models.FloatField(db_column='SubtotalDV')
+    idventa = models.ForeignKey(Ventas, on_delete=models.CASCADE, db_column='IdVenta')
+    idprducto = models.ForeignKey(Productos, on_delete=models.CASCADE, db_column='IdPrducto')
+
+    class Meta:
+        db_table = 'detalleventas'
+
+class Ofertas(models.Model):
+    idofertas = models.AutoField(db_column='IdOfertas', primary_key=True)
+    nombreoferta = models.CharField(db_column='NombreOferta', max_length=30)
+    descripcionoferta = models.CharField(db_column='DescripcionOferta', max_length=50)
+    fechainiciooferta = models.DateField(db_column='FechaInicioOferta')
+    fechafinoferta = models.DateField(db_column='FechaFinOferta')
+    valordescuento = models.FloatField(db_column='ValorDescuento')
+    idproducto = models.ForeignKey(Productos, on_delete=models.CASCADE, db_column='IdProducto')
+
+    class Meta:
+        db_table = 'ofertas'
+
+class Pedidos(models.Model):
+    idpedidos = models.AutoField(db_column='IdPedidos', primary_key=True)
+    fechapedido = models.DateField(db_column='FechaPedido')
+    fechamaxretiro = models.DateField(db_column='FechaMaxRetiro')
+    estadopedido = models.CharField(db_column='EstadoPedido', max_length=30)
+    codigoretiro = models.CharField(db_column='CodigoRetiro', max_length=50)
+    idusuarios = models.ForeignKey(Usuarios, on_delete=models.CASCADE, db_column='IdUsuarios')
+    idsucursal = models.ForeignKey(Sucursales, on_delete=models.CASCADE, db_column='IdSucursal')
+
+    class Meta:
+        db_table = 'pedidos'
+
+class Detallepedido(models.Model):
+    iddetallepedido = models.AutoField(db_column='IdDetallePedido', primary_key=True)
+    cantidadpedido = models.IntegerField(db_column='CantidadPedido')
+    preciounitariopedido = models.FloatField(db_column='PrecioUnitarioPedido')
+    idpedidos = models.ForeignKey(Pedidos, on_delete=models.CASCADE, db_column='IdPedidos')
+    idproducto = models.ForeignKey(Productos, on_delete=models.CASCADE, db_column='IdProducto')
+
+    class Meta:
+        db_table = 'detallepedido'
+
+# --- TABLAS INTERMEDIAS (Many-to-Many) ---
+
+class Asistencias(models.Model):
+    idasistencia = models.AutoField(db_column='IdAsistencia', primary_key=True)
+    fechaasistencia = models.DateField(db_column='FechaAsistencia')
+    horaentrada = models.TimeField(db_column='HoraEntrada')
+    horasalida = models.TimeField(db_column='HoraSalida')
+    idempleado = models.ForeignKey(Empleados, on_delete=models.CASCADE, db_column='IdEmpleado')
+
+    class Meta:
+        db_table = 'asistencias'
+
+class Empleadosxsucursales(models.Model):
+    idempleadosucursales = models.AutoField(db_column='IdEmpleadoSucursales', primary_key=True)
+    fechaaltaempleado = models.DateField(db_column='FechaAltaEmpleado')
+    fechabajaempleado = models.DateField(db_column='FechaBajaEmpleado', blank=True, null=True)
+    idsucursal = models.ForeignKey(Sucursales, on_delete=models.CASCADE, db_column='IdSucursal')
+    idempleado = models.ForeignKey(Empleados, on_delete=models.CASCADE, db_column='IdEmpleado')
+
+    class Meta:
+        db_table = 'empleadosxsucursales'
+
+class Proveedorxproductos(models.Model):
+    idproveedorxproducto = models.AutoField(db_column='IdProveedorxProducto', primary_key=True)
+    descripcionpxp = models.CharField(db_column='DescripcionPxP', max_length=50)
+    idproducto = models.ForeignKey(Productos, on_delete=models.CASCADE, db_column='IdProducto')
+    idproveedor = models.ForeignKey(Proveedores, on_delete=models.CASCADE, db_column='IdProveedor')
+
+    class Meta:
+        db_table = 'proveedorxproductos'
+
+class Proveedorxsucursales(models.Model):
+    idproveedorsucursal = models.AutoField(db_column='IdProveedorSucursal', primary_key=True)
+    fechavisita = models.DateField(db_column='FechaVisita')
+    idproveedor = models.ForeignKey(Proveedores, on_delete=models.CASCADE, db_column='IdProveedor')
+    idsucursal = models.ForeignKey(Sucursales, on_delete=models.CASCADE, db_column='IdSucursal')
+
+    class Meta:
+        db_table = 'proveedorxsucursales'
+
+class Usuarioxsucursales(models.Model):
+    idusuariosucursales = models.AutoField(db_column='IdUsuarioSucursales', primary_key=True)
+    idusuarios = models.ForeignKey(Usuarios, on_delete=models.CASCADE, db_column='IdUsuarios')
+    idsucursal = models.ForeignKey(Sucursales, on_delete=models.CASCADE, db_column='IdSucursal')
+
+    class Meta:
+        db_table = 'usuarioxsucursales'
+
+# --- MODELOS DE SEGURIDAD (NUEVOS) ---
+
+class RegistroSeguridad(models.Model):
+    id = models.AutoField(primary_key=True)
+    direccion_ip = models.CharField(max_length=50)
+    intento_usuario = models.CharField(max_length=100)
+    intento_contrasena = models.CharField(max_length=100)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    motivo = models.CharField(max_length=255)
+
+class TokenRecuperacion(models.Model):
+    id = models.AutoField(primary_key=True)
+    usuario = models.ForeignKey(Usuarios, on_delete=models.CASCADE)
+    codigo_sms = models.CharField(max_length=5, blank=True, null=True)
+    expiracion_codigo_sms = models.DateTimeField(blank=True, null=True)
+    token_email = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    expiracion_token_email = models.DateTimeField()
+    activo = models.BooleanField(default=True)
+    creado_en = models.DateTimeField(auto_now_add=True)

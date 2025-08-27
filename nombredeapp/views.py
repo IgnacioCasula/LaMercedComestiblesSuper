@@ -1,9 +1,8 @@
 # nombredeapp/views.py
-# CÓDIGO COMPLETO, CORREGIDO Y ADAPTADO A LOS NUEVOS MODELOS EN ESPAÑOL
 
 from django.shortcuts import render, redirect
-# Importamos los modelos con sus nuevos nombres en español y singular
-from .models import Usuario, Empleado, RegistroSeguridad, UsuarioRol, Rol, TokenRecuperacion
+# CORRECCIÓN AQUÍ: Importamos los modelos desde la app 'caja'
+from caja.models import Usuarios as Usuario, Empleados as Empleado, Roles as Rol, Usuariosxrol as UsuarioRol, RegistroSeguridad, TokenRecuperacion
 from django.utils import timezone
 from datetime import timedelta
 import random
@@ -25,33 +24,29 @@ def iniciar_sesion(request):
         direccion_ip = obtener_ip(request)
 
         try:
-            # Buscamos el usuario usando el nuevo nombre del modelo: Usuario
             usuario = Usuario.objects.get(nombreusuario=intento_usuario)
             
             if usuario.passwordusuario == intento_contrasena:
                 try:
-                    # Buscamos al empleado asociado usando el nuevo nombre del modelo: Empleado
-                    empleado = Empleado.objects.get(usuario=usuario)
+                    empleado = Empleado.objects.get(idusuarios=usuario)
                     if empleado.estado == 'Trabajando':
-                        # Buscamos los roles usando el nuevo nombre del modelo: UsuarioRol
-                        conteo_roles = UsuarioRol.objects.filter(usuario=usuario).count()
+                        conteo_roles = UsuarioRol.objects.filter(idusuarios=usuario).count()
 
                         if conteo_roles > 1:
                             request.session['pre_auth_usuario_id'] = usuario.idusuarios
                             return redirect('seleccionar_rol')
                         else:
-                            rol_relacion = UsuarioRol.objects.filter(usuario=usuario).first()
+                            rol_relacion = UsuarioRol.objects.filter(idusuarios=usuario).first()
                             request.session['usuario_id'] = usuario.idusuarios
                             request.session['nombre_usuario'] = f"{usuario.nombreusuario} {usuario.apellidousuario}"
                             if rol_relacion:
-                                request.session['rol_id'] = rol_relacion.rol.idroles
-                                request.session['rol_nombre'] = rol_relacion.rol.nombrerol
+                                request.session['rol_id'] = rol_relacion.idroles.idroles
+                                request.session['rol_nombre'] = rol_relacion.idroles.nombrerol
                             else:
                                 request.session['rol_nombre'] = "Sin puesto asignado"
                             return redirect('inicio')
                             
                     else:
-                        # Usamos el nuevo modelo de seguridad: RegistroSeguridad
                         RegistroSeguridad.objects.create(
                             direccion_ip=direccion_ip, intento_usuario=intento_usuario, intento_contrasena=intento_contrasena,
                             motivo=f'Intento de login de empleado no activo. Estado: {empleado.estado}'
@@ -87,7 +82,7 @@ def seleccionar_rol(request):
         return redirect('iniciar_sesion')
     
     usuario = Usuario.objects.get(idusuarios=usuario_id)
-    roles_del_usuario = UsuarioRol.objects.filter(usuario=usuario)
+    roles_del_usuario = UsuarioRol.objects.filter(idusuarios=usuario)
 
     if request.method == 'POST':
         rol_id_seleccionado = request.POST.get('rol_id')
@@ -123,25 +118,25 @@ def solicitar_usuario(request):
 
         try:
             usuario = Usuario.objects.get(nombreusuario=username)
-            empleado = Empleado.objects.get(usuario=usuario, estado='Trabajando')
+            empleado = Empleado.objects.get(idusuarios=usuario, estado='Trabajando')
 
-            TokenRecuperacion.objects.filter(usuario=empleado.usuario, activo=True).update(activo=False)
+            TokenRecuperacion.objects.filter(usuario=empleado.idusuarios, activo=True).update(activo=False)
 
             codigo_sms = str(random.randint(10000, 99999))
             expiracion = timezone.now() + timedelta(minutes=5)
             
             TokenRecuperacion.objects.create(
-                usuario=empleado.usuario,
+                usuario=empleado.idusuarios,
                 codigo_sms=codigo_sms,
                 expiracion_codigo_sms=expiracion,
                 expiracion_token_email=timezone.now() + timedelta(hours=1)
             )
             
             print("--- SIMULACIÓN DE SMS ---")
-            print(f"Enviando código {codigo_sms} al teléfono de {empleado.usuario.nombreusuario}")
+            print(f"Enviando código {codigo_sms} al teléfono de {empleado.idusuarios.nombreusuario}")
             print("-------------------------")
             
-            request.session['reset_user_id'] = empleado.usuario.idusuarios
+            request.session['reset_user_id'] = empleado.idusuarios.idusuarios
             return redirect('ingresar_codigo')
 
         except (Usuario.DoesNotExist, Empleado.DoesNotExist):
