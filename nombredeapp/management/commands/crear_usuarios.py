@@ -2,7 +2,6 @@
 
 from django.core.management.base import BaseCommand
 from datetime import date
-# CORRECCIÓN AQUÍ: Importamos los modelos desde la app 'caja'
 from caja.models import Usuarios as Usuario, Empleados as Empleado, Roles as Rol, Usuariosxrol as UsuarioRol, Area
 
 class Command(BaseCommand):
