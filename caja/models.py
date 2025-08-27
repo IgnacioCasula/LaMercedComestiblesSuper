@@ -1,4 +1,4 @@
-# caja/models.py (Versión Definitiva, Limpia y Completa)
+# caja/models.py
 
 from django.db import models
 import uuid
@@ -221,6 +221,15 @@ class Detallepedido(models.Model):
         db_table = 'detallepedido'
 
 # --- TABLAS INTERMEDIAS (Many-to-Many) ---
+
+class Usuariosxrol(models.Model):
+    idusuarioxrol = models.AutoField(primary_key=True)
+    idusuarios = models.ForeignKey(Usuarios, on_delete=models.CASCADE, db_column='IdUsuarios')
+    idroles = models.ForeignKey(Roles, on_delete=models.CASCADE, db_column='IdRoles')
+
+    class Meta:
+        db_table = 'usuariosxrol'
+        unique_together = [['idusuarios', 'idroles']]
 
 class Asistencias(models.Model):
     idasistencia = models.AutoField(db_column='IdAsistencia', primary_key=True)

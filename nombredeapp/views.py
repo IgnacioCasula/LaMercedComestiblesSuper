@@ -1,7 +1,6 @@
 # nombredeapp/views.py
 
 from django.shortcuts import render, redirect
-# CORRECCIÓN AQUÍ: Importamos los modelos desde la app 'caja'
 from caja.models import Usuarios as Usuario, Empleados as Empleado, Roles as Rol, Usuariosxrol as UsuarioRol, RegistroSeguridad, TokenRecuperacion
 from django.utils import timezone
 from datetime import timedelta
