@@ -20,7 +20,12 @@
             <div class="form-group password-wrapper">
                 <label for="password">Contraseña</label>
                 <input type="password" id="password" name="password" required>
-                <img src="{% static 'iconos/eyeX.png' %}" class="toggle-password" data-target="password" alt="Mostrar/Ocultar">
+                <img src="{% static 'iconos/eyeX.png' %}" 
+                     class="toggle-password" 
+                     data-target="password" 
+                     data-open-eye="{% static 'iconos/eye.png' %}"
+                     data-closed-eye="{% static 'iconos/eyeX.png' %}"
+                     alt="Mostrar/Ocultar">
             </div>
 
             {% if error %}
