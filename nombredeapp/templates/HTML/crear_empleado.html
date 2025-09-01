@@ -1,0 +1,245 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Nuevo Empleado</title>
+    <link rel="stylesheet" href="{% static 'CSS/crear_empleado_styles.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+<div class="form-container">
+    <h1>Añadir Nuevo Empleado</h1>
+
+    <div class="section">
+        <div class="personal-data-grid">
+            <div class="photo-uploader">
+                <button>Añadir Foto</button>
+            </div>
+            <div class="fields-grid">
+                <div class="form-group"><label for="nombre">Nombre:</label><input type="text" id="nombre"></div>
+                <div class="form-group"><label for="apellido">Apellido:</label><input type="text" id="apellido"></div>
+                <div class="form-group"><label for="dni">DNI:</label><input type="text" id="dni"></div>
+                <div class="form-group"><label for="telefono">Telefono:</label><input type="text" id="telefono"></div>
+                <div class="form-group"><label for="email">Email:</label><input type="email" id="email"></div>
+                <div class="form-group"><label for="cod_pais">Codigo pais:</label><input type="text" id="cod_pais"></div>
+                <div class="form-group"><label for="direccion">Direccion:</label><input type="text" id="direccion"></div>
+                <div class="form-group"><label for="fecha_nacimiento">Fecha nacimiento:</label><input type="text" id="fecha_nacimiento" placeholder="DD/MM/AAAA"></div>
+            </div>
+        </div>
+        <div class="form-actions-initial">
+            <button id="btn-add-laboral" class="btn btn-secondary">Añadir datos laborales</button>
+            <button class="btn btn-light">Predeterminado</button>
+        </div>
+    </div>
+
+    <div id="laboral-data" class="laboral-data">
+        <div class="section">
+            <div class="area-puesto">
+                <div class="form-group" style="flex-grow: 1;"><label>Area:</label><button disabled>Selecciona</button></div>
+                <div class="form-group" style="flex-grow: 1;"><label>Puesto:</label><button disabled>Selecciona</button></div>
+            </div>
+        </div>
+        
+        <div class="section schedule-section">
+            <h3>Hora y dia laboral</h3>
+            <div class="color-palette-container">
+                <span>Mismo horario:</span>
+                <div id="color-palette" class="color-palette"></div>
+                <button id="add-color" class="add-btn"><i class="fa-solid fa-add"></i></button>
+            </div>
+            <div id="weeks-container"></div>
+            <div class="daily-schedule-container" id="daily-schedule-container"></div>
+        </div>
+
+        <div class="section permissions-section">
+            <h3>Permisos: Personalizado</h3>
+            </div>
+    </div>
+
+    <div class="main-form-actions">
+        <button class="btn btn-danger">Cancelar</button>
+        <button class="btn btn-success">Listo</button>
+    </div>
+
+</div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // --- 1. MOSTRAR/OCULTAR DATOS LABORALES ---
+    const btnAddLaboral = document.getElementById('btn-add-laboral');
+    const laboralDataSection = document.getElementById('laboral-data');
+    btnAddLaboral.addEventListener('click', () => {
+        laboralDataSection.style.display = 'block';
+        btnAddLaboral.style.display = 'none'; // Opcional: ocultar el botón
+    });
+
+    // --- 2. LÓGICA DEL HORARIO ---
+    const colorPaletteContainer = document.getElementById('color-palette');
+    const addColorBtn = document.getElementById('add-color');
+    const weeksContainer = document.getElementById('weeks-container');
+    const dailyScheduleContainer = document.getElementById('daily-schedule-container');
+
+    const availableColors = ["#28a745", "#dc3545", "#007bff", "#ffc107", "#6f42c1", "#fd7e14", "#20c997", "#e83e8c", "#17a2b8", "#6610f2"];
+    const daysOfWeek = ['Sa', 'Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi'];
+    let activeColors = ["#28a745", "#dc3545"];
+    let selectedColor = activeColors[0];
+    let scheduleData = {}; // { "#28a745": [{start: "18:00", end: "21:00"}], ... }
+    let weeksCount = 1;
+
+    function renderPalette() {
+        colorPaletteContainer.innerHTML = '';
+        activeColors.forEach(color => {
+            const colorDiv = document.createElement('div');
+            colorDiv.className = 'color-box';
+            colorDiv.style.backgroundColor = color;
+            colorDiv.dataset.color = color;
+            if (color === selectedColor) {
+                colorDiv.classList.add('selected');
+            }
+            colorDiv.addEventListener('click', () => {
+                selectedColor = color;
+                renderPalette();
+            });
+            colorPaletteContainer.appendChild(colorDiv);
+        });
+    }
+
+    function addWeek() {
+        if (weeksCount >= 4) return;
+        weeksCount++;
+        const weekDiv = document.createElement('div');
+        weekDiv.className = 'schedule-week';
+        weekDiv.id = `week-${weeksCount}`;
+
+        daysOfWeek.forEach(day => {
+            const dayBtn = document.createElement('button');
+            dayBtn.className = 'day-btn';
+            dayBtn.textContent = day;
+            dayBtn.dataset.day = day;
+            dayBtn.dataset.week = weeksCount;
+            dayBtn.addEventListener('click', () => toggleDayColor(dayBtn));
+            weekDiv.appendChild(dayBtn);
+        });
+
+        const removeWeekBtn = document.createElement('button');
+        removeWeekBtn.className = 'remove-btn';
+        removeWeekBtn.innerHTML = '<i class="fa-solid fa-minus"></i>';
+        removeWeekBtn.addEventListener('click', () => {
+            weekDiv.remove();
+            weeksCount--;
+            renderDailySchedules();
+        });
+        weekDiv.appendChild(removeWeekBtn);
+        weeksContainer.appendChild(weekDiv);
+    }
+    
+    function toggleDayColor(dayBtn) {
+        if (dayBtn.style.backgroundColor === selectedColor) {
+            dayBtn.style.backgroundColor = '#e0e0e0';
+            dayBtn.dataset.color = '';
+        } else {
+            dayBtn.style.backgroundColor = selectedColor;
+            dayBtn.dataset.color = selectedColor;
+        }
+        renderDailySchedules();
+    }
+
+    function renderDailySchedules() {
+        dailyScheduleContainer.innerHTML = '';
+        const coloredDays = {}; // { "Sa": "#28a745", "Do": "#dc3545", ... }
+
+        document.querySelectorAll('.day-btn').forEach(btn => {
+            if (btn.dataset.color) {
+                coloredDays[btn.dataset.day] = btn.dataset.color;
+            }
+        });
+
+        // Agrupar días por color
+        const daysByColor = {};
+        for (const day in coloredDays) {
+            const color = coloredDays[day];
+            if (!daysByColor[color]) {
+                daysByColor[color] = [];
+            }
+            if (!daysByColor[color].includes(day)) {
+                daysByColor[color].push(day);
+            }
+        }
+        
+        for (const color in daysByColor) {
+            if (!scheduleData[color]) {
+                scheduleData[color] = [{ start: '', end: '' }];
+            }
+
+            const dayNames = daysByColor[color].join(', ');
+            const scheduleRow = document.createElement('div');
+            scheduleRow.className = 'schedule-day-row';
+            scheduleRow.innerHTML = `<h4>${dayNames}</h4>`;
+
+            scheduleData[color].forEach((slot, index) => {
+                const timeSlotDiv = document.createElement('div');
+                timeSlotDiv.className = 'time-slot';
+                
+                const startTimeInput = document.createElement('input');
+                startTimeInput.type = 'time';
+                startTimeInput.value = slot.start;
+                startTimeInput.addEventListener('change', (e) => {
+                    scheduleData[color][index].start = e.target.value;
+                });
+
+                const endTimeInput = document.createElement('input');
+                endTimeInput.type = 'time';
+                endTimeInput.value = slot.end;
+                endTimeInput.addEventListener('change', (e) => {
+                    scheduleData[color][index].end = e.target.value;
+                });
+
+                timeSlotDiv.appendChild(startTimeInput);
+                timeSlotDiv.appendChild(document.createTextNode('a'));
+                timeSlotDiv.appendChild(endTimeInput);
+                
+                scheduleRow.appendChild(timeSlotDiv);
+            });
+
+            dailyScheduleContainer.appendChild(scheduleRow);
+        }
+    }
+
+    // Inicialización
+    renderPalette();
+    // Crear la primera semana y el botón de añadir semana
+    function createFirstWeek() {
+        const weekDiv = document.createElement('div');
+        weekDiv.className = 'schedule-week';
+        weekDiv.id = 'week-1';
+
+        daysOfWeek.forEach(day => {
+            const dayBtn = document.createElement('button');
+            dayBtn.className = 'day-btn';
+            dayBtn.textContent = day;
+            dayBtn.dataset.day = day;
+            dayBtn.dataset.week = 1;
+            dayBtn.addEventListener('click', () => toggleDayColor(dayBtn));
+            weekDiv.appendChild(dayBtn);
+        });
+        
+        const addWeekBtn = document.createElement('button');
+        addWeekBtn.className = 'add-btn';
+        addWeekBtn.innerHTML = '<i class="fa-solid fa-add"></i>';
+        addWeekBtn.addEventListener('click', addWeek);
+        weekDiv.appendChild(addWeekBtn);
+        weeksContainer.appendChild(weekDiv);
+    }
+
+    createFirstWeek();
+
+});
+</script>
+
+
+</body>
+</html>

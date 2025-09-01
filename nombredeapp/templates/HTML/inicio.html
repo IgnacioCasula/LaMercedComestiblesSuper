@@ -8,7 +8,8 @@
     <link rel="stylesheet" href="{% static 'CSS/inicio_styles.css' %}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body>
+<body class="is-loading">
+
     <header class="main-header">
         <div class="header-background"></div>
         <h1>Hola, {{ nombre_usuario }}</h1>
@@ -18,11 +19,18 @@
         <section class="panel preview-panel">
             <h2>Vista Previa</h2>
             <div class="panel-content">
-                <div class="preview-placeholder">
-                    <img src="{% static 'iconos/trending_up.png' %}" alt="Icono de vista previa" class="preview-icon">
-                    <p>Vista previa</p>
-                    <button class="select-button" disabled>Seleccionar</button>
-                </div>
+                 {% if tiene_permiso_vista_previa %}
+                    <div class="preview-placeholder">
+                        <img src="{% static 'iconos/trending_up.png' %}" alt="Icono de vista previa" class="preview-icon">
+                        <p>Vista previa</p>
+                        <button class="select-button" disabled>Seleccionar</button>
+                    </div>
+                {% else %}
+                    <div class="preview-placeholder">
+                        <img src="{% static 'iconos/Dangero_us.png' %}" alt="Icono de peligro" class="preview-icon no-permission-icon">
+                        <p>No tienes permiso.</p>
+                    </div>
+                {% endif %}
             </div>
         </section>
 
@@ -36,7 +44,6 @@
                         <a href="#" class="action-btn profile">Perfil</a>
                     </div>
                 </div>
-                
                 <div class="tools-grid">
                     {% if herramientas %}
                         {% for herramienta in herramientas %}
@@ -58,33 +65,62 @@
     </main>
 
     <script>
-        window.onload = function () { window.scrollTo(0, 0); };
-        const header = document.querySelector('.main-header');
-        let isLocked = false;
-        let unlockCounter = 0;
-        const UNLOCK_THRESHOLD = 3;
-        window.addEventListener('wheel', function(event) {
-            const isScrollingUp = event.deltaY < 0;
-            const currentScrollY = window.scrollY;
-            if (currentScrollY > 0) { header.classList.add('scrolled'); } else { header.classList.remove('scrolled'); }
-            if (currentScrollY <= 1 && isScrollingUp) { isLocked = true; }
-            if (isLocked && isScrollingUp) {
-                event.preventDefault();
-                unlockCounter++;
-                if (unlockCounter >= UNLOCK_THRESHOLD) {
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- CONFIGURACIÓN INICIAL ---
+            if (history.scrollRestoration) {
+                history.scrollRestoration = 'manual';
+            }
+            window.scrollTo(0, 0);
+
+            const header = document.querySelector('.main-header');
+            let isLocked = false;
+            let unlockCounter = 0;
+            const UNLOCK_THRESHOLD = 3; 
+
+            // --- LÓGICA DE BLOQUEO (Usa 'wheel' para poder prevenir el scroll) ---
+            window.addEventListener('wheel', function(event) {
+                const isScrollingUp = event.deltaY < 0;
+                
+                if (window.scrollY <= 1 && isScrollingUp) {
+                    isLocked = true;
+                }
+
+                if (isLocked && isScrollingUp) {
+                    event.preventDefault();
+                    unlockCounter++;
+                    if (unlockCounter >= UNLOCK_THRESHOLD) {
+                        isLocked = false;
+                        unlockCounter = 0;
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
+                } else {
                     isLocked = false;
                     unlockCounter = 0;
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
-            } else if (!isScrollingUp) {
-                isLocked = false;
-                unlockCounter = 0;
-            }
-        }, { passive: false });
-        document.getElementById('logout-btn').addEventListener('click', function(event) {
-            event.preventDefault(); 
-            const confirmLogout = confirm('¿Está seguro de que desea cerrar sesión? Si lo hace, se registrará como el fin de su jornada laboral.\n\nTendrá 10 minutos para volver a iniciar sesión y continuar su trabajo sin que se registre la salida.');
-            if (confirmLogout) { window.location.href = "{% url 'cerrar_sesion' %}"; }
+            }, { passive: false });
+
+            // --- LÓGICA VISUAL (Usa 'scroll' para reaccionar al resultado) ---
+            window.addEventListener('scroll', function() {
+                if (window.scrollY > 0) {
+                    header.classList.add('scrolled');
+                } else {
+                    header.classList.remove('scrolled');
+                }
+            });
+
+            // Elimina la clase 'is-loading' para evitar el glitch inicial
+            setTimeout(() => {
+                document.body.classList.remove('is-loading');
+            }, 150);
+
+            // --- SCRIPT DE CIERRE DE SESIÓN ---
+            document.getElementById('logout-btn').addEventListener('click', function(event) {
+                event.preventDefault(); 
+                const confirmLogout = confirm('¿Está seguro de que desea cerrar sesión? Si lo hace, se registrará como el fin de su jornada laboral.\n\nTendrá 10 minutos para volver a iniciar sesión y continuar su trabajo sin que se registre la salida.');
+                if (confirmLogout) {
+                    window.location.href = "{% url 'cerrar_sesion' %}";
+                }
+            });
         });
     </script>
 </body>
