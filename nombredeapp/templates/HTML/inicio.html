@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Página de Inicio - La Merced</title>
     <link rel="stylesheet" href="{% static 'CSS/inicio_styles.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <header class="main-header">
@@ -31,88 +32,59 @@
                 <div class="tools-actions">
                     <h3>{{ request.session.rol_nombre|default:"RRHH" }}</h3>
                     <div class="buttons-wrapper">
-                        <a href="{% url 'cerrar_sesion' %}" id="logout-btn" class="action-btn logout">Cerrar Sesion</a>
+                        <a href="{% url 'cerrar_sesion' %}" id="logout-btn" class="action-btn logout">Cerrar Sesión</a>
                         <a href="#" class="action-btn profile">Perfil</a>
                     </div>
                 </div>
+                
                 <div class="tools-grid">
-                    <div class="tool-button"></div>
-                    <div class="tool-button"></div>
-                    <div class="tool-button"></div>
-                    <div class="tool-button"></div>
-                    <div class="tool-button"></div>
-                    <div class="tool-button"></div>
-                    <div class="tool-button"></div>
-                    <div class="tool-button"></div>
-                    <div class="tool-button"></div>
+                    {% if herramientas %}
+                        {% for herramienta in herramientas %}
+                            <a href="{% url herramienta.url_nombre %}" class="tool-button">
+                                {% if herramienta.icono %}
+                                    <i class="{{ herramienta.icono }} tool-icon"></i>
+                                {% endif %}
+                                <span>{{ herramienta.nombre }}</span>
+                            </a>
+                        {% endfor %}
+                    {% else %}
+                        <p class="no-tools-message">No tienes herramientas asignadas.</p>
+                    {% endif %}
                 </div>
             </div>
         </section>
         
         <div style="height: 1000px;"></div>
-
     </main>
 
     <script>
-        // --- SCRIPT PARA RESETEAR SCROLL EN RECARGA ---
-        window.onload = function () {
-            window.scrollTo(0, 0);
-        };
-
-        // --- SCRIPT PARA EL BANNER CON "SCROLL FORZADO" (VERSIÓN DEFINITIVA) ---
+        window.onload = function () { window.scrollTo(0, 0); };
         const header = document.querySelector('.main-header');
         let isLocked = false;
         let unlockCounter = 0;
-        const UNLOCK_THRESHOLD = 3; // Número de "scrolls" hacia arriba para desbloquear
-
+        const UNLOCK_THRESHOLD = 3;
         window.addEventListener('wheel', function(event) {
             const isScrollingUp = event.deltaY < 0;
             const currentScrollY = window.scrollY;
-
-            // Lógica de cambio visual
-            if (currentScrollY > 0) {
-                header.classList.add('scrolled');
-            } else {
-                header.classList.remove('scrolled');
-            }
-
-            // --- LÓGICA DE BLOQUEO Y DESBLOQUEO ---
-            
-            // Si estamos cerca de la cima y subiendo, entramos en modo "bloqueado".
-            if (currentScrollY <= 1 && isScrollingUp) {
-                isLocked = true;
-            }
-
+            if (currentScrollY > 0) { header.classList.add('scrolled'); } else { header.classList.remove('scrolled'); }
+            if (currentScrollY <= 1 && isScrollingUp) { isLocked = true; }
             if (isLocked && isScrollingUp) {
-                // Prevenimos que la página suba por sí sola.
                 event.preventDefault();
                 unlockCounter++;
-
-                // Si se ha forzado lo suficiente, se desbloquea.
                 if (unlockCounter >= UNLOCK_THRESHOLD) {
                     isLocked = false;
                     unlockCounter = 0;
-                    // Llevamos al usuario a la cima suavemente.
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
             } else if (!isScrollingUp) {
-                // Si el usuario empieza a bajar, se resetea el bloqueo inmediatamente.
                 isLocked = false;
                 unlockCounter = 0;
             }
-
         }, { passive: false });
-
-
-        // --- SCRIPT PARA CIERRE DE SESIÓN ---
         document.getElementById('logout-btn').addEventListener('click', function(event) {
             event.preventDefault(); 
-            const confirmLogout = confirm(
-                '¿Está seguro de que desea cerrar sesión? Si lo hace, se registrará como el fin de su jornada laboral.\n\nTendrá 10 minutos para volver a iniciar sesión y continuar su trabajo sin que se registre la salida.'
-            );
-            if (confirmLogout) {
-                window.location.href = "{% url 'cerrar_sesion' %}";
-            }
+            const confirmLogout = confirm('¿Está seguro de que desea cerrar sesión? Si lo hace, se registrará como el fin de su jornada laboral.\n\nTendrá 10 minutos para volver a iniciar sesión y continuar su trabajo sin que se registre la salida.');
+            if (confirmLogout) { window.location.href = "{% url 'cerrar_sesion' %}"; }
         });
     </script>
 </body>

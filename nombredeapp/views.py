@@ -2,7 +2,7 @@
 # nombredeapp/views.py
 
 from django.shortcuts import render, redirect
-from caja.models import Usuarios as Usuario, Empleados as Empleado, Roles as Rol, Usuariosxrol as UsuarioRol, RegistroSeguridad, TokenRecuperacion, Asistencias
+from caja.models import Usuarios as Usuario, Empleados as Empleado, Roles as Rol, Usuariosxrol as UsuarioRol, RegistroSeguridad, TokenRecuperacion, Asistencias, Permiso
 from django.utils import timezone
 from datetime import timedelta, date
 import random
@@ -332,3 +332,25 @@ def cambiar_contrasena(request):
 def acceso_denegado(request):
     """Página que se muestra si el usuario cancela la recuperación o el token es inválido."""
     return render(request, 'HTML/acceso_denegado.html')
+
+def pagina_inicio(request):
+    """Página principal a la que se accede después de iniciar sesión."""
+    usuario_id = request.session.get('usuario_id')
+    if not usuario_id:
+        return redirect('iniciar_sesion')
+    
+    nombre_usuario = request.session.get('nombre_usuario', '').capitalize()
+    
+    # --- LÓGICA PARA OBTENER HERRAMIENTAS POR ROL ---
+    rol_id = request.session.get('rol_id')
+    herramientas_permitidas = []
+    if rol_id:
+        # Buscamos en el modelo Permiso todas las herramientas asociadas a este rol
+        permisos = Permiso.objects.filter(rol_id=rol_id).select_related('herramienta')
+        herramientas_permitidas = [p.herramienta for p in permisos]
+
+    context = {
+        'nombre_usuario': nombre_usuario,
+        'herramientas': herramientas_permitidas # Enviamos la lista a la plantilla
+    }
+    return render(request, 'HTML/inicio.html', context)
