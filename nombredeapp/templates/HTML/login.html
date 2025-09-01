@@ -1,0 +1,54 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - Comestible La Merced</title>
+    <link rel="stylesheet" href="{% static 'CSS/login_styles.css' %}">
+</head>
+<body>
+    <div class="login-container">
+        <form class="login-form" method="post" action="{% url 'iniciar_sesion' %}">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="username">Usuario</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            
+            <div class="form-group password-wrapper">
+                <label for="password">Contraseña</label>
+                <input type="password" id="password" name="password" required>
+                <img src="{% static 'iconos/eyeX.png' %}" 
+                     class="toggle-password" 
+                     data-target="password" 
+                     data-open-eye="{% static 'iconos/eye.png' %}"
+                     data-closed-eye="{% static 'iconos/eyeX.png' %}"
+                     alt="Mostrar/Ocultar">
+            </div>
+
+            {% if error %}
+            <div class="error-message">{{ error }}</div>
+            {% endif %}
+            
+            <button type="submit" class="submit-btn">Aceptar</button>
+        </form>
+        
+        <div class="forgot-password">
+            <span>¿Olvidaste tu contraseña?</span>
+            <form action="{% url 'solicitar_usuario' %}" method="post" style="display: inline;">
+                {% csrf_token %}
+                <input type="hidden" name="username_from_login" id="username_from_login">
+                <button type="submit" class="forgot-btn">SI</button>
+            </form>
+        </div>
+    </div>
+    <script src="{% static 'JS/password_visibility.js' %}"></script>
+    <script>
+        document.querySelector('.forgot-btn').addEventListener('mouseover', () => {
+            document.getElementById('username_from_login').value = document.getElementById('username').value;
+        });
+    </script>
+</body>
+</html>

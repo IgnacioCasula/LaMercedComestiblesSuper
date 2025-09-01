@@ -1,0 +1,148 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Página de Inicio - La Merced</title>
+    <link rel="stylesheet" href="{% static 'CSS/inicio_styles.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="is-loading">
+
+    <header class="main-header">
+        <div class="header-background"></div>
+        <h1>Hola, {{ nombre_usuario }}</h1>
+    </header>
+
+    <main class="main-container">
+        <section class="panel preview-panel">
+            <h2>Vista Previa</h2>
+            <div class="panel-content">
+                 {% if tiene_permiso_vista_previa %}
+                    <div class="preview-placeholder">
+                        <img src="{% static 'iconos/trending_up.png' %}" alt="Icono de vista previa" class="preview-icon">
+                        <p>Vista previa</p>
+                        <button class="select-button" disabled>Seleccionar</button>
+                    </div>
+                {% else %}
+                    <div class="preview-placeholder">
+                        <img src="{% static 'iconos/Dangero_us.png' %}" alt="Icono de peligro" class="preview-icon no-permission-icon">
+                        <p>No tienes permiso.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="panel tools-panel">
+            <h2>Herramientas</h2>
+            <div class="panel-content">
+                <div class="tools-actions">
+                    <h3>{{ request.session.rol_nombre|default:"RRHH" }}</h3>
+                    <div class="buttons-wrapper">
+                        <a href="{% url 'cerrar_sesion' %}" id="logout-btn" class="action-btn logout">Cerrar Sesión</a>
+                        <a href="#" class="action-btn profile">Perfil</a>
+                    </div>
+                </div>
+                <div class="tools-grid">
+                    {% if herramientas %}
+                        {% for herramienta in herramientas %}
+                            <a href="{% url herramienta.url_nombre %}" class="tool-button">
+                                {% if herramienta.icono %}
+                                    <i class="{{ herramienta.icono }} tool-icon"></i>
+                                {% endif %}
+                                <span>{{ herramienta.nombre }}</span>
+                            </a>
+                        {% endfor %}
+                    {% else %}
+                        <p class="no-tools-message">No tienes herramientas asignadas.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+        
+        <div style="height: 1000px;"></div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- CONFIGURACIÓN Y ELEMENTOS DEL DOM ---
+            const header = document.querySelector('.main-header');
+            const body = document.body;
+            
+            if (history.scrollRestoration) {
+                history.scrollRestoration = 'manual';
+            }
+            window.scrollTo(0, 0);
+
+            // --- ESTADO Y PARÁMETROS ---
+            const state = {
+                unlockCounter: 0,
+                isTicking: false
+            };
+            const UNLOCK_THRESHOLD = 3; // Giros de rueda necesarios para expandir
+
+            // --- LISTENER DE SCROLL (SIMPLIFICADO) ---
+            // Su ÚNICA responsabilidad es ENCOGER el header. NUNCA lo expande.
+            function handleScroll() {
+                if (window.scrollY > 0) {
+                    header.classList.add('scrolled');
+                }
+                // NOTA: No hay 'else' aquí. La expansión es manejada 100% por el evento 'wheel'.
+                state.isTicking = false;
+            }
+
+            window.addEventListener('scroll', () => {
+                if (!state.isTicking) {
+                    window.requestAnimationFrame(handleScroll);
+                    state.isTicking = true;
+                }
+            });
+
+            // --- LISTENER DE WHEEL (CONTROLADOR DE EXPANSIÓN) ---
+            // Se encarga de la lógica de bloqueo y expansión en el borde superior.
+            window.addEventListener('wheel', (event) => {
+                const isScrollingUp = event.deltaY < 0;
+                const isAtTop = window.scrollY === 0;
+                const isShrunk = header.classList.contains('scrolled');
+
+                // La lógica de bloqueo SOLO se aplica si el header está encogido,
+                // estamos en la cima y el usuario intenta subir.
+                if (isShrunk && isAtTop && isScrollingUp) {
+                    // 1. Prevenir el scroll "rebotante" del navegador.
+                    event.preventDefault();
+
+                    // 2. Incrementar el contador para el gesto de "forzar".
+                    state.unlockCounter++;
+
+                    // 3. Si se alcanza el umbral, expandir el header y resetear.
+                    if (state.unlockCounter >= UNLOCK_THRESHOLD) {
+                        header.classList.remove('scrolled');
+                        state.unlockCounter = 0;
+                    }
+                } else {
+                    // Si no estamos en el escenario de bloqueo, reseteamos el contador.
+                    // Esto asegura que el usuario deba hacer los giros de rueda seguidos en la cima.
+                    state.unlockCounter = 0;
+                }
+
+            }, { passive: false }); // 'passive: false' es crucial para que preventDefault() funcione.
+
+
+            // --- LÓGICA DE CIERRE DE SESIÓN ---
+            document.getElementById('logout-btn').addEventListener('click', function(event) {
+                event.preventDefault(); 
+                const confirmLogout = confirm('¿Está seguro de que desea cerrar sesión? Si lo hace, se registrará como el fin de su jornada laboral.\n\nTendrá 10 minutos para volver a iniciar sesión y continuar su trabajo sin que se registre la salida.');
+                if (confirmLogout) {
+                    window.location.href = "{% url 'cerrar_sesion' %}";
+                }
+            });
+
+            // Quitar la clase de carga para activar las animaciones de CSS
+            setTimeout(() => {
+                body.classList.remove('is-loading');
+            }, 150);
+        });
+    </script>
+</body>
+</html>
