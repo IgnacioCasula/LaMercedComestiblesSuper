@@ -297,3 +297,34 @@ class TokenRecuperacion(models.Model):
     expiracion_token_email = models.DateTimeField()
     activo = models.BooleanField(default=True)
     creado_en = models.DateTimeField(auto_now_add=True)
+
+class Herramienta(models.Model):
+    idherramienta = models.AutoField(primary_key=True)
+    nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre de la Herramienta")
+    # El nombre de la URL que usarás en urls.py, ej: 'ver_lista_empleados'
+    url_nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre de URL (para {% url %})")
+    # Opcional: para añadir un ícono visual en el futuro
+    icono = models.CharField(max_length=50, blank=True, null=True, verbose_name="Clase del Icono (ej: fa-users)")
+
+    class Meta:
+        db_table = 'herramientas'
+        verbose_name = "Herramienta"
+        verbose_name_plural = "Herramientas"
+
+    def __str__(self):
+        return self.nombre
+
+class Permiso(models.Model):
+    idpermiso = models.AutoField(primary_key=True)
+    rol = models.ForeignKey(Roles, on_delete=models.CASCADE, related_name="permisos")
+    herramienta = models.ForeignKey(Herramienta, on_delete=models.CASCADE)
+
+    class Meta:
+        db_table = 'permisos'
+        # Nos aseguramos de que un rol no pueda tener el mismo permiso dos veces
+        unique_together = [['rol', 'herramienta']]
+        verbose_name = "Permiso"
+        verbose_name_plural = "Permisos"
+
+    def __str__(self):
+        return f"El rol '{self.rol.nombrerol}' tiene permiso para '{self.herramienta.nombre}'"
