@@ -13,4 +13,5 @@ urlpatterns = [
     path('recuperar/verificar-email/<uuid:token>/', views.verificar_email, name='verificar_email'),
     path('recuperar/cambiar-contrasena/', views.cambiar_contrasena, name='cambiar_contrasena'),
     path('recuperar/acceso-denegado/', views.acceso_denegado, name='acceso_denegado'),
+    path('empleados/crear/', views.crear_empleado_vista, name='crear_empleado'),
 ]
