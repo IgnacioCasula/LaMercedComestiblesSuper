@@ -41,8 +41,7 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // CORRECCIÓN: Se quitó un punto y coma extra
-            const rolesPorArea = {{ roles_por_area_json|safe }};
+            const rolesPorArea = JSON.parse('{{ roles_por_area_json|escapejs }}');
 
             const areaSelect = document.getElementById('area');
             const rolSelect = document.getElementById('rol');
