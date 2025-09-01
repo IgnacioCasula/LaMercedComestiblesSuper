@@ -2,10 +2,11 @@
 # nombredeapp/views.py
 
 from django.shortcuts import render, redirect
-from caja.models import Usuarios as Usuario, Empleados as Empleado, Roles as Rol, Usuariosxrol as UsuarioRol, RegistroSeguridad, TokenRecuperacion
+from caja.models import Usuarios as Usuario, Empleados as Empleado, Roles as Rol, Usuariosxrol as UsuarioRol, RegistroSeguridad, TokenRecuperacion, Asistencias
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, date
 import random
+import json
 
 def obtener_ip(request):
     """Obtiene la dirección IP real del cliente."""
@@ -30,6 +31,26 @@ def iniciar_sesion(request):
                 try:
                     empleado = Empleado.objects.get(idusuarios=usuario)
                     if empleado.estado == 'Trabajando':
+                        # Lógica del período de gracia
+                        last_asistencia_id = request.session.get('last_asistencia_id')
+                        grace_period_end_str = request.session.get('grace_period_end')
+                        
+                        if last_asistencia_id and grace_period_end_str:
+                            grace_period_end = timezone.datetime.fromisoformat(grace_period_end_str)
+                            if timezone.now() <= grace_period_end:
+                                # El usuario está dentro del período de gracia, revertir la salida
+                                try:
+                                    asistencia_a_revertir = Asistencias.objects.get(pk=last_asistencia_id, idempleado=empleado)
+                                    asistencia_a_revertir.horasalida = None
+                                    asistencia_a_revertir.save()
+                                except Asistencias.DoesNotExist:
+                                    pass # La asistencia fue borrada o es incorrecta, ignorar
+                            
+                            # Limpiar las variables de sesión del período de gracia
+                            del request.session['last_asistencia_id']
+                            del request.session['grace_period_end']
+
+                        # Lógica de selección de roles
                         conteo_roles = UsuarioRol.objects.filter(idusuarios=usuario).count()
 
                         if conteo_roles > 1:
@@ -38,7 +59,8 @@ def iniciar_sesion(request):
                         else:
                             rol_relacion = UsuarioRol.objects.filter(idusuarios=usuario).first()
                             request.session['usuario_id'] = usuario.idusuarios
-                            request.session['nombre_usuario'] = f"{usuario.nombreusuario} {usuario.apellidousuario}"
+                            request.session['nombre_usuario'] = usuario.nombreusuario
+                            request.session['apellido_usuario'] = usuario.apellidousuario
                             if rol_relacion:
                                 request.session['rol_id'] = rol_relacion.idroles.idroles
                                 request.session['rol_nombre'] = rol_relacion.idroles.nombrerol
@@ -80,32 +102,98 @@ def seleccionar_rol(request):
     usuario_id = request.session.get('pre_auth_usuario_id')
     if not usuario_id:
         return redirect('iniciar_sesion')
-    
+
     usuario = Usuario.objects.get(idusuarios=usuario_id)
-    roles_del_usuario = UsuarioRol.objects.filter(idusuarios=usuario)
+    roles_del_usuario = UsuarioRol.objects.filter(idusuarios=usuario).select_related('idroles', 'idroles__area')
 
     if request.method == 'POST':
         rol_id_seleccionado = request.POST.get('rol_id')
         rol_seleccionado = Rol.objects.get(idroles=rol_id_seleccionado)
 
         request.session['usuario_id'] = usuario.idusuarios
-        request.session['nombre_usuario'] = f"{usuario.nombreusuario} {usuario.apellidousuario}"
+        request.session['nombre_usuario'] = usuario.nombreusuario
+        request.session['apellido_usuario'] = usuario.apellidousuario
         request.session['rol_id'] = rol_seleccionado.idroles
         request.session['rol_nombre'] = rol_seleccionado.nombrerol
         del request.session['pre_auth_usuario_id']
-
         return redirect('inicio')
-    return render(request, 'HTML/seleccionar_rol.html', {'roles_usuario': roles_del_usuario})
+
+    # Preparar datos para los dropdowns dependientes
+    areas_disponibles = sorted(
+        list(set(relacion.idroles.area for relacion in roles_del_usuario if relacion.idroles.area)),
+        key=lambda area: area.nombrearea
+    )
+    
+    roles_por_area = {}
+    for relacion in roles_del_usuario:
+        if relacion.idroles.area:
+            area_id = relacion.idroles.area.idarea
+            if area_id not in roles_por_area:
+                roles_por_area[area_id] = []
+            roles_por_area[area_id].append({
+                'id': relacion.idroles.idroles,
+                'nombre': relacion.idroles.nombrerol
+            })
+
+    context = {
+        'areas': areas_disponibles,
+        'roles_por_area_json': json.dumps(roles_por_area)
+    }
+    return render(request, 'HTML/seleccionar_rol.html', context)
 
 def pagina_inicio(request):
     """Página principal a la que se accede después de iniciar sesión."""
-    if not request.session.get('usuario_id'):
+    usuario_id = request.session.get('usuario_id')
+    if not usuario_id:
         return redirect('iniciar_sesion')
-    return render(request, 'HTML/inicio.html')
+    
+    nombre_usuario = request.session.get('nombre_usuario', '').capitalize()
+    
+    context = {
+        'nombre_usuario': nombre_usuario
+    }
+    return render(request, 'HTML/inicio.html', context)
 
 def cerrar_sesion(request):
-    """Cierra la sesión del usuario."""
+    """Cierra la sesión del usuario, registra la hora de salida y activa un período de gracia de 10 minutos."""
+    usuario_id = request.session.get('usuario_id')
+    if not usuario_id:
+        return redirect('iniciar_sesion')
+
+    try:
+        # Registrar la hora de salida en el modelo Asistencias
+        empleado = Empleado.objects.get(idusuarios_id=usuario_id)
+        asistencia_actual = Asistencias.objects.filter(
+            idempleado=empleado, 
+            fechaasistencia=date.today(),
+            horasalida__isnull=True
+        ).order_by('-horaentrada').first()
+
+        if asistencia_actual:
+            asistencia_actual.horasalida = timezone.now().time()
+            asistencia_actual.save()
+            # Guardar datos para el período de gracia
+            request.session['last_asistencia_id'] = asistencia_actual.idasistencia
+            request.session['grace_period_end'] = (timezone.now() + timedelta(minutes=10)).isoformat()
+
+    except Empleado.DoesNotExist:
+        # Si no es un empleado, simplemente cerrar sesión
+        pass
+    except Exception as e:
+        # Manejar otros posibles errores sin impedir el cierre de sesión
+        print(f"Error al registrar salida: {e}")
+
+    # Guardar las variables del período de gracia antes de limpiar el resto
+    last_asistencia_id = request.session.get('last_asistencia_id')
+    grace_period_end = request.session.get('grace_period_end')
+    
     request.session.flush()
+    
+    # Restaurar las variables del período de gracia en la nueva sesión
+    if last_asistencia_id and grace_period_end:
+        request.session['last_asistencia_id'] = last_asistencia_id
+        request.session['grace_period_end'] = grace_period_end
+        
     return redirect('iniciar_sesion')
 
 def solicitar_usuario(request):

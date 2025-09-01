@@ -1,3 +1,4 @@
+# ignaciocasula/lamercedcomestiblessuper/LaMercedComestiblesSuper-9e4cb265129870267e8e016db0b510984c444d8d/nombredeapp/management/commands/crear_usuarios.py
 # nombredeapp/management/commands/crear_usuarios.py
 
 from django.core.management.base import BaseCommand
@@ -35,7 +36,16 @@ class Command(BaseCommand):
                 'fecharegistrousuario': date.today()
             }
         )
-        Empleado.objects.get_or_create(idusuarios=usuario_laura, defaults={'cargoempleado': 'Cajera Principal', 'estado': 'Trabajando'})
+        # CORRECCIÓN: Se añaden los campos obligatorios 'salarioempleado' y 'fechacontratado'
+        Empleado.objects.get_or_create(
+            idusuarios=usuario_laura, 
+            defaults={
+                'cargoempleado': 'Cajera Principal', 
+                'estado': 'Trabajando',
+                'salarioempleado': 50000.00,  # Valor de ejemplo
+                'fechacontratado': date.today() # Valor de ejemplo
+            }
+        )
         UsuarioRol.objects.get_or_create(idusuarios=usuario_laura, idroles=puesto_super_caja)
         if created:
             self.stdout.write(self.style.SUCCESS("Usuario 1 (Laura Gomez) creado y asignado."))
@@ -52,7 +62,16 @@ class Command(BaseCommand):
                 'fecharegistrousuario': date.today()
             }
         )
-        Empleado.objects.get_or_create(idusuarios=usuario_marcos, defaults={'cargoempleado': 'Jefe de Salon', 'estado': 'Trabajando'})
+        # CORRECCIÓN: Se añaden los campos obligatorios 'salarioempleado' y 'fechacontratado'
+        Empleado.objects.get_or_create(
+            idusuarios=usuario_marcos, 
+            defaults={
+                'cargoempleado': 'Jefe de Salon', 
+                'estado': 'Trabajando',
+                'salarioempleado': 75000.00,  # Valor de ejemplo
+                'fechacontratado': date.today() # Valor de ejemplo
+            }
+        )
         UsuarioRol.objects.get_or_create(idusuarios=usuario_marcos, idroles=puesto_gerente)
         UsuarioRol.objects.get_or_create(idusuarios=usuario_marcos, idroles=puesto_repositor)
         UsuarioRol.objects.get_or_create(idusuarios=usuario_marcos, idroles=puesto_admin)

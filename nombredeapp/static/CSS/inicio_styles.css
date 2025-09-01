@@ -1,0 +1,135 @@
+/* ignaciocasula/lamercedcomestiblessuper/LaMercedComestiblesSuper-9e4cb265129870267e8e016db0b510984c444d8d/nombredeapp/static/CSS/inicio_styles.css */
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f0f2f5;
+    color: #333;
+}
+
+.main-header {
+    background-color: #e0e0e0;
+    padding: 10px 40px;
+    border-bottom: 1px solid #ccc;
+}
+
+.main-header h1 {
+    margin: 0;
+    font-size: 24px;
+}
+
+.main-container {
+    display: flex;
+    padding: 20px;
+    gap: 20px;
+}
+
+.panel {
+    background-color: #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.panel h2 {
+    margin-top: 0;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 10px;
+    font-size: 18px;
+    color: #555;
+}
+
+.preview-panel {
+    flex-basis: 40%;
+}
+
+.preview-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    height: 80%;
+}
+
+.preview-icon {
+    width: 64px;
+    height: 64px;
+    opacity: 0.5;
+}
+
+.select-button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    border: none;
+    background-color: #b0b0b0;
+    color: #fff;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: not-allowed;
+}
+
+.tools-panel {
+    flex-basis: 60%;
+}
+
+.tools-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.tools-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: normal;
+    background-color: #ccc;
+    padding: 8px 15px;
+    border-radius: 5px;
+}
+
+.user-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.action-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 5px;
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+    cursor: pointer;
+    text-align: center;
+}
+
+.action-btn.logout {
+    background-color: #e57373; /* Rojo claro */
+}
+
+.action-btn.profile {
+    background-color: #81c784; /* Verde claro */
+}
+
+.action-btn.logout:hover {
+    background-color: #ef5350; /* Rojo más oscuro */
+}
+
+.action-btn.profile:hover {
+    background-color: #66bb6a; /* Verde más oscuro */
+}
+
+
+.tools-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+
+.tool-button {
+    background-color: #757575; /* Gris oscuro */
+    height: 100px;
+    border-radius: 5px;
+    cursor: pointer;
+}
