@@ -3,20 +3,61 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Página de Inicio</title>
-    <link rel="stylesheet" href="{% static 'CSS/login_styles.css' %}">
+    <link rel="stylesheet" href="{% static 'CSS/inicio_styles.css' %}">
 </head>
 <body>
-    <div class="login-container">
-        <h1>Bienvenido al Sistema</h1>
-        {% if request.session.nombre_usuario %}
-            <p>Has iniciado sesión como: <strong>{{ request.session.nombre_usuario }}</strong></p>
-            <p>Puesto seleccionado: <strong>{{ request.session.rol_nombre }}</strong></p>
-        {% else %}
-            <p>No has iniciado sesión.</p>
-        {% endif %}
-        <br>
-        <a href="{% url 'cerrar_sesion' %}">Cerrar Sesión</a>
-    </div>
+    <header class="main-header">
+        <h1>Hola, {{ nombre_usuario }}</h1>
+    </header>
+
+    <main class="main-container">
+        <section class="panel preview-panel">
+            <h2>Vista Previa</h2>
+            <div class="preview-content">
+                <img src="{% static 'iconos/trending_up.png' %}" alt="Vista Previa" class="preview-icon">
+                <p>Vista previa</p>
+                <button class="select-button" disabled>Seleccionar</button>
+            </div>
+        </section>
+
+        <section class="panel tools-panel">
+            <h2>Herramientas</h2>
+            <div class="tools-header">
+                <h3>{{ request.session.rol_nombre }}</h3>
+                <div class="user-actions">
+                    <a href="#" id="logout-btn" class="action-btn logout">Cerrar Sesión</a>
+                    <a href="#" class="action-btn profile">Perfil</a>
+                </div>
+            </div>
+            <div class="tools-grid">
+                <div class="tool-button"></div>
+                <div class="tool-button"></div>
+                <div class="tool-button"></div>
+                <div class="tool-button"></div>
+                <div class="tool-button"></div>
+                <div class="tool-button"></div>
+                <div class="tool-button"></div>
+                <div class="tool-button"></div>
+                <div class="tool-button"></div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        document.getElementById('logout-btn').addEventListener('click', function(event) {
+            event.preventDefault(); // Evita que el enlace navegue inmediatamente
+            
+            const confirmLogout = confirm(
+                '¿Está seguro de que desea cerrar sesión? Si lo hace, se registrará como el fin de su jornada laboral.\n\nTendrá 10 minutos para volver a iniciar sesión y continuar su trabajo sin que se registre la salida.'
+            );
+            
+            if (confirmLogout) {
+                // Si el usuario confirma, redirige a la URL de cerrar sesión
+                window.location.href = "{% url 'cerrar_sesion' %}";
+            }
+        });
+    </script>
 </body>
 </html>
