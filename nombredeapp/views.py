@@ -348,9 +348,15 @@ def pagina_inicio(request):
         # Buscamos en el modelo Permiso todas las herramientas asociadas a este rol
         permisos = Permiso.objects.filter(rol_id=rol_id).select_related('herramienta')
         herramientas_permitidas = [p.herramienta for p in permisos]
+        tiene_permiso_vista_previa = False
 
     context = {
         'nombre_usuario': nombre_usuario,
-        'herramientas': herramientas_permitidas # Enviamos la lista a la plantilla
+        'herramientas': herramientas_permitidas,
+        'tiene_permiso_vista_previa': tiene_permiso_vista_previa, # Nueva variable
     }
     return render(request, 'HTML/inicio.html', context)
+
+def crear_empleado_vista(request):
+    # Por ahora, solo renderiza la plantilla. La lógica del POST vendrá después.
+    return render(request, 'HTML/crear_empleado.html')
