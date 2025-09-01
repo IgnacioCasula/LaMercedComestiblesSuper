@@ -1,3 +1,4 @@
+# ignaciocasula/lamercedcomestiblessuper/LaMercedComestiblesSuper-9e4cb265129870267e8e016db0b510984c444d8d/nombredeapp/views.py
 # nombredeapp/views.py
 
 from django.shortcuts import render, redirect

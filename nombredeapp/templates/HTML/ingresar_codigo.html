@@ -21,6 +21,9 @@
             {% if error %}
             <div class="error-message">{{ error }}</div>
             {% endif %}
+            {% if message %}
+            <div class="success-message">{{ message }}</div>
+            {% endif %}
             <button type="submit" class="submit-btn">Enviar</button>
             <p style="font-size: 12px; text-align: center; margin-top: 10px;">Si el código es correcto, se le enviará un mensaje por correo.</p>
             <a href="{% url 'reenviar_codigo' %}" class="resend-btn">Volver a enviar código</a>
