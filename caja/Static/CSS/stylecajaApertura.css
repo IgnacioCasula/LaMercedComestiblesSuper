@@ -1,6 +1,6 @@
 body{
     font-family: 'Roboto', sans-serif;
-    background-color: #f5f7fa;
+    background-color: #333;
     color: #333;
     line-height: 1.6;
 }
@@ -9,6 +9,7 @@ body{
     max-width: 1000px;
     margin: 0 auto;
     padding: 20px;
+    background-color: #333;
 }
 
 .EncabezadoCajaApertura {
@@ -27,11 +28,13 @@ body{
     color: var(--primary-color);
     font-size: 28px;
     font-weight: 700;
+    margin-left: 10px;
 }
 
 .SubtituloSuper {
     color: var(--text-light);
-    font-size: 14px;
+    font-size: 20px;
+    margin-left: 10px;
 }
 
 .EncabezadoInfoUsu {
@@ -43,6 +46,8 @@ body{
     align-items: center;
     gap: 8px;
     margin-bottom: 5px;
+    font-size: 20px;
+    margin-right: 10px;
 }
 
 .IconoUsu {
@@ -50,8 +55,9 @@ body{
 }
 
 .UsuarioFecha {
-    font-size: 14px;
+    font-size: 20px;
     color: var(--text-light);
+    margin-right: 10px;
 }
 
 .EstadoCaja, .AperturaPanel {
@@ -88,6 +94,8 @@ body{
     justify-content: space-between;
     align-items: center;
     margin-bottom: 15px;
+    margin-left: 10px;
+    margin-right: 10px;
 }
 
 .EstadoIndicador {
@@ -114,10 +122,14 @@ body{
 .EstadoTexto {
     font-weight: 500;
     color: var(--danger-color);
+    font-size: 20px;
 }
 
 .EstadoDetalles {
     padding: 0 5px;
+    font-size: 20px;
+    margin-left: 10px;
+    margin-right: 10px;
 }
 
 .EstadoMensaje {
@@ -125,7 +137,7 @@ body{
 }
 
 .UltimaOperacion {
-    font-size: 14px;
+    font-size: 20px;
     color: var(--text-light);
 }
 
