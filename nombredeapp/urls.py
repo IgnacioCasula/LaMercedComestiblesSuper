@@ -1,4 +1,3 @@
-# ignaciocasula/lamercedcomestiblessuper/LaMercedComestiblesSuper-9e4cb265129870267e8e016db0b510984c444d8d/nombredeapp/urls.py
 from django.urls import path
 from . import views
 
@@ -14,4 +13,9 @@ urlpatterns = [
     path('recuperar/cambiar-contrasena/', views.cambiar_contrasena, name='cambiar_contrasena'),
     path('recuperar/acceso-denegado/', views.acceso_denegado, name='acceso_denegado'),
     path('empleados/crear/', views.crear_empleado_vista, name='crear_empleado'),
+    path('api/areas/', views.api_areas, name='api_areas'),
+    path('api/areas/crear/', views.api_crear_area, name='api_crear_area'),
+    path('api/puestos/<int:area_id>/', views.api_puestos_por_area, name='api_puestos_por_area'),
+    path('api/puestos/crear/', views.api_crear_puesto, name='api_crear_puesto'),
+    path('api/empleados/registrar/', views.api_registrar_empleado, name='api_registrar_empleado'),
 ]
