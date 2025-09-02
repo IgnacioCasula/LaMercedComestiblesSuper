@@ -1,8 +1,7 @@
-# ignaciocasula/lamercedcomestiblessuper/LaMercedComestiblesSuper-9e4cb265129870267e8e016db0b510984c444d8d/nombredeapp/views.py
-# nombredeapp/views.py
+# ignaciocasula/lamercedcomestiblessuper/LaMercedComestiblesSuper-01f8d833acd495d85802e57720fa43f65e7b42b3/nombredeapp/views.py
 
 from django.shortcuts import render, redirect
-from caja.models import Usuarios as Usuario, Empleados as Empleado, Roles as Rol, Usuariosxrol as UsuarioRol, RegistroSeguridad, TokenRecuperacion, Asistencias, Permiso
+from caja.models import Usuarios as Usuario, Empleados as Empleado, Roles as Rol, Usuariosxrol as UsuarioRol, RegistroSeguridad, TokenRecuperacion, Asistencias, Permiso, Herramienta
 from django.utils import timezone
 from datetime import timedelta, date
 import random
@@ -31,26 +30,22 @@ def iniciar_sesion(request):
                 try:
                     empleado = Empleado.objects.get(idusuarios=usuario)
                     if empleado.estado == 'Trabajando':
-                        # Lógica del período de gracia
                         last_asistencia_id = request.session.get('last_asistencia_id')
                         grace_period_end_str = request.session.get('grace_period_end')
                         
                         if last_asistencia_id and grace_period_end_str:
                             grace_period_end = timezone.datetime.fromisoformat(grace_period_end_str)
                             if timezone.now() <= grace_period_end:
-                                # El usuario está dentro del período de gracia, revertir la salida
                                 try:
                                     asistencia_a_revertir = Asistencias.objects.get(pk=last_asistencia_id, idempleado=empleado)
                                     asistencia_a_revertir.horasalida = None
                                     asistencia_a_revertir.save()
                                 except Asistencias.DoesNotExist:
-                                    pass # La asistencia fue borrada o es incorrecta, ignorar
+                                    pass
                             
-                            # Limpiar las variables de sesión del período de gracia
                             del request.session['last_asistencia_id']
                             del request.session['grace_period_end']
 
-                        # Lógica de selección de roles
                         conteo_roles = UsuarioRol.objects.filter(idusuarios=usuario).count()
 
                         if conteo_roles > 1:
@@ -73,6 +68,7 @@ def iniciar_sesion(request):
                             direccion_ip=direccion_ip, intento_usuario=intento_usuario, intento_contrasena=intento_contrasena,
                             motivo=f'Intento de login de empleado no activo. Estado: {empleado.estado}'
                         )
+                        # RUTA CORREGIDA AQUÍ
                         return render(request, 'HTML/login.html', {'error': f'Acceso denegado. Su estado es: {empleado.estado}.'})
 
                 except Empleado.DoesNotExist:
@@ -80,12 +76,14 @@ def iniciar_sesion(request):
                         direccion_ip=direccion_ip, intento_usuario=intento_usuario, intento_contrasena=intento_contrasena,
                         motivo='Usuario existe pero no es empleado.'
                     )
+                    # RUTA CORREGIDA AQUÍ
                     return render(request, 'HTML/login.html', {'error': 'Este usuario no es un empleado válido.'})
             else:
                 RegistroSeguridad.objects.create(
                     direccion_ip=direccion_ip, intento_usuario=intento_usuario, intento_contrasena=intento_contrasena,
                     motivo='Contraseña incorrecta.'
                 )
+                # RUTA CORREGIDA AQUÍ
                 return render(request, 'HTML/login.html', {'error': 'Ha ingresado mal la contraseña.'})
 
         except Usuario.DoesNotExist:
@@ -93,8 +91,10 @@ def iniciar_sesion(request):
                 direccion_ip=direccion_ip, intento_usuario=intento_usuario, intento_contrasena=intento_contrasena,
                 motivo='El empleado no existe.'
             )
+            # RUTA CORREGIDA AQUÍ
             return render(request, 'HTML/login.html', {'error': 'El empleado no existe.'})
 
+    # RUTA CORREGIDA AQUÍ
     return render(request, 'HTML/login.html')
 
 def seleccionar_rol(request):
@@ -118,7 +118,6 @@ def seleccionar_rol(request):
         del request.session['pre_auth_usuario_id']
         return redirect('inicio')
 
-    # Preparar datos para los dropdowns dependientes
     areas_disponibles = sorted(
         list(set(relacion.idroles.area for relacion in roles_del_usuario if relacion.idroles.area)),
         key=lambda area: area.nombrearea
@@ -139,7 +138,7 @@ def seleccionar_rol(request):
         'areas': areas_disponibles,
         'roles_por_area_json': json.dumps(roles_por_area)
     }
-    return render(request, 'HTML/seleccionar_rol.html', context)
+    return render(request, 'HTML/seleccionar_rol.html')
 
 def pagina_inicio(request):
     """Página principal a la que se accede después de iniciar sesión."""
@@ -149,10 +148,21 @@ def pagina_inicio(request):
     
     nombre_usuario = request.session.get('nombre_usuario', '').capitalize()
     
+    rol_id = request.session.get('rol_id')
+    herramientas_permitidas = []
+    if rol_id:
+        permisos = Permiso.objects.filter(rol_id=rol_id).select_related('herramienta')
+        herramientas_permitidas = [p.herramienta for p in permisos]
+        
+    tiene_permiso_vista_previa = any(h.url_nombre == 'vista_previa' for h in herramientas_permitidas)
+
     context = {
-        'nombre_usuario': nombre_usuario
+        'nombre_usuario': nombre_usuario,
+        'herramientas': herramientas_permitidas,
+        'tiene_permiso_vista_previa': tiene_permiso_vista_previa,
     }
     return render(request, 'HTML/inicio.html', context)
+
 
 def cerrar_sesion(request):
     """Cierra la sesión del usuario, registra la hora de salida y activa un período de gracia de 10 minutos."""
@@ -161,7 +171,6 @@ def cerrar_sesion(request):
         return redirect('iniciar_sesion')
 
     try:
-        # Registrar la hora de salida en el modelo Asistencias
         empleado = Empleado.objects.get(idusuarios_id=usuario_id)
         asistencia_actual = Asistencias.objects.filter(
             idempleado=empleado, 
@@ -172,24 +181,19 @@ def cerrar_sesion(request):
         if asistencia_actual:
             asistencia_actual.horasalida = timezone.now().time()
             asistencia_actual.save()
-            # Guardar datos para el período de gracia
             request.session['last_asistencia_id'] = asistencia_actual.idasistencia
             request.session['grace_period_end'] = (timezone.now() + timedelta(minutes=10)).isoformat()
 
     except Empleado.DoesNotExist:
-        # Si no es un empleado, simplemente cerrar sesión
         pass
     except Exception as e:
-        # Manejar otros posibles errores sin impedir el cierre de sesión
         print(f"Error al registrar salida: {e}")
 
-    # Guardar las variables del período de gracia antes de limpiar el resto
     last_asistencia_id = request.session.get('last_asistencia_id')
     grace_period_end = request.session.get('grace_period_end')
     
     request.session.flush()
     
-    # Restaurar las variables del período de gracia en la nueva sesión
     if last_asistencia_id and grace_period_end:
         request.session['last_asistencia_id'] = last_asistencia_id
         request.session['grace_period_end'] = grace_period_end
@@ -333,30 +337,9 @@ def acceso_denegado(request):
     """Página que se muestra si el usuario cancela la recuperación o el token es inválido."""
     return render(request, 'HTML/acceso_denegado.html')
 
-def pagina_inicio(request):
-    """Página principal a la que se accede después de iniciar sesión."""
-    usuario_id = request.session.get('usuario_id')
-    if not usuario_id:
-        return redirect('iniciar_sesion')
-    
-    nombre_usuario = request.session.get('nombre_usuario', '').capitalize()
-    
-    # --- LÓGICA PARA OBTENER HERRAMIENTAS POR ROL ---
-    rol_id = request.session.get('rol_id')
-    herramientas_permitidas = []
-    if rol_id:
-        # Buscamos en el modelo Permiso todas las herramientas asociadas a este rol
-        permisos = Permiso.objects.filter(rol_id=rol_id).select_related('herramienta')
-        herramientas_permitidas = [p.herramienta for p in permisos]
-        tiene_permiso_vista_previa = False
-
-    context = {
-        'nombre_usuario': nombre_usuario,
-        'herramientas': herramientas_permitidas,
-        'tiene_permiso_vista_previa': tiene_permiso_vista_previa, # Nueva variable
-    }
-    return render(request, 'HTML/inicio.html', context)
-
 def crear_empleado_vista(request):
-    # Por ahora, solo renderiza la plantilla. La lógica del POST vendrá después.
-    return render(request, 'HTML/crear_empleado.html')
+    herramientas = Herramienta.objects.all()
+    context = {
+        'herramientas': herramientas
+    }
+    return render(request, 'HTML/crear_empleado.html', context)
