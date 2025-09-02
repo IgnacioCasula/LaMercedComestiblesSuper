@@ -17,6 +17,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'nombredeapp',
     'caja',
+    'GestionDeStock'
 ]
 
 MIDDLEWARE = [

@@ -22,7 +22,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('caja/', include('caja.urls')),
     path('', include('nombredeapp.urls')),
-    path('GestionDeStock/', include('GestionDeStock.urls')),
+    path('gestion/', include('GestionDeStock.urls')), 
 ]
 
 if settings.DEBUG:
