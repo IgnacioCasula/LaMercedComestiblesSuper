@@ -10,6 +10,9 @@
 </head>
 <body class="is-loading">
 
+    <audio id="sound-expand" src="{% static 'effects/shine-1.mp3' %}" preload="auto"></audio>
+    <audio id="sound-shrink" src="{% static 'effects/magazine-swiped.mp3' %}" preload="auto"></audio>
+
     <header class="main-header">
         <div class="header-background"></div>
         <h1>Hola, {{ nombre_usuario }}</h1>
@@ -21,7 +24,7 @@
             <div class="panel-content">
                  {% if tiene_permiso_vista_previa %}
                     <div class="preview-placeholder">
-                        <img src="{% static 'iconos/trending_up.png' %}" alt="Icono de vista previa" class="preview-icon">
+                        <img src="{% static 'iconos/Trending_up.png' %}" alt="Icono de vista previa" class="preview-icon">
                         <p>Vista previa</p>
                         <button class="select-button" disabled>Seleccionar</button>
                     </div>
@@ -69,6 +72,8 @@
             // --- CONFIGURACIÓN Y ELEMENTOS DEL DOM ---
             const header = document.querySelector('.main-header');
             const body = document.body;
+            const soundExpand = document.getElementById('sound-expand');
+            const soundShrink = document.getElementById('sound-shrink');
             
             if (history.scrollRestoration) {
                 history.scrollRestoration = 'manual';
@@ -78,17 +83,54 @@
             // --- ESTADO Y PARÁMETROS ---
             const state = {
                 unlockCounter: 0,
-                isTicking: false
+                isTicking: false,
+                isExpanded: true,
+                audioUnlocked: false
             };
-            const UNLOCK_THRESHOLD = 3; // Giros de rueda necesarios para expandir
+            const UNLOCK_THRESHOLD = 3;
 
-            // --- LISTENER DE SCROLL (SIMPLIFICADO) ---
-            // Su ÚNICA responsabilidad es ENCOGER el header. NUNCA lo expande.
+            // --- CORRECCIÓN 1: FUNCIÓN PARA HABILITAR EL AUDIO ---
+            function unlockAudio() {
+                if (!state.audioUnlocked) {
+                    soundExpand.play().then(() => soundExpand.pause()).catch(() => {});
+                    soundShrink.play().then(() => soundShrink.pause()).catch(() => {});
+                    state.audioUnlocked = true;
+                    // Se remueven los listeners una vez que el audio está habilitado
+                    window.removeEventListener('click', unlockAudio);
+                    window.removeEventListener('scroll', unlockAudio);
+                    window.removeEventListener('wheel', unlockAudio);
+                }
+            }
+            // Se añade el listener a múltiples eventos para asegurar la activación
+            window.addEventListener('click', unlockAudio);
+            window.addEventListener('scroll', unlockAudio);
+            window.addEventListener('wheel', unlockAudio);
+
+            // --- CORRECCIÓN 2: SONIDO AL CARGAR LA PÁGINA ---
+            setTimeout(() => {
+                soundExpand.currentTime = 0;
+                soundExpand.play().catch(() => {});
+            }, 200);
+
+            // --- LISTENER DE SCROLL ---
             function handleScroll() {
                 if (window.scrollY > 0) {
-                    header.classList.add('scrolled');
+                    if (state.isExpanded) {
+                        state.isExpanded = false;
+                        header.classList.add('scrolled');
+                        
+                        soundShrink.currentTime = 0;
+                        soundShrink.play().catch(() => {});
+
+                        // --- CORRECCIÓN 3: EFECTO DE TEMBLOR AL FINALIZAR ---
+                        setTimeout(() => {
+                            header.classList.add('effect-shake');
+                            setTimeout(() => {
+                                header.classList.remove('effect-shake');
+                            }, 300); // Duración de la animación de temblor
+                        }, 400); // Retraso para que coincida con el fin de la transición
+                    }
                 }
-                // NOTA: No hay 'else' aquí. La expansión es manejada 100% por el evento 'wheel'.
                 state.isTicking = false;
             }
 
@@ -99,34 +141,31 @@
                 }
             });
 
-            // --- LISTENER DE WHEEL (CONTROLADOR DE EXPANSIÓN) ---
-            // Se encarga de la lógica de bloqueo y expansión en el borde superior.
+            // --- LISTENER DE WHEEL ---
             window.addEventListener('wheel', (event) => {
                 const isScrollingUp = event.deltaY < 0;
                 const isAtTop = window.scrollY === 0;
                 const isShrunk = header.classList.contains('scrolled');
 
-                // La lógica de bloqueo SOLO se aplica si el header está encogido,
-                // estamos en la cima y el usuario intenta subir.
                 if (isShrunk && isAtTop && isScrollingUp) {
-                    // 1. Prevenir el scroll "rebotante" del navegador.
                     event.preventDefault();
-
-                    // 2. Incrementar el contador para el gesto de "forzar".
                     state.unlockCounter++;
 
-                    // 3. Si se alcanza el umbral, expandir el header y resetear.
                     if (state.unlockCounter >= UNLOCK_THRESHOLD) {
                         header.classList.remove('scrolled');
                         state.unlockCounter = 0;
+
+                        if (!state.isExpanded) {
+                            state.isExpanded = true;
+                            soundExpand.currentTime = 0;
+                            soundExpand.play().catch(() => {});
+                        }
                     }
                 } else {
-                    // Si no estamos en el escenario de bloqueo, reseteamos el contador.
-                    // Esto asegura que el usuario deba hacer los giros de rueda seguidos en la cima.
                     state.unlockCounter = 0;
                 }
 
-            }, { passive: false }); // 'passive: false' es crucial para que preventDefault() funcione.
+            }, { passive: false });
 
 
             // --- LÓGICA DE CIERRE DE SESIÓN ---
@@ -138,7 +177,7 @@
                 }
             });
 
-            // Quitar la clase de carga para activar las animaciones de CSS
+            // Quitar la clase de carga para activar las animaciones
             setTimeout(() => {
                 body.classList.remove('is-loading');
             }, 150);
