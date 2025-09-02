@@ -57,16 +57,36 @@
         </div>
 
         <div class="section permissions-section">
-            <h3>Permisos: Personalizado</h3>
+            <div class="permissions-header">
+                <h3>Permisos y Herramientas</h3>
+                <div class="mode-selector">
+                    <span>Modo:</span>
+                    <button id="permissions-mode-btn" class="btn btn-light-alt">Personalizado</button>
+                </div>
+            </div>
+            <div id="permissions-list" class="permissions-list-grid">
+                {% if herramientas %}
+                    {% for herramienta in herramientas %}
+                    <div class="permission-toggle">
+                        <label class="switch">
+                            <input type="checkbox" id="perm-{{ herramienta.idherramienta }}" name="permisos" value="{{ herramienta.idherramienta }}">
+                            <span class="slider"></span>
+                        </label>
+                        <label for="perm-{{ herramienta.idherramienta }}" class="permission-label">{{ herramienta.nombre }}</label>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p>No hay herramientas disponibles para asignar.</p>
+                {% endif %}
+            </div>
         </div>
-    </div>
+        </div>
 
     <div class="main-form-actions">
         <button id="btn-cancel" class="btn btn-danger">Cancelar</button>
         <button class="btn btn-success">Listo</button>
     </div>
 </div>
-
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -103,7 +123,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // --- VALIDACIÓN Y FORMATEO DE INPUTS ---
     const nombreInput = document.getElementById('nombre');
     const apellidoInput = document.getElementById('apellido');
     const dniInput = document.getElementById('dni');
@@ -124,36 +143,28 @@ document.addEventListener('DOMContentLoaded', function() {
     dniInput.addEventListener('input', allowOnlyNumbers);
     telefonoInput.addEventListener('input', allowOnlyNumbers);
 
-    // --- NUEVO: LÓGICA DE AUTOCOMPLETADO EN TIEMPO REAL PARA EMAIL ---
     emailInput.addEventListener('input', (event) => {
         const input = event.target;
         const value = input.value;
         const domain = '@gmail.com';
         const atIndex = value.lastIndexOf('@');
 
-        // Si el usuario ha escrito '@' y está empezando a escribir el dominio
         if (atIndex !== -1) {
             const typedDomain = value.substring(atIndex);
             
-            // Verificar si lo que ha escrito coincide con el inicio de nuestro dominio
             if (domain.startsWith(typedDomain)) {
                 const suggestion = domain.substring(typedDomain.length);
                 
                 if (suggestion) {
-                    // Guardar la posición actual del cursor
                     const cursorPos = input.selectionStart;
-                    // Añadir la sugerencia
                     const newValue = value + suggestion;
                     input.value = newValue;
-                    
-                    // Seleccionar solo la parte autocompletada
                     input.setSelectionRange(cursorPos, newValue.length);
                 }
             }
         }
     });
 
-    // Lógica de autocompletado al perder el foco (se mantiene como respaldo)
     emailInput.addEventListener('blur', (event) => {
         let emailValue = event.target.value.trim();
         if (emailValue && !emailValue.includes('@')) {
@@ -168,7 +179,6 @@ document.addEventListener('DOMContentLoaded', function() {
         btnAddLaboral.style.display = 'none';
     });
 
-    // --- LÓGICA DEL HORARIO (sin cambios) ---
     const colorPaletteContainer = document.getElementById('color-palette');
     const addColorBtn = document.getElementById('add-color');
     const weeksContainer = document.getElementById('weeks-container');

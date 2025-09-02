@@ -328,3 +328,19 @@ class Permiso(models.Model):
 
     def __str__(self):
         return f"El rol '{self.rol.nombrerol}' tiene permiso para '{self.herramienta.nombre}'"
+
+class Permiso(models.Model):
+    idpermiso = models.AutoField(primary_key=True)
+    # AÑADIMOS related_name="permisos"
+    rol = models.ForeignKey(Roles, on_delete=models.CASCADE, related_name="permisos")
+    herramienta = models.ForeignKey(Herramienta, on_delete=models.CASCADE)
+
+    class Meta:
+        db_table = 'permisos'
+        # Nos aseguramos de que un rol no pueda tener el mismo permiso dos veces
+        unique_together = [['rol', 'herramienta']]
+        verbose_name = "Permiso"
+        verbose_name_plural = "Permisos"
+
+    def __str__(self):
+        return f"El rol '{self.rol.nombrerol}' tiene permiso para '{self.herramienta.nombre}'"
