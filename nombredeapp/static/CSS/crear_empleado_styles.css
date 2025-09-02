@@ -171,7 +171,7 @@ h1 {
     border: 3px solid transparent;
     border-radius: 50%;
     transition: transform 0.2s ease, border-color 0.2s;
-    position: relative; /* Para el botón de eliminar */
+    position: relative;
 }
 
 .color-box.selected {
@@ -179,7 +179,6 @@ h1 {
     transform: scale(1.2);
 }
 
-/* --- NUEVO: Estilo para el botón de eliminar color --- */
 .remove-color-trigger {
     width: 16px;
     height: 16px;
@@ -195,13 +194,13 @@ h1 {
     right: -5px;
     border-radius: 50%;
     cursor: pointer;
-    display: none; /* Oculto por defecto */
+    display: none;
     transition: background-color 0.2s ease;
     border: 1px solid white;
 }
 .remove-color-trigger:hover { background-color: #c82333; }
 .color-box:hover .remove-color-trigger { display: block; }
-.color-box.is-last .remove-color-trigger { display: none; } /* Ocultar en el último color */
+.color-box.is-last .remove-color-trigger { display: none; }
 
 
 .schedule-week {
@@ -287,7 +286,6 @@ h1 {
 .btn-danger { background-color: #dc3545; color: white; }
 .btn-success { background-color: #28a745; color: white; }
 
-/* --- NUEVOS ESTILOS PARA LA SECCIÓN DE PERMISOS --- */
 .permissions-header {
     display: flex;
     justify-content: space-between;
@@ -319,10 +317,9 @@ h1 {
 .permission-description {
     font-size: 0.85em;
     color: #6c757d;
-    margin: 8px 0 0 63px; /* Alineado con el texto del label */
+    margin: 8px 0 0 63px;
     padding-left: 2px;
 }
-
 
 /* Estilos del interruptor (toggle switch) */
 .switch { position: relative; display: inline-block; width: 48px; height: 24px; }
@@ -331,3 +328,112 @@ h1 {
 .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
 input:checked + .slider { background-color: #28a745; }
 input:checked + .slider:before { transform: translateX(24px); }
+
+/* --- Estilos para las Ventanas Modales --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: none; /* Oculto por defecto */
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    position: relative;
+}
+
+.modal-content h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.modal-options {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.modal-btn {
+    padding: 15px;
+    font-size: 16px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    background-color: #f8f9fa;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.modal-btn:hover {
+    background-color: #e9ecef;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 25px;
+}
+
+#searchInput {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+#resultsList {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #eee;
+    border-radius: 5px;
+}
+
+#resultsList li {
+    padding: 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+}
+
+#resultsList li:last-child {
+    border-bottom: none;
+}
+
+#resultsList li:hover {
+    background-color: #f0f0f0;
+}
+
+.area-puesto .selector-btn {
+    width: 100%;
+    padding: 10px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    text-align: left;
+    cursor: pointer;
+}
+.area-puesto .selector-btn.selected {
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+    font-weight: bold;
+}
+.area-puesto .selector-btn:disabled {
+    background-color: #e9ecef;
+    cursor: not-allowed;
+    opacity: 0.7;
+}

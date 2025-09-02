@@ -1,11 +1,14 @@
-# ignaciocasula/lamercedcomestiblessuper/LaMercedComestiblesSuper-01f8d833acd495d85802e57720fa43f65e7b42b3/nombredeapp/views.py
-
 from django.shortcuts import render, redirect
 from caja.models import Usuarios as Usuario, Empleados as Empleado, Roles as Rol, Usuariosxrol as UsuarioRol, RegistroSeguridad, TokenRecuperacion, Asistencias, Permiso, Herramienta
+from django.http import JsonResponse
+from caja.models import Area, Roles
 from django.utils import timezone
-from datetime import timedelta, date
+from datetime import timedelta, date, datetime
+from django.core.mail import send_mail
+from django.db import transaction
 import random
 import json
+import string
 
 def obtener_ip(request):
     """Obtiene la dirección IP real del cliente."""
@@ -68,7 +71,6 @@ def iniciar_sesion(request):
                             direccion_ip=direccion_ip, intento_usuario=intento_usuario, intento_contrasena=intento_contrasena,
                             motivo=f'Intento de login de empleado no activo. Estado: {empleado.estado}'
                         )
-                        # RUTA CORREGIDA AQUÍ
                         return render(request, 'HTML/login.html', {'error': f'Acceso denegado. Su estado es: {empleado.estado}.'})
 
                 except Empleado.DoesNotExist:
@@ -76,14 +78,12 @@ def iniciar_sesion(request):
                         direccion_ip=direccion_ip, intento_usuario=intento_usuario, intento_contrasena=intento_contrasena,
                         motivo='Usuario existe pero no es empleado.'
                     )
-                    # RUTA CORREGIDA AQUÍ
                     return render(request, 'HTML/login.html', {'error': 'Este usuario no es un empleado válido.'})
             else:
                 RegistroSeguridad.objects.create(
                     direccion_ip=direccion_ip, intento_usuario=intento_usuario, intento_contrasena=intento_contrasena,
                     motivo='Contraseña incorrecta.'
                 )
-                # RUTA CORREGIDA AQUÍ
                 return render(request, 'HTML/login.html', {'error': 'Ha ingresado mal la contraseña.'})
 
         except Usuario.DoesNotExist:
@@ -91,10 +91,7 @@ def iniciar_sesion(request):
                 direccion_ip=direccion_ip, intento_usuario=intento_usuario, intento_contrasena=intento_contrasena,
                 motivo='El empleado no existe.'
             )
-            # RUTA CORREGIDA AQUÍ
             return render(request, 'HTML/login.html', {'error': 'El empleado no existe.'})
-
-    # RUTA CORREGIDA AQUÍ
     return render(request, 'HTML/login.html')
 
 def seleccionar_rol(request):
@@ -343,3 +340,136 @@ def crear_empleado_vista(request):
         'herramientas': herramientas
     }
     return render(request, 'HTML/crear_empleado.html', context)
+
+def api_areas(request):
+    """Devuelve todas las áreas, opcionalmente filtradas por un término de búsqueda."""
+    query = request.GET.get('q', '').strip()
+    if query:
+        areas = Area.objects.filter(nombrearea__icontains=query)
+    else:
+        areas = Area.objects.all()
+    
+    data = [{'id': area.idarea, 'nombre': area.nombrearea} for area in areas]
+    return JsonResponse(data, safe=False)
+
+def api_crear_area(request):
+    """Crea una nueva área."""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            nombre_area = data.get('nombre').strip()
+            if not nombre_area:
+                return JsonResponse({'error': 'El nombre no puede estar vacío.'}, status=400)
+            if Area.objects.filter(nombrearea__iexact=nombre_area).exists():
+                return JsonResponse({'error': 'Ya existe un área con este nombre.'}, status=400)
+            nueva_area = Area.objects.create(nombrearea=nombre_area)
+            return JsonResponse({'id': nueva_area.idarea, 'nombre': nueva_area.nombrearea}, status=201)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+def api_puestos_por_area(request, area_id):
+    """Devuelve todos los puestos para un área específica."""
+    puestos = Roles.objects.filter(area_id=area_id)
+    data = [{'id': puesto.idroles, 'nombre': puesto.nombrerol} for puesto in puestos]
+    return JsonResponse(data, safe=False)
+
+def api_crear_puesto(request):
+    """Crea un nuevo puesto y lo asocia a un área."""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            nombre_puesto = data.get('nombre').strip()
+            area_id = data.get('area_id')
+
+            if not all([nombre_puesto, area_id]):
+                return JsonResponse({'error': 'Faltan datos (nombre o area_id).'}, status=400)
+            if Roles.objects.filter(nombrerol__iexact=nombre_puesto, area_id=area_id).exists():
+                 return JsonResponse({'error': 'Ya existe un puesto con este nombre en esta área.'}, status=400)
+            
+            nuevo_puesto = Roles.objects.create(nombrerol=nombre_puesto, area_id=area_id)
+            return JsonResponse({'id': nuevo_puesto.idroles, 'nombre': nuevo_puesto.nombrerol}, status=201)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+@transaction.atomic
+def api_registrar_empleado(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        
+        personal_data = data.get('personal', {})
+        if personal_data is None:
+            return JsonResponse({'error': 'No se recibieron los datos personales.'}, status=400)
+
+        nombre = personal_data.get('nombre', '').strip()
+        apellido = personal_data.get('apellido', '').strip()
+        email = personal_data.get('email', '').strip()
+        dni = personal_data.get('dni')
+        foto_base64 = personal_data.get('foto')
+
+        if not all([nombre, apellido, email, dni]):
+            return JsonResponse({'error': 'Faltan datos personales obligatorios (nombre, apellido, email, DNI).'}, status=400)
+
+        if Usuario.objects.filter(emailusuario__iexact=email).exists():
+            return JsonResponse({'error': 'El correo electrónico ya está en uso.'}, status=400)
+        
+        if Usuario.objects.filter(dniusuario=dni).exists():
+            return JsonResponse({'error': 'El DNI ya está registrado.'}, status=400)
+
+        username = (nombre.split(' ')[0] + apellido.replace(' ', '')).lower()
+        temp_username = username
+        counter = 1
+        while Usuario.objects.filter(nombreusuario=temp_username).exists():
+            temp_username = f"{username}{counter}"
+            counter += 1
+        username = temp_username
+        
+        password = ''.join(random.choices(string.digits, k=5))
+
+        nuevo_usuario = Usuario.objects.create(
+            nombreusuario=username,
+            apellidousuario=apellido,
+            emailusuario=email,
+            passwordusuario=password,
+            dniusuario=dni,
+            telefono=personal_data.get('telefono') or '',
+            fecharegistrousuario=timezone.now().date(),
+            imagenusuario=foto_base64
+        )
+
+        puesto_seleccionado = data.get('puesto', {}) or {}
+        
+        nuevo_empleado = Empleado.objects.create(
+            idusuarios=nuevo_usuario,
+            cargoempleado=puesto_seleccionado.get('nombre', 'Sin Puesto'),
+            salarioempleado=0,
+            fechacontratado=timezone.now().date(),
+            estado='Trabajando'
+        )
+
+        puesto_id = puesto_seleccionado.get('id')
+        if puesto_id:
+            puesto = Roles.objects.get(idroles=puesto_id)
+            UsuarioRol.objects.create(idusuarios=nuevo_usuario, idroles=puesto)
+
+            permisos_ids = data.get('permisos', [])
+            for herramienta_id in permisos_ids:
+                herramienta = Herramienta.objects.get(idherramienta=herramienta_id)
+                Permiso.objects.get_or_create(rol=puesto, herramienta=herramienta)
+
+        send_mail(
+            subject='¡Bienvenido! Tus credenciales de acceso',
+            message=f"Hola {nombre},\n\n¡Te damos la bienvenida al sistema! A continuación encontrarás tus datos para iniciar sesión:\n\nNombre de Usuario: {username}\nContraseña Temporal: {password}\n\nTe recomendamos cambiar tu contraseña después de tu primer inicio de sesión.\n\nSaludos,\nEl equipo de Supermercado.",
+            from_email='noreply@supermercado.com',
+            recipient_list=[email],
+            fail_silently=False,
+        )
+
+        return JsonResponse({'message': f'¡Empleado {nombre} {apellido} creado exitosamente!', 'username': username}, status=201)
+
+    except Exception as e:
+        return JsonResponse({'error': f'Ocurrió un error inesperado: {str(e)}'}, status=500)

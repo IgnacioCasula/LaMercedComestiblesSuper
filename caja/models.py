@@ -1,10 +1,5 @@
-# ignaciocasula/lamercedcomestiblessuper/LaMercedComestiblesSuper-9e4cb265129870267e8e016db0b510984c444d8d/caja/models.py
-# caja/models.py
-
 from django.db import models
 import uuid
-
-# --- MODELOS DE ESTRUCTURA ORGANIZATIVA ---
 
 class Area(models.Model):
     idarea = models.AutoField(primary_key=True)
@@ -31,9 +26,7 @@ class Roles(models.Model):
     def __str__(self):
         if self.area:
             return f"{self.area.nombrearea} - {self.nombrerol}"
-        return self.nombrerol
-
-# --- MODELOS DE PERSONAS Y UBICACIONES ---
+        return self.nombrerol or ''
 
 class Usuarios(models.Model):
     idusuarios = models.AutoField(db_column='IdUsuarios', primary_key=True)
@@ -100,8 +93,6 @@ class Proveedores(models.Model):
 
     class Meta:
         db_table = 'proveedores'
-
-# --- MODELOS DE OPERACIONES DEL SUPERMERCADO ---
 
 class Cajas(models.Model):
     idcaja = models.AutoField(db_column='IdCaja', primary_key=True)
@@ -221,8 +212,6 @@ class Detallepedido(models.Model):
     class Meta:
         db_table = 'detallepedido'
 
-# --- TABLAS INTERMEDIAS (Many-to-Many) ---
-
 class Usuariosxrol(models.Model):
     idusuarioxrol = models.AutoField(primary_key=True)
     idusuarios = models.ForeignKey(Usuarios, on_delete=models.CASCADE, db_column='IdUsuarios')
@@ -278,8 +267,6 @@ class Usuarioxsucursales(models.Model):
     class Meta:
         db_table = 'usuarioxsucursales'
 
-# --- MODELOS DE SEGURIDAD (NUEVOS) ---
-
 class RegistroSeguridad(models.Model):
     id = models.AutoField(primary_key=True)
     direccion_ip = models.CharField(max_length=50)
@@ -301,9 +288,7 @@ class TokenRecuperacion(models.Model):
 class Herramienta(models.Model):
     idherramienta = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre de la Herramienta")
-    # El nombre de la URL que usarás en urls.py, ej: 'ver_lista_empleados'
     url_nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre de URL (para {% url %})")
-    # Opcional: para añadir un ícono visual en el futuro
     icono = models.CharField(max_length=50, blank=True, null=True, verbose_name="Clase del Icono (ej: fa-users)")
 
     class Meta:
@@ -321,7 +306,6 @@ class Permiso(models.Model):
 
     class Meta:
         db_table = 'permisos'
-        # Nos aseguramos de que un rol no pueda tener el mismo permiso dos veces
         unique_together = [['rol', 'herramienta']]
         verbose_name = "Permiso"
         verbose_name_plural = "Permisos"
@@ -331,13 +315,11 @@ class Permiso(models.Model):
 
 class Permiso(models.Model):
     idpermiso = models.AutoField(primary_key=True)
-    # AÑADIMOS related_name="permisos"
     rol = models.ForeignKey(Roles, on_delete=models.CASCADE, related_name="permisos")
     herramienta = models.ForeignKey(Herramienta, on_delete=models.CASCADE)
 
     class Meta:
         db_table = 'permisos'
-        # Nos aseguramos de que un rol no pueda tener el mismo permiso dos veces
         unique_together = [['rol', 'herramienta']]
         verbose_name = "Permiso"
         verbose_name_plural = "Permisos"

@@ -39,8 +39,14 @@
     <div id="laboral-data" class="laboral-data">
         <div class="section">
             <div class="area-puesto">
-                <div class="form-group" style="flex-grow: 1;"><label>Area:</label><button disabled>Selecciona</button></div>
-                <div class="form-group" style="flex-grow: 1;"><label>Puesto:</label><button disabled>Selecciona</button></div>
+                <div class="form-group" style="flex-grow: 1;">
+                    <label>Area:</label>
+                    <button id="btn-area" class="selector-btn">Selecciona un área</button>
+                </div>
+                <div class="form-group" style="flex-grow: 1;">
+                    <label>Puesto:</label>
+                    <button id="btn-puesto" class="selector-btn" disabled>Selecciona un puesto</button>
+                </div>
             </div>
         </div>
         
@@ -66,7 +72,7 @@
                 </div>
             </div>
             <div id="permissions-list" class="permissions-list-grid">
-                {% if herramientas %}
+                 {% if herramientas %}
                     {% for herramienta in herramientas %}
                     <div class="permission-card">
                         <div class="permission-main">
@@ -92,7 +98,7 @@
                 {% endif %}
             </div>
         </div>
-        </div>
+    </div>
 
     <div class="main-form-actions">
         <button id="btn-cancel" class="btn btn-danger">Cancelar</button>
@@ -100,9 +106,48 @@
     </div>
 </div>
 
+<div id="modal-opciones" class="modal-overlay">
+    <div class="modal-content">
+        <h2 id="opciones-titulo"></h2>
+        <div class="modal-options">
+            <button id="btn-opcion-cargar" class="modal-btn">Cargar existente</button>
+            <button id="btn-opcion-crear" class="modal-btn">Crear nuevo</button>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-light" onclick="cerrarModal('modal-opciones')">Volver</button>
+        </div>
+    </div>
+</div>
+<div id="modal-cargar" class="modal-overlay">
+    <div class="modal-content">
+        <h2 id="cargar-titulo"></h2>
+        <input type="text" id="searchInput" placeholder="Buscar...">
+        <ul id="resultsList"></ul>
+        <div class="modal-actions">
+            <button class="btn btn-light" id="btn-cargar-volver">Volver</button>
+        </div>
+    </div>
+</div>
+<div id="modal-crear" class="modal-overlay">
+    <div class="modal-content">
+        <h2 id="crear-titulo"></h2>
+        <div class="form-group">
+            <label for="new-item-name" id="crear-label"></label>
+            <input type="text" id="new-item-name" class="form-control">
+        </div>
+        <div id="crear-error-msg" style="color: red; margin-top: 10px; text-align: center;"></div>
+        <div class="modal-actions">
+            <button class="btn btn-light" id="btn-crear-volver">Volver</button>
+            <button class="btn btn-success" id="btn-crear-confirmar">Crear</button>
+        </div>
+    </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    
+    // ... (todo el JavaScript anterior de validaciones, horarios, y modales se mantiene aquí) ...
+    // ... (omito el código anterior por brevedad, pero debe estar aquí)
+
     // --- LÓGICA DE FOTO Y DATOS PERSONALES ---
     const photoUploader = document.getElementById('photo-uploader');
     const photoInput = document.getElementById('photo-input');
@@ -136,7 +181,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // --- VALIDACIÓN DE INPUTS ---
     const nombreInput = document.getElementById('nombre');
     const apellidoInput = document.getElementById('apellido');
     const dniInput = document.getElementById('dni');
@@ -144,15 +188,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const emailInput = document.getElementById('email');
     const codPaisInput = document.getElementById('cod_pais');
 
-    function allowOnlyLetters(event) {
-        event.target.value = event.target.value.replace(/[^a-zA-Z\sñÑáéíóúÁÉÍÓÚ]/g, '');
-    }
+    function allowOnlyLetters(event) { event.target.value = event.target.value.replace(/[^a-zA-Z\sñÑáéíóúÁÉÍÓÚ]/g, ''); }
     nombreInput.addEventListener('input', allowOnlyLetters);
     apellidoInput.addEventListener('input', allowOnlyLetters);
 
-    function allowOnlyNumbers(event) {
-        event.target.value = event.target.value.replace(/\D/g, '');
-    }
+    function allowOnlyNumbers(event) { event.target.value = event.target.value.replace(/\D/g, ''); }
     dniInput.addEventListener('input', allowOnlyNumbers);
     telefonoInput.addEventListener('input', allowOnlyNumbers);
 
@@ -162,17 +202,13 @@ document.addEventListener('DOMContentLoaded', function() {
         event.target.value = '+' + numbers;
     });
     codPaisInput.addEventListener('blur', (event) => {
-        if (event.target.value === '' || event.target.value === '+') {
-            event.target.value = '+';
-        }
+        if (event.target.value === '' || event.target.value === '+') { event.target.value = '+'; }
     });
     codPaisInput.value = '+';
 
     emailInput.addEventListener('blur', (event) => {
         let emailValue = event.target.value.trim();
-        if (emailValue && !emailValue.includes('@')) {
-            event.target.value = emailValue + '@gmail.com';
-        }
+        if (emailValue && !emailValue.includes('@')) { event.target.value = emailValue + '@gmail.com'; }
     });
 
     const btnAddLaboral = document.getElementById('btn-add-laboral');
@@ -181,8 +217,8 @@ document.addEventListener('DOMContentLoaded', function() {
         laboralDataSection.style.display = 'block';
         btnAddLaboral.style.display = 'none';
     });
-
-    // --- LÓGICA DEL HORARIO (CON OPCIÓN PARA QUITAR COLOR) ---
+    
+    // --- LÓGICA DEL HORARIO ---
     const colorPaletteContainer = document.getElementById('color-palette');
     const addColorBtn = document.getElementById('add-color');
     const weeksContainer = document.getElementById('weeks-container');
@@ -219,28 +255,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 renderPalette();
             });
 
-            // Lógica para quitar color
             const removeTrigger = document.createElement('div');
             removeTrigger.className = 'remove-color-trigger';
-            removeTrigger.onclick = (e) => {
-                e.stopPropagation();
-                removeColor(color);
-            };
+            removeTrigger.onclick = (e) => { e.stopPropagation(); removeColor(color); };
             colorDiv.appendChild(removeTrigger);
 
-            // No mostrar el botón de eliminar si es el último color
-            if (activeColors.length <= 1) {
-                colorDiv.classList.add('is-last');
-            }
-
+            if (activeColors.length <= 1) { colorDiv.classList.add('is-last'); }
             colorPaletteContainer.appendChild(colorDiv);
         });
     }
 
     function removeColor(colorToRemove) {
-        if (activeColors.length <= 1) return; // No permitir eliminar el último color
-
-        // Deseleccionar todos los días que usaban este color
+        if (activeColors.length <= 1) return;
         document.querySelectorAll(`.day-btn[data-color="${colorToRemove}"]`).forEach(btn => {
             const dayKey = `w${btn.dataset.week}-d${btn.dataset.day}`;
             delete dayColorMap[dayKey];
@@ -248,38 +274,26 @@ document.addEventListener('DOMContentLoaded', function() {
             btn.style.backgroundColor = '';
             btn.classList.remove('text-light', 'text-dark');
         });
-        
-        // Quitar el color de la lista de activos y de los datos de horario
         delete scheduleData[colorToRemove];
         activeColors = activeColors.filter(c => c !== colorToRemove);
-
-        // Si el color eliminado era el seleccionado, seleccionar el primero disponible
-        if (selectedColor === colorToRemove) {
-            selectedColor = activeColors[0];
-        }
-
+        if (selectedColor === colorToRemove) { selectedColor = activeColors[0]; }
         renderPalette();
         renderDailySchedules();
     }
 
     addColorBtn.addEventListener('click', () => {
         const nextColor = availableColors.find(c => !activeColors.includes(c));
-        if (nextColor) {
-            activeColors.push(nextColor);
-            renderPalette();
-        }
+        if (nextColor) { activeColors.push(nextColor); renderPalette(); }
     });
 
     function createWeek(weekNumber) {
         const weekDiv = document.createElement('div');
         weekDiv.className = 'schedule-week';
         weekDiv.id = `week-${weekNumber}`;
-
         const weekLabel = document.createElement('span');
         weekLabel.className = 'week-label';
         weekLabel.textContent = `Semana ${weekNumber}`;
         weekDiv.appendChild(weekLabel);
-
         daysOfWeek.forEach(day => {
             const dayBtn = document.createElement('button');
             dayBtn.className = 'day-btn';
@@ -289,41 +303,29 @@ document.addEventListener('DOMContentLoaded', function() {
             dayBtn.addEventListener('click', () => toggleDayColor(dayBtn));
             weekDiv.appendChild(dayBtn);
         });
-
         if (weekNumber === 1) {
             const addWeekBtn = document.createElement('button');
             addWeekBtn.className = 'add-btn week-action-btn';
             addWeekBtn.innerHTML = `<img src="{% static "iconos/add_circle.png" %}" alt="Añadir semana">`;
-            addWeekBtn.onclick = () => {
-                if(weeksCount < 4) {
-                    weeksCount++;
-                    createWeek(weeksCount);
-                }
-            };
+            addWeekBtn.onclick = () => { if(weeksCount < 4) { weeksCount++; createWeek(weeksCount); } };
             weekDiv.appendChild(addWeekBtn);
         } else {
              const removeWeekBtn = document.createElement('button');
              removeWeekBtn.className = 'remove-btn week-action-btn';
              removeWeekBtn.innerHTML = `<img src="{% static "iconos/remove_circle.png" %}" alt="Eliminar semana">`;
              removeWeekBtn.onclick = () => {
-                Object.keys(dayColorMap).forEach(key => {
-                    if (key.startsWith(`w${weekNumber}-`)) {
-                        delete dayColorMap[key];
-                    }
-                });
+                Object.keys(dayColorMap).forEach(key => { if (key.startsWith(`w${weekNumber}-`)) { delete dayColorMap[key]; } });
                 weekDiv.remove();
                 weeksCount--;
                 renderDailySchedules();
              };
              weekDiv.appendChild(removeWeekBtn);
         }
-
         weeksContainer.appendChild(weekDiv);
     }
     
     function toggleDayColor(dayBtn) {
         const dayKey = `w${dayBtn.dataset.week}-d${dayBtn.dataset.day}`;
-        
         if (dayColorMap[dayKey] === selectedColor) {
             delete dayColorMap[dayKey];
             delete dayBtn.dataset.color;
@@ -341,35 +343,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function renderDailySchedules() {
         dailyScheduleContainer.innerHTML = '';
-        
         const groupedDaysByColor = {};
         for(const dayKey in dayColorMap) {
             const color = dayColorMap[dayKey];
-            if (!groupedDaysByColor[color]) {
-                groupedDaysByColor[color] = [];
-            }
+            if (!groupedDaysByColor[color]) { groupedDaysByColor[color] = []; }
             const [week, day] = dayKey.split('-d');
             groupedDaysByColor[color].push({ week: week.replace('w',''), day: day });
         }
-        
-        if (Object.keys(groupedDaysByColor).length === 0) {
-            dailyScheduleContainer.style.display = 'none';
-            return;
-        }
+        if (Object.keys(groupedDaysByColor).length === 0) { dailyScheduleContainer.style.display = 'none'; return; }
         dailyScheduleContainer.style.display = 'block';
-
         for (const color in groupedDaysByColor) {
-            if (!scheduleData[color]) {
-                scheduleData[color] = [{ start: '', end: '' }];
-            }
-
+            if (!scheduleData[color]) { scheduleData[color] = [{ start: '', end: '' }]; }
             const scheduleRow = document.createElement('div');
             scheduleRow.className = 'schedule-day-row';
             scheduleRow.style.borderColor = color;
-
             const contrastClass = getContrastColor(color);
             scheduleRow.classList.add(contrastClass);
-            
             const title = document.createElement('h4');
             const titleParts = groupedDaysByColor[color]
                 .sort((a,b) => parseInt(a.week) - parseInt(b.week) || daysOfWeek.indexOf(a.day) - daysOfWeek.indexOf(b.day))
@@ -377,63 +366,228 @@ document.addEventListener('DOMContentLoaded', function() {
             title.textContent = titleParts.join(', ');
             title.style.backgroundColor = color;
             scheduleRow.appendChild(title);
-            
             const timeSlotsContainer = document.createElement('div');
             timeSlotsContainer.className = 'time-slots-container';
-
             scheduleData[color].forEach((slot, index) => {
                 const timeSlotDiv = document.createElement('div');
                 timeSlotDiv.className = 'time-slot';
-                
                 const startTimeInput = document.createElement('input');
                 startTimeInput.type = 'time';
                 startTimeInput.value = slot.start;
                 startTimeInput.onchange = (e) => scheduleData[color][index].start = e.target.value;
-
                 const endTimeInput = document.createElement('input');
                 endTimeInput.type = 'time';
                 endTimeInput.value = slot.end;
                 endTimeInput.onchange = (e) => scheduleData[color][index].end = e.target.value;
-                
                 const addTimeSlotBtn = document.createElement('button');
                 addTimeSlotBtn.className = 'add-btn';
                 addTimeSlotBtn.innerHTML = `<img src="{% static 'iconos/add_circle.png' %}" alt="Añadir horario">`;
-                addTimeSlotBtn.onclick = () => {
-                    scheduleData[color].push({ start: '', end: '' });
-                    renderDailySchedules();
-                };
-
+                addTimeSlotBtn.onclick = () => { scheduleData[color].push({ start: '', end: '' }); renderDailySchedules(); };
                 const removeTimeSlotBtn = document.createElement('button');
                 removeTimeSlotBtn.className = 'remove-btn';
                 removeTimeSlotBtn.innerHTML = `<img src="{% static 'iconos/remove_circle.png' %}" alt="Eliminar horario">`;
-                removeTimeSlotBtn.onclick = () => {
-                    if (scheduleData[color].length > 1) {
-                        scheduleData[color].splice(index, 1);
-                        renderDailySchedules();
-                    }
-                };
-
+                removeTimeSlotBtn.onclick = () => { if (scheduleData[color].length > 1) { scheduleData[color].splice(index, 1); renderDailySchedules(); } };
                 timeSlotDiv.appendChild(startTimeInput);
                 timeSlotDiv.appendChild(document.createElement('span')).textContent = 'a';
                 timeSlotDiv.appendChild(endTimeInput);
                 timeSlotDiv.appendChild(addTimeSlotBtn);
-                if (scheduleData[color].length > 1) {
-                    timeSlotDiv.appendChild(removeTimeSlotBtn);
-                }
-                
+                if (scheduleData[color].length > 1) { timeSlotDiv.appendChild(removeTimeSlotBtn); }
                 timeSlotsContainer.appendChild(timeSlotDiv);
             });
-            
             scheduleRow.appendChild(timeSlotsContainer);
             dailyScheduleContainer.appendChild(scheduleRow);
         }
     }
-
     renderPalette();
     createWeek(1);
     renderDailySchedules();
+
+    // --- SCRIPT PARA ÁREA Y PUESTO ---
+    let selectedArea = null;
+    let selectedPuesto = null;
+    const btnArea = document.getElementById('btn-area');
+    const btnPuesto = document.getElementById('btn-puesto');
+    const btnOpcionCargar = document.getElementById('btn-opcion-cargar');
+    const btnOpcionCrear = document.getElementById('btn-opcion-crear');
+    const btnCargarVolver = document.getElementById('btn-cargar-volver');
+    const btnCrearVolver = document.getElementById('btn-crear-volver');
+    const btnCrearConfirmar = document.getElementById('btn-crear-confirmar');
+    const opcionesTitulo = document.getElementById('opciones-titulo');
+    const cargarTitulo = document.getElementById('cargar-titulo');
+    const crearTitulo = document.getElementById('crear-titulo');
+    const crearLabel = document.getElementById('crear-label');
+    const searchInput = document.getElementById('searchInput');
+    const resultsList = document.getElementById('resultsList');
+    const newItemInput = document.getElementById('new-item-name');
+    const crearErrorMsg = document.getElementById('crear-error-msg');
+    let currentSelectionMode = null;
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+
+    window.abrirModal = (id) => document.getElementById(id).style.display = 'flex';
+    window.cerrarModal = (id) => document.getElementById(id).style.display = 'none';
+
+    btnArea.addEventListener('click', () => { currentSelectionMode = 'area'; opcionesTitulo.textContent = 'Seleccionar Área'; abrirModal('modal-opciones'); });
+    btnPuesto.addEventListener('click', () => { currentSelectionMode = 'puesto'; opcionesTitulo.textContent = 'Seleccionar Puesto'; abrirModal('modal-opciones'); });
+
+    btnOpcionCargar.addEventListener('click', () => {
+        cerrarModal('modal-opciones');
+        if (currentSelectionMode === 'area') { cargarTitulo.textContent = 'Cargar Área'; cargarResultados('area'); } 
+        else { cargarTitulo.textContent = 'Cargar Puesto'; cargarResultados('puesto'); }
+        abrirModal('modal-cargar');
+    });
+
+    btnOpcionCrear.addEventListener('click', () => {
+        cerrarModal('modal-opciones');
+        newItemInput.value = '';
+        crearErrorMsg.textContent = '';
+        if (currentSelectionMode === 'area') { crearTitulo.textContent = 'Crear Nueva Área'; crearLabel.textContent = 'Nombre del Área:'; } 
+        else { crearTitulo.textContent = 'Crear Nuevo Puesto'; crearLabel.textContent = 'Nombre del Puesto:'; }
+        abrirModal('modal-crear');
+    });
+    
+    btnCargarVolver.addEventListener('click', () => { cerrarModal('modal-cargar'); abrirModal('modal-opciones'); });
+    btnCrearVolver.addEventListener('click', () => { cerrarModal('modal-crear'); abrirModal('modal-opciones'); });
+
+    async function cargarResultados(tipo, query = '') {
+        let url = '';
+        if (tipo === 'area') { url = `{% url 'api_areas' %}?q=${query}`; } 
+        else if (tipo === 'puesto' && selectedArea) { url = `/api/puestos/${selectedArea.id}/`; } 
+        else { return; }
+        const response = await fetch(url);
+        const data = await response.json();
+        resultsList.innerHTML = '';
+        if (data.length === 0) { resultsList.innerHTML = '<li>No hay resultados</li>'; }
+        data.forEach(item => {
+            const li = document.createElement('li');
+            li.textContent = item.nombre;
+            li.dataset.id = item.id;
+            li.addEventListener('click', () => seleccionarItem(item));
+            resultsList.appendChild(li);
+        });
+    }
+
+    searchInput.addEventListener('input', () => { if (currentSelectionMode === 'area') { cargarResultados('area', searchInput.value); } });
+
+    function seleccionarItem(item) {
+        if (currentSelectionMode === 'area') {
+            selectedArea = item;
+            btnArea.textContent = item.nombre;
+            btnArea.classList.add('selected');
+            selectedPuesto = null;
+            btnPuesto.textContent = 'Selecciona un puesto';
+            btnPuesto.classList.remove('selected');
+            btnPuesto.disabled = false;
+        } else if (currentSelectionMode === 'puesto') {
+            selectedPuesto = item;
+            btnPuesto.textContent = item.nombre;
+            btnPuesto.classList.add('selected');
+        }
+        cerrarModal('modal-cargar');
+    }
+
+    btnCrearConfirmar.addEventListener('click', async () => {
+        const nombre = newItemInput.value.trim();
+        if (!nombre) { crearErrorMsg.textContent = 'El nombre no puede estar vacío.'; return; }
+        let url = '';
+        let body = {};
+        if (currentSelectionMode === 'area') {
+            url = '{% url "api_crear_area" %}';
+            body = { nombre: nombre };
+        } else {
+            url = '{% url "api_crear_puesto" %}';
+            body = { nombre: nombre, area_id: selectedArea.id };
+        }
+        const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken }, body: JSON.stringify(body) });
+        const data = await response.json();
+        if (response.ok) { seleccionarItem(data); cerrarModal('modal-crear'); } 
+        else { crearErrorMsg.textContent = data.error || 'Ocurrió un error.'; }
+    });
+
+    // --- LÓGICA PARA EL BOTÓN "LISTO" (CON GUARDADO DE FOTO) ---
+    const btnListo = document.querySelector('.btn-success');
+
+    // Función para convertir archivo a Base64
+    const toBase64 = file => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+
+    btnListo.addEventListener('click', async () => {
+        let fotoBase64 = null;
+        const fotoInput = document.getElementById('photo-input');
+        if (fotoInput.files[0]) {
+            fotoBase64 = await toBase64(fotoInput.files[0]);
+        }
+
+        const data = {
+            personal: {
+                nombre: document.getElementById('nombre').value,
+                apellido: document.getElementById('apellido').value,
+                dni: document.getElementById('dni').value,
+                telefono: document.getElementById('telefono').value,
+                email: document.getElementById('email').value,
+                codigo_telefonico: document.getElementById('cod_pais').value,
+                direccion: document.getElementById('direccion').value,
+                fecha_nacimiento: document.getElementById('fecha_nacimiento').value,
+                foto: fotoBase64 // Añadimos la foto aquí
+            },
+            area: selectedArea,
+            puesto: selectedPuesto,
+            horario: { scheduleData: scheduleData, dayColorMap: dayColorMap },
+            permisos: Array.from(document.querySelectorAll('input[name="permisos"]:checked')).map(el => el.value)
+        };
+
+        if (!data.personal.nombre || !data.personal.apellido || !data.personal.email || !data.personal.dni) {
+            alert('Por favor, completa los campos obligatorios: Nombre, Apellido, DNI y Email.');
+            return;
+        }
+        if (!data.area || !data.puesto) {
+            alert('Por favor, selecciona un Área y un Puesto para el empleado.');
+            return;
+        }
+        
+        btnListo.disabled = true;
+        btnListo.textContent = 'Guardando...';
+
+        try {
+            const response = await fetch("{% url 'api_registrar_empleado' %}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            if (response.ok) {
+                alert(result.message);
+                window.location.href = "{% url 'inicio' %}";
+            } else {
+                alert(`Error: ${result.error}`);
+            }
+        } catch (error) {
+            console.error('Error al enviar el formulario:', error);
+            alert('Ocurrió un error de red. Inténtalo de nuevo.');
+        } finally {
+            btnListo.disabled = false;
+            btnListo.textContent = 'Listo';
+        }
+    });
 });
 </script>
-
 </body>
 </html>
