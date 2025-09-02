@@ -1,41 +1,69 @@
+{% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/caja/Static/CSS/menucaja.css">
-    <title>Menu de Caja</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <!-- CSS desde caja/Static/CSS -->
+  <link rel="stylesheet" href="{% static 'CSS/menucaja.css' %}">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <title>Menu de Caja</title>
 </head>
 <body>
-    <div class="MenuCaja">
-        <div class="grisarriba"></div>
-        <div class="EncabezadoMenuCaja">
-            <div class="EncabezadoUsuario">
-                <p>👤 Cajero: (usuario)</p>
-            </div>
-            <div class="EncabezadoMontoIni">
-                <p>💰 Monto Inicial: (dinero)</p>
-            </div>
+  <div class="MenuCaja">
+    <div class="grisarriba"></div>
+    <div class="EncabezadoMenuCaja">
+      <div class="EncabezadoUsuario">
+        <p>👤 Cajero: {{ usuario_nombre }}</p>
+      </div>
 
-        </div>
-        <div class="MenuCajaCuerpo">
-            <div class="AperturaBoton">
-                <a href="aperturadecaja.html" id="boton-apertura" class="botonapertura">Apertura de Caja</a>
-            </div>
-            <div class="CierreBoton">
-                <button id="boton-apertura" class="botoncierre">Ciere de Caja</button>
-            </div>
-            <div class="VentaBoton">
-                <button id="boton-apertura" class="botonventa">Registrar Venta</button>
-            </div>
-
-        </div>
-        <div class="Final">
-            <div class="BotonCerrarSesion">
-                <a href="index.html" id="botoncerrar" class="botoncerrar">Cerrar Sesion</a>
-            </div>
-        </div>
+      <div class="EncabezadoMontoIni">
+        {% if open_caja %}
+          <p>💰 Monto Inicial: ${{ open_caja.montoinicialcaja|floatformat:2 }}</p>
+        {% else %}
+          <p>💰 Monto Inicial: <em>Sin apertura</em></p>
+        {% endif %}
+      </div>
     </div>
+
+    <div class="MenuCajaCuerpo">
+      <div class="AperturaBoton">
+        {% if not open_caja %}
+          <a href="{% url 'apertura_caja' %}" id="boton-apertura" class="botonapertura" data-allowed="true">Apertura de Caja</a>
+        {% else %}
+          <a href="#" id="boton-apertura" class="botonapertura" data-allowed="false" data-message="Ya hay una apertura activa. Debe cerrar la caja antes de abrir otra.">Apertura de Caja</a>
+        {% endif %}
+      </div>
+
+      <div class="CierreBoton">
+        {% if open_caja %}
+          <button id="boton-cierre" class="botoncierre" data-allowed="true" data-impl="not-implemented">Cierre de Caja</button>
+        {% else %}
+          <button id="boton-cierre" class="botoncierre" data-allowed="false" data-message="Debe abrir la caja antes de poder cerrarla.">Cierre de Caja</button>
+        {% endif %}
+      </div>
+
+      <div class="VentaBoton">
+        {% if open_caja %}
+          <button id="boton-venta" class="botonventa" data-allowed="true" data-impl="not-implemented">Registrar Venta</button>
+        {% else %}
+          <button id="boton-venta" class="botonventa" data-allowed="false" data-message="Debe abrir la caja antes de registrar ventas.">Registrar Venta</button>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="Final">
+      <div class="BotonCerrarSesion">
+        <a href="{% url 'logout' %}" id="botoncerrar" class="botoncerrar">Cerrar Sesion</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- contenedor para notificaciones animadas por JS -->
+  <div id="menu-notification" style="position:fixed; right:20px; bottom:20px; z-index:9999; display:none;"></div>
+
+  <!-- JS desde caja/Static/JS -->
+  <script src="{% static 'JS/menu_caja.js' %}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-     
 </html>
