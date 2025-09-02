@@ -63,7 +63,19 @@ body.is-loading .panel {
     text-shadow: none;
 }
 
-/* Contenedor de Paneles (CORRECCIÓN CLAVE) */
+/* --- CORRECCIÓN: EFECTO DE TEMBLOR AL LLEGAR AL LÍMITE --- */
+@keyframes shakeEffect {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+.main-header.effect-shake {
+  animation: shakeEffect 0.3s ease-in-out;
+}
+
+
+/* Contenedor de Paneles */
 .main-container {
     padding: 30px;
     max-width: 1400px;
@@ -73,8 +85,6 @@ body.is-loading .panel {
     justify-content: center;
     align-items: flex-start; 
 }
-
-/* --- RESTO DEL CSS (SIN CAMBIOS) --- */
 
 @keyframes slideUp {
     from { transform: translateY(30px); opacity: 0; }
