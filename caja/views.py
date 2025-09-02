@@ -29,30 +29,27 @@ def get_caja_abierta_para_usuario(usuario_id):
     ).order_by('-idcaja').first()
     return caja_abierta
 
-# --- LÍNEA CORREGIDA ---
-# Cambiamos "menu_caja" por el nombre completo "caja:menu_caja" para que coincida con la base de datos.
 @permiso_requerido("caja:menu_caja") 
 def menu_caja_view(request):
     usuario_id = request.session.get('usuario_id')
     usuario_nombre = request.session.get('nombre_usuario')
     open_caja = get_caja_abierta_para_usuario(usuario_id)
+
     return render(request, "menucaja.html", {
         "usuario_nombre": usuario_nombre,
         "open_caja": open_caja,
     })
 
-# --- LÍNEA CORREGIDA ---
-# Hacemos el mismo cambio aquí por consistencia.
 @permiso_requerido("caja:menu_caja") 
 def apertura_caja_view(request):
     usuario_id = request.session.get('usuario_id')
     usuario_nombre = request.session.get('nombre_usuario')
 
-    if get_caja_abierta_para_usuario(usuario_id):
+    if usuario_id and get_caja_abierta_para_usuario(usuario_id):
         messages.warning(request, "Ya existe una apertura activa para hoy. Debe cerrar antes de abrir otra.")
         return redirect("caja:menu_caja")
 
-    sucursal = obtener_sucursal_del_usuario(usuario_id)
+    sucursal = obtener_sucursal_del_usuario(usuario_id) if usuario_id else None
     if not sucursal:
         messages.error(request, "No tienes una sucursal asignada. Contacta al administrador.")
         return redirect("caja:menu_caja")
@@ -71,6 +68,7 @@ def apertura_caja_view(request):
             apertura.fechacierrecaja = apertura.fechaaperturacaja
             apertura.nombrecaja = f"Caja {sucursal.nombresucursal} - {usuario_nombre} - {ahora.strftime('%d/%m %H:%M')}"
             apertura.save()
+
             messages.success(request, "✅ Apertura registrada correctamente.")
             return redirect("caja:menu_caja")
         else:
