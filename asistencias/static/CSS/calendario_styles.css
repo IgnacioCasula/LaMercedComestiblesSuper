@@ -1,0 +1,104 @@
+body {
+    background-color: #f0f2f5;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.container {
+    max-width: 1200px;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    border-radius: 12px;
+}
+
+.profile-img {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+#calendar-container {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 12px;
+    margin-top: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+}
+
+/* --- ESTILOS DEL CALENDARIO --- */
+.fc-day-sat, .fc-day-sun {
+    background-color: #f9f9f9;
+}
+
+.fc-event {
+    border: none !important;
+    padding: 3px 5px;
+    font-size: 13px;
+    cursor: pointer;
+    overflow: hidden;
+}
+.fc-event-main {
+    color: white !important;
+}
+
+/* --- ESTILOS MEJORADOS PARA VISTA SEMANA/DÍA --- */
+.fc-timegrid-event .fc-event-main-frame {
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+}
+.fc-timegrid-event .fc-event-time {
+    font-weight: bold;
+    font-size: 0.9em;
+}
+.fc-timegrid-event .fc-event-title-container {
+    flex-grow: 1;
+}
+.fc-timegrid-event .fc-event-title {
+    font-size: 1em;
+    font-weight: 500;
+    white-space: normal;
+}
+.event-details {
+    margin-top: 4px;
+    font-size: 0.85em;
+    opacity: 0.9;
+    border-top: 1px solid rgba(255, 255, 255, 0.3);
+    padding-top: 4px;
+}
+/* --- FIN DE NUEVOS ESTILOS --- */
+
+
+.tippy-box[data-theme~='light-border'] {
+    border: 1px solid #dcdcdc;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+#leyenda-container {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 12px;
+    margin-top: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+}
+.leyenda-color {
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+#leyenda-container h5 {
+    margin-bottom: 15px;
+    font-weight: bold;
+    color: #333;
+}
+#leyenda-container li {
+    margin-bottom: 5px;
+    color: #555;
+}
