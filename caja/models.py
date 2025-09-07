@@ -1,5 +1,8 @@
+# (Importaciones y otros modelos se mantienen igual)
 from django.db import models
 import uuid
+
+# ... (Area, Roles, Usuarios, Empleados, etc. se mantienen igual) ...
 
 class Area(models.Model):
     idarea = models.AutoField(primary_key=True)
@@ -56,6 +59,8 @@ class Empleados(models.Model):
 
     class Meta:
         db_table = 'empleados'
+
+# ... (Codigopostal, Ubicaciones, Sucursales, Proveedores, Cajas, Categorias, etc. se mantienen igual) ...
 
 class Codigopostal(models.Model):
     idcodigopostal = models.AutoField(db_column='IdCodigoPostal', primary_key=True)
@@ -225,8 +230,10 @@ class Asistencias(models.Model):
     idasistencia = models.AutoField(db_column='IdAsistencia', primary_key=True)
     fechaasistencia = models.DateField(db_column='FechaAsistencia')
     horaentrada = models.TimeField(db_column='HoraEntrada')
-    horasalida = models.TimeField(db_column='HoraSalida')
+    horasalida = models.TimeField(db_column='HoraSalida', null=True, blank=True)
     idempleado = models.ForeignKey(Empleados, on_delete=models.CASCADE, db_column='IdEmpleado')
+    # --- CAMPO NUEVO ---
+    rol = models.ForeignKey(Roles, on_delete=models.SET_NULL, null=True, blank=True, help_text="Rol con el que se registró esta asistencia")
 
     class Meta:
         db_table = 'asistencias'
@@ -298,20 +305,6 @@ class Herramienta(models.Model):
 
     def __str__(self):
         return self.nombre
-
-class Permiso(models.Model):
-    idpermiso = models.AutoField(primary_key=True)
-    rol = models.ForeignKey(Roles, on_delete=models.CASCADE, related_name="permisos")
-    herramienta = models.ForeignKey(Herramienta, on_delete=models.CASCADE)
-
-    class Meta:
-        db_table = 'permisos'
-        unique_together = [['rol', 'herramienta']]
-        verbose_name = "Permiso"
-        verbose_name_plural = "Permisos"
-
-    def __str__(self):
-        return f"El rol '{self.rol.nombrerol}' tiene permiso para '{self.herramienta.nombre}'"
 
 class Permiso(models.Model):
     idpermiso = models.AutoField(primary_key=True)

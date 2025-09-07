@@ -34,6 +34,22 @@ class Command(BaseCommand):
             nombre='Caja',
             defaults={'url_nombre': 'caja:menu_caja', 'icono': 'fas fa-cash-register'}
         )
+
+        herramienta_asistencias, _ = Herramienta.objects.get_or_create(
+            nombre='Asistencias',
+            defaults={'url_nombre': 'asistencias:ver_asistencias', 'icono': 'fas fa-clock'}
+        )
+        # Por defecto, se lo asignamos a ambos roles de ejemplo
+        Permiso.objects.get_or_create(rol=puesto_super_caja, herramienta=herramienta_asistencias)
+        Permiso.objects.get_or_create(rol=puesto_rrhh, herramienta=herramienta_asistencias)
+
+        self.stdout.write("-> Permisos asignados correctamente.")
+
+        # Por defecto, se lo asignamos a todos los roles para probar
+        Permiso.objects.get_or_create(rol=puesto_super_caja, herramienta=herramienta_asistencias)
+        Permiso.objects.get_or_create(rol=puesto_rrhh, herramienta=herramienta_asistencias)
+        self.stdout.write(self.style.SUCCESS("-> Permiso 'Ver Asistencias' creado y asignado."))
+
         Permiso.objects.get_or_create(rol=puesto_super_caja, herramienta=herramienta_caja)
         self.stdout.write("-> Permisos asignados correctamente.")
 
@@ -41,7 +57,7 @@ class Command(BaseCommand):
         self.stdout.write("Creando usuarios de prueba...")
         usuario_laura, created = Usuario.objects.get_or_create(
             nombreusuario='lgomez',
-            defaults={'apellidousuario': 'Gomez', 'emailusuario': 'laura.gomez@ejemplo.com', 'passwordusuario': 'clave123', 'dniusuario': 33111222, 'fecharegistrousuario': date.today()}
+            defaults={'apellidousuario': 'Gomez', 'emailusuario': 'laura.gomez@ejemplo.com', 'passwordusuario': 'waza', 'dniusuario': 33111222, 'fecharegistrousuario': date.today()}
         )
         if created:
             Empleado.objects.create(idusuarios=usuario_laura, cargoempleado='Cajera Principal', salarioempleado=50000.00, fechacontratado=date.today())
@@ -49,7 +65,7 @@ class Command(BaseCommand):
 
         usuario_ana, created = Usuario.objects.get_or_create(
             nombreusuario='arobles',
-            defaults={'apellidousuario': 'Robles', 'emailusuario': 'ana.robles@ejemplo.com', 'passwordusuario': 'clave789', 'dniusuario': 35555666, 'fecharegistrousuario': date.today()}
+            defaults={'apellidousuario': 'Robles', 'emailusuario': 'ana.robles@ejemplo.com', 'passwordusuario': '777', 'dniusuario': 35555666, 'fecharegistrousuario': date.today()}
         )
         if created:
             Empleado.objects.create(idusuarios=usuario_ana, cargoempleado='Analista de RRHH', salarioempleado=65000.00, fechacontratado=date.today())
