@@ -102,3 +102,14 @@ body {
     margin-bottom: 5px;
     color: #555;
 }
+
+/* --- REGLA AÑADIDA PARA LEGIBILIDAD --- */
+/* Forzamos el color del texto a ser oscuro para que contraste con fondos claros */
+.fc-event-main-text {
+    color: #1a1a1a !important; /* Un color oscuro, !important para asegurar que se aplique */
+    font-weight: 500; /* Hacemos la fuente un poco más gruesa */
+}
+
+.fc-daygrid-event .fc-event-time {
+    font-weight: 700; /* Hacemos la hora más visible en la vista de mes */
+}

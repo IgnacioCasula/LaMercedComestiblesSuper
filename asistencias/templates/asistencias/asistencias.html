@@ -74,7 +74,7 @@
                     html: '<div style="text-align:center; padding: 20px; color: #777;">No hay turnos ni asistencias registradas en este período.</div>'
                 },
                 
-                // --- CONTENIDO MEJORADO PARA CADA EVENTO ---
+                // --- FUNCIÓN MODIFICADA ---
                 eventContent: function(arg) {
                     let props = arg.event.extendedProps;
                     let html = '';
@@ -84,16 +84,16 @@
                             <div class="fc-event-main-frame">
                                 <div class="fc-event-time">${arg.timeText}</div>
                                 <div class="fc-event-title-container">
-                                    <div class="fc-event-title">${arg.event.title}</div>
+                                    <div class="fc-event-title fc-event-main-text">${arg.event.title}</div>
                                 </div>
-                                <div class="event-details">
+                                <div class="event-details fc-event-main-text">
                                     ${props.estado} (${props.entrada_registrada})
                                 </div>
                             </div>
                         `;
                     } else {
                         // Para la vista de mes, mantenemos un formato más simple
-                        html = `<div class="fc-event-main"><span class="fc-event-time">${arg.timeText}</span> ${arg.event.title}</div>`;
+                        html = `<div class="fc-event-main fc-event-main-text"><span class="fc-event-time">${arg.timeText}</span> ${arg.event.title}</div>`;
                     }
                     return { html: html };
                 },
