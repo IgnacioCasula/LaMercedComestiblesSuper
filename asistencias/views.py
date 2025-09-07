@@ -32,13 +32,20 @@ def calendar_events(request):
         return JsonResponse([], safe=False)
 
     empleado = Empleados.objects.get(idusuarios_id=usuario_id)
+    
+    # --- CORRECCIÓN CLAVE PARA EL RANGO DE FECHAS ---
+    # Convertimos las fechas y ajustamos el rango para que sea inclusivo.
     start_date = datetime.fromisoformat(start_str.split('T')[0]).date()
     end_date = datetime.fromisoformat(end_str.split('T')[0]).date()
 
     horarios = Horario.objects.filter(empleado=empleado).prefetch_related('dias__tramos', 'rol__area')
+    
+    # El rango en el filtro de asistencias debe ser inclusivo para la fecha de inicio (gte)
+    # y exclusivo para la de fin (lt), que es como funciona FullCalendar.
     asistencias = Asistencias.objects.filter(
         idempleado=empleado, 
-        fechaasistencia__range=[start_date, end_date]
+        fechaasistencia__gte=start_date,
+        fechaasistencia__lt=end_date
     ).select_related('rol')
 
     events = []
@@ -47,8 +54,11 @@ def calendar_events(request):
     for a in asistencias:
         asistencias_map[a.fechaasistencia].append(a)
 
-    current_date = start_date
-    while current_date < end_date:
+    # --- CORRECCIÓN EN LA FORMA DE ITERAR LOS DÍAS ---
+    # Iteramos día por día de una forma más robusta y segura.
+    total_days = (end_date - start_date).days
+    for day_offset in range(total_days):
+        current_date = start_date + timedelta(days=day_offset)
         dia_semana_actual = current_date.weekday()
         
         turnos_programados = []
@@ -98,10 +108,11 @@ def calendar_events(request):
                     'extendedProps': {'area': area, 'estado': estado, 'entrada_registrada': mejor_asistencia.horaentrada.strftime('%H:%M')}
                 })
             else: 
-                if current_date < timezone.now().date(): 
+                # Se utiliza timezone.localdate() para una comparación correcta con fechas naive
+                if current_date < timezone.localdate(): 
                     estado, color = ('Ausente', '#e74c3c')
                 else: 
-                    estado, color = ('Programado', '#95a5a6') # Gris más oscuro para mejor visibilidad
+                    estado, color = ('Programado', '#95a5a6')
                 
                 events.append({
                     'title': titulo, 'start': fecha_hora_inicio.isoformat(), 'end': fecha_hora_fin.isoformat(), 'color': color,
@@ -118,7 +129,5 @@ def calendar_events(request):
                     'color': '#8e44ad',
                     'extendedProps': {'area': area, 'estado': 'Fuera de Turno', 'entrada_registrada': asistencia.horaentrada.strftime('%H:%M')}
                 })
-
-        current_date += timedelta(days=1)
         
     return JsonResponse(events, safe=False)
