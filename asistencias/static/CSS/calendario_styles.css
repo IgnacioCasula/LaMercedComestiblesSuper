@@ -20,15 +20,6 @@ body {
     object-fit: cover;
 }
 
-#calendar-container {
-    background-color: #ffffff;
-    padding: 20px;
-    border-radius: 12px;
-    margin-top: 20px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-}
-
-/* --- ESTILOS DEL CALENDARIO --- */
 .fc-day-sat, .fc-day-sun {
     background-color: #f9f9f9;
 }
@@ -38,39 +29,7 @@ body {
     padding: 3px 5px;
     font-size: 13px;
     cursor: pointer;
-    overflow: hidden;
 }
-.fc-event-main {
-    color: white !important;
-}
-
-/* --- ESTILOS MEJORADOS PARA VISTA SEMANA/DÍA --- */
-.fc-timegrid-event .fc-event-main-frame {
-    padding: 5px;
-    display: flex;
-    flex-direction: column;
-}
-.fc-timegrid-event .fc-event-time {
-    font-weight: bold;
-    font-size: 0.9em;
-}
-.fc-timegrid-event .fc-event-title-container {
-    flex-grow: 1;
-}
-.fc-timegrid-event .fc-event-title {
-    font-size: 1em;
-    font-weight: 500;
-    white-space: normal;
-}
-.event-details {
-    margin-top: 4px;
-    font-size: 0.85em;
-    opacity: 0.9;
-    border-top: 1px solid rgba(255, 255, 255, 0.3);
-    padding-top: 4px;
-}
-/* --- FIN DE NUEVOS ESTILOS --- */
-
 
 .tippy-box[data-theme~='light-border'] {
     border: 1px solid #dcdcdc;
@@ -78,13 +37,6 @@ body {
     line-height: 1.5;
 }
 
-#leyenda-container {
-    background-color: #ffffff;
-    padding: 20px;
-    border-radius: 12px;
-    margin-top: 20px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-}
 .leyenda-color {
     display: inline-block;
     width: 15px;
@@ -93,23 +45,67 @@ body {
     margin-right: 8px;
     vertical-align: middle;
 }
-#leyenda-container h5 {
-    margin-bottom: 15px;
-    font-weight: bold;
-    color: #333;
-}
-#leyenda-container li {
-    margin-bottom: 5px;
-    color: #555;
+
+/* --- ESTILOS MEJORADOS PARA VISIBILIDAD DE EVENTOS --- */
+.fc-daygrid-event {
+    white-space: normal !important;
+    overflow: visible !important;
+    padding: 4px 5px !important;
+    margin-bottom: 3px !important;
 }
 
-/* --- REGLA AÑADIDA PARA LEGIBILIDAD --- */
-/* Forzamos el color del texto a ser oscuro para que contraste con fondos claros */
 .fc-event-main-text {
-    color: #1a1a1a !important; /* Un color oscuro, !important para asegurar que se aplique */
-    font-weight: 500; /* Hacemos la fuente un poco más gruesa */
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
-.fc-daygrid-event .fc-event-time {
-    font-weight: 700; /* Hacemos la hora más visible en la vista de mes */
+.event-line {
+    line-height: 1.3;
+}
+.event-status {
+    font-size: 0.9em;
+    opacity: 0.95;
+    display: flex;
+    align-items: center;
+}
+.event-icon {
+    margin-right: 5px;
+}
+
+/* --- NUEVOS ESTILOS POR CLASE DE EVENTO --- */
+
+/* 1. Evento Programado (Fondo Rayado) */
+.fc-event.event-programado {
+    background: repeating-linear-gradient(45deg, #181818, #181818 10px, #252727 10px, #252727 20px);
+    border: 1px solid #dee2e6;
+}
+.event-programado .fc-event-main-text, .event-programado .fc-event-main-text div, .event-programado .fc-event-main-text strong {
+     color: #495057 !important;
+}
+
+/* 2. Evento Temprano (Azul) */
+.fc-event.event-temprano { background-color: #3498db; border: 1px solid #2980b9; }
+
+/* 3. Evento Justo (Verde) */
+.fc-event.event-justo { background-color: #27ae60; border: 1px solid #229954; }
+
+/* 4. Evento Tarde (Naranja) */
+.fc-event.event-tarde { background-color: #e67e22; border: 1px solid #d35400; }
+
+/* 5. Evento Ausente (Rojo) */
+.fc-event.event-ausente { background-color: #e74c3c; border: 1px solid #c0392b; }
+
+/* 6. Evento Fuera de Turno (Azul Oscuro) */
+.fc-event.event-fuera-de-turno { background-color: #34495e; border: 1px solid #2c3e50; }
+
+/* Color de texto blanco por defecto para todos los eventos con fondo sólido */
+.fc-event.event-temprano .fc-event-main-text,
+.fc-event.event-justo .fc-event-main-text,
+.fc-event.event-tarde .fc-event-main-text,
+.fc-event.event-ausente .fc-event-main-text,
+.fc-event.event-fuera-de-turno .fc-event-main-text,
+.fc-event .fc-event-main-text div,
+.fc-event .fc-event-main-text strong {
+    color: white !important;
 }
