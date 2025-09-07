@@ -33,15 +33,11 @@ def calendar_events(request):
 
     empleado = Empleados.objects.get(idusuarios_id=usuario_id)
     
-    # --- CORRECCIÓN CLAVE PARA EL RANGO DE FECHAS ---
-    # Convertimos las fechas y ajustamos el rango para que sea inclusivo.
     start_date = datetime.fromisoformat(start_str.split('T')[0]).date()
     end_date = datetime.fromisoformat(end_str.split('T')[0]).date()
 
     horarios = Horario.objects.filter(empleado=empleado).prefetch_related('dias__tramos', 'rol__area')
     
-    # El rango en el filtro de asistencias debe ser inclusivo para la fecha de inicio (gte)
-    # y exclusivo para la de fin (lt), que es como funciona FullCalendar.
     asistencias = Asistencias.objects.filter(
         idempleado=empleado, 
         fechaasistencia__gte=start_date,
@@ -54,8 +50,6 @@ def calendar_events(request):
     for a in asistencias:
         asistencias_map[a.fechaasistencia].append(a)
 
-    # --- CORRECCIÓN EN LA FORMA DE ITERAR LOS DÍAS ---
-    # Iteramos día por día de una forma más robusta y segura.
     total_days = (end_date - start_date).days
     for day_offset in range(total_days):
         current_date = start_date + timedelta(days=day_offset)
@@ -63,9 +57,10 @@ def calendar_events(request):
         
         turnos_programados = []
         for horario in horarios:
-            for dia in horario.dias.filter(dia_semana=dia_semana_actual):
-                for tramo in dia.tramos.all():
-                    turnos_programados.append({'horario': horario, 'tramo': tramo})
+            for dia in horario.dias.all():
+                if dia.dia_semana == dia_semana_actual:
+                    for tramo in dia.tramos.all():
+                        turnos_programados.append({'horario': horario, 'tramo': tramo})
         
         asistencias_del_dia = asistencias_map.get(current_date, [])
         asistencias_procesadas = set()
@@ -74,6 +69,9 @@ def calendar_events(request):
             horario = turno['horario']
             tramo = turno['tramo']
             rol = horario.rol
+
+            if not tramo.hora_inicio or not tramo.hora_fin:
+                continue
             
             fecha_hora_inicio = datetime.combine(current_date, tramo.hora_inicio)
             fecha_hora_fin = datetime.combine(current_date, tramo.hora_fin)
@@ -84,7 +82,7 @@ def calendar_events(request):
             min_diff = float('inf')
 
             for asistencia in asistencias_del_dia:
-                if asistencia.rol == rol and asistencia.id not in asistencias_procesadas:
+                if asistencia.rol == rol and asistencia.idasistencia not in asistencias_procesadas and asistencia.horaentrada:
                     hora_entrada_reg = datetime.combine(current_date, asistencia.horaentrada)
                     diff = abs((hora_entrada_reg - fecha_hora_inicio).total_seconds())
                     if diff < min_diff:
@@ -95,39 +93,42 @@ def calendar_events(request):
             area = rol.area.nombrearea if rol and rol.area else 'Sin Área'
 
             if mejor_asistencia:
-                asistencias_procesadas.add(mejor_asistencia.id)
+                asistencias_procesadas.add(mejor_asistencia.idasistencia)
                 hora_entrada_reg = datetime.combine(current_date, mejor_asistencia.horaentrada)
                 diff_puntualidad = (hora_entrada_reg - fecha_hora_inicio).total_seconds()
                 
-                estado, color = ("Justo", "#27ae60")
-                if diff_puntualidad < -900: estado, color = ("Temprano", "#3498db")
-                elif diff_puntualidad > 300: estado, color = ("Tarde", "#e67e22")
+                estado, className = ("Justo", "event-justo")
+                if diff_puntualidad < -900: estado, className = ("Temprano", "event-temprano")
+                elif diff_puntualidad > 300: estado, className = ("Tarde", "event-tarde")
 
                 events.append({
-                    'title': titulo, 'start': fecha_hora_inicio.isoformat(), 'end': fecha_hora_fin.isoformat(), 'color': color,
+                    'title': titulo, 'start': fecha_hora_inicio.isoformat(), 'end': fecha_hora_fin.isoformat(), 
+                    'classNames': [className], # Se usa classNames en lugar de color
                     'extendedProps': {'area': area, 'estado': estado, 'entrada_registrada': mejor_asistencia.horaentrada.strftime('%H:%M')}
                 })
             else: 
-                # Se utiliza timezone.localdate() para una comparación correcta con fechas naive
+                event_data = {
+                    'title': titulo, 'start': fecha_hora_inicio.isoformat(), 'end': fecha_hora_fin.isoformat(),
+                    'extendedProps': {'area': area, 'entrada_registrada': 'N/A'}
+                }
                 if current_date < timezone.localdate(): 
-                    estado, color = ('Ausente', '#e74c3c')
+                    event_data['extendedProps']['estado'] = 'Ausente'
+                    event_data['classNames'] = ['event-ausente']
                 else: 
-                    estado, color = ('Programado', '#95a5a6')
+                    event_data['extendedProps']['estado'] = 'Programado'
+                    event_data['classNames'] = ['event-programado']
                 
-                events.append({
-                    'title': titulo, 'start': fecha_hora_inicio.isoformat(), 'end': fecha_hora_fin.isoformat(), 'color': color,
-                    'extendedProps': {'area': area, 'estado': estado, 'entrada_registrada': 'N/A'}
-                })
+                events.append(event_data)
 
         for asistencia in asistencias_del_dia:
-            if asistencia.id not in asistencias_procesadas:
+            if asistencia.idasistencia not in asistencias_procesadas:
                 titulo = f"{asistencia.rol.nombrerol if asistencia.rol else 'Sin Rol'}"
                 area = asistencia.rol.area.nombrearea if asistencia.rol and asistencia.rol.area else 'Sin Área'
                 events.append({
                     'title': titulo,
-                    'start': datetime.combine(current_date, asistencia.horaentrada).isoformat(),
-                    'color': '#8e44ad',
-                    'extendedProps': {'area': area, 'estado': 'Fuera de Turno', 'entrada_registrada': asistencia.horaentrada.strftime('%H:%M')}
+                    'start': datetime.combine(current_date, asistencia.horaentrada).isoformat() if asistencia.horaentrada else None,
+                    'classNames': ['event-fuera-de-turno'], # Se usa classNames en lugar de color
+                    'extendedProps': {'area': area, 'estado': 'Fuera de Turno', 'entrada_registrada': asistencia.horaentrada.strftime('%H:%M') if asistencia.horaentrada else 'N/A'}
                 })
         
     return JsonResponse(events, safe=False)
