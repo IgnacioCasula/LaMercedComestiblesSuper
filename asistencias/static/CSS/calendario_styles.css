@@ -46,7 +46,6 @@ body {
     vertical-align: middle;
 }
 
-/* --- ESTILOS MEJORADOS PARA VISIBILIDAD DE EVENTOS --- */
 .fc-daygrid-event {
     white-space: normal !important;
     overflow: visible !important;
@@ -73,9 +72,6 @@ body {
     margin-right: 5px;
 }
 
-/* --- NUEVOS ESTILOS POR CLASE DE EVENTO --- */
-
-/* 1. Evento Programado (Fondo Rayado) */
 .fc-event.event-programado {
     background: repeating-linear-gradient(45deg, #181818, #181818 10px, #252727 10px, #252727 20px);
     border: 1px solid #dee2e6;
@@ -84,22 +80,16 @@ body {
      color: #495057 !important;
 }
 
-/* 2. Evento Temprano (Azul) */
 .fc-event.event-temprano { background-color: #3498db; border: 1px solid #2980b9; }
 
-/* 3. Evento Justo (Verde) */
 .fc-event.event-justo { background-color: #27ae60; border: 1px solid #229954; }
 
-/* 4. Evento Tarde (Naranja) */
 .fc-event.event-tarde { background-color: #e67e22; border: 1px solid #d35400; }
 
-/* 5. Evento Ausente (Rojo) */
 .fc-event.event-ausente { background-color: #e74c3c; border: 1px solid #c0392b; }
 
-/* 6. Evento Fuera de Turno (Azul Oscuro) */
 .fc-event.event-fuera-de-turno { background-color: #34495e; border: 1px solid #2c3e50; }
 
-/* Color de texto blanco por defecto para todos los eventos con fondo sólido */
 .fc-event.event-temprano .fc-event-main-text,
 .fc-event.event-justo .fc-event-main-text,
 .fc-event.event-tarde .fc-event-main-text,

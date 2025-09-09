@@ -18,10 +18,8 @@ class Horario(models.Model):
 class DiaHorario(models.Model):
     iddiahorario = models.AutoField(primary_key=True)
     horario = models.ForeignKey(Horario, on_delete=models.CASCADE, related_name="dias")
-    
-    # Usamos números para los días de la semana (0=Lunes, 6=Domingo)
-    # ELIMINAMOS 'semana_del_mes'
     dia_semana = models.IntegerField() 
+    semana_del_mes = models.IntegerField(default=1)
 
     class Meta:
         db_table = 'dias_horario'
