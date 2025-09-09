@@ -1,18 +1,15 @@
-/* Estilos Generales */
 body {
     margin: 0;
     font-family: Arial, sans-serif;
     background-color: #f0f2f5;
 }
 
-/* Regla para evitar la animación al recargar la página */
 body.is-loading .main-header,
 body.is-loading .main-header h1,
 body.is-loading .panel {
     transition: none !important;
 }
 
-/* --- ESTILOS DEL BANNER DINÁMICO --- */
 .main-header {
     height: 50vh;
     color: white;
@@ -63,7 +60,6 @@ body.is-loading .panel {
     text-shadow: none;
 }
 
-/* --- CORRECCIÓN: EFECTO DE TEMBLOR AL LLEGAR AL LÍMITE --- */
 @keyframes shakeEffect {
   0%, 100% { transform: translateX(0); }
   10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
@@ -74,8 +70,6 @@ body.is-loading .panel {
   animation: shakeEffect 0.3s ease-in-out;
 }
 
-
-/* Contenedor de Paneles */
 .main-container {
     padding: 30px;
     max-width: 1400px;

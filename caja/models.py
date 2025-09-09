@@ -1,8 +1,5 @@
-# (Importaciones y otros modelos se mantienen igual)
 from django.db import models
 import uuid
-
-# ... (Area, Roles, Usuarios, Empleados, etc. se mantienen igual) ...
 
 class Area(models.Model):
     idarea = models.AutoField(primary_key=True)
@@ -59,8 +56,6 @@ class Empleados(models.Model):
 
     class Meta:
         db_table = 'empleados'
-
-# ... (Codigopostal, Ubicaciones, Sucursales, Proveedores, Cajas, Categorias, etc. se mantienen igual) ...
 
 class Codigopostal(models.Model):
     idcodigopostal = models.AutoField(db_column='IdCodigoPostal', primary_key=True)
@@ -232,7 +227,6 @@ class Asistencias(models.Model):
     horaentrada = models.TimeField(db_column='HoraEntrada')
     horasalida = models.TimeField(db_column='HoraSalida', null=True, blank=True)
     idempleado = models.ForeignKey(Empleados, on_delete=models.CASCADE, db_column='IdEmpleado')
-    # --- CAMPO NUEVO ---
     rol = models.ForeignKey(Roles, on_delete=models.SET_NULL, null=True, blank=True, help_text="Rol con el que se registró esta asistencia")
 
     class Meta:

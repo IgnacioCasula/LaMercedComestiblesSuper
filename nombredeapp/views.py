@@ -22,18 +22,17 @@ def obtener_ip(request):
 
 def registrar_asistencia_entrada(empleado, rol_id):
     """Crea un nuevo registro de asistencia para un empleado y rol."""
-    # Primero, nos aseguramos de que no haya una entrada abierta para este empleado y rol
     Asistencias.objects.filter(
         idempleado=empleado,
         rol_id=rol_id,
         horasalida__isnull=True
-    ).update(horasalida=timezone.now().time()) # Cerramos cualquier sesión olvidada
+    ).update(horasalida=timezone.localtime().time())
 
     Asistencias.objects.create(
         idempleado=empleado,
         rol_id=rol_id,
-        fechaasistencia=timezone.now().date(),
-        horaentrada=timezone.now().time()
+        fechaasistencia=timezone.localtime().date(),
+        horaentrada=timezone.localtime().time()
     )
 
 def iniciar_sesion(request):
@@ -50,8 +49,6 @@ def iniciar_sesion(request):
                 try:
                     empleado = Empleado.objects.get(idusuarios=usuario)
                     if empleado.estado == 'Trabajando':
-                        # El manejo de grace period se simplifica, ya no es necesario aquí
-                        
                         conteo_roles = UsuarioRol.objects.filter(idusuarios=usuario).count()
 
                         if conteo_roles > 1:
@@ -66,31 +63,25 @@ def iniciar_sesion(request):
                             request.session['apellido_usuario'] = usuario.apellidousuario
                             request.session['rol_id'] = rol.idroles
                             request.session['rol_nombre'] = rol.nombrerol
-                            
-                            # Registramos la asistencia al iniciar sesión
                             registrar_asistencia_entrada(empleado, rol.idroles)
 
                             return redirect('inicio')
-                        else: # No tiene roles
+                        else:
                             request.session['usuario_id'] = usuario.idusuarios
                             request.session['nombre_usuario'] = usuario.nombreusuario
                             request.session['apellido_usuario'] = usuario.apellidousuario
                             request.session['rol_nombre'] = "Sin puesto asignado"
                             return redirect('inicio')
                             
-                    else: # Empleado no 'Trabajando'
-                        # ... (código de seguridad sin cambios) ...
+                    else:
                         return render(request, 'HTML/login.html', {'error': f'Acceso denegado. Su estado es: {empleado.estado}.'})
 
                 except Empleado.DoesNotExist:
-                    # ... (código de seguridad sin cambios) ...
                     return render(request, 'HTML/login.html', {'error': 'Este usuario no es un empleado válido.'})
             else:
-                # ... (código de seguridad sin cambios) ...
                 return render(request, 'HTML/login.html', {'error': 'Ha ingresado mal la contraseña.'})
 
         except Usuario.DoesNotExist:
-            # ... (código de seguridad sin cambios) ...
             return render(request, 'HTML/login.html', {'error': 'El empleado no existe.'})
 
     return render(request, 'HTML/login.html')
@@ -117,12 +108,10 @@ def seleccionar_rol(request):
         request.session['rol_nombre'] = rol_seleccionado.nombrerol
         del request.session['pre_auth_usuario_id']
         
-        # Registramos la asistencia con el rol seleccionado
         registrar_asistencia_entrada(empleado, rol_seleccionado.idroles)
         
         return redirect('inicio')
 
-    # ... (lógica para preparar el contexto se mantiene igual) ...
     areas_disponibles = sorted(
         list(set(relacion.idroles.area for relacion in roles_del_usuario if relacion.idroles.area)),
         key=lambda area: area.nombrearea
@@ -152,7 +141,6 @@ def cerrar_sesion(request):
     if usuario_id and rol_id:
         try:
             empleado = Empleado.objects.get(idusuarios_id=usuario_id)
-            # Buscamos la asistencia abierta para ESE empleado y ESE rol
             asistencia_abierta = Asistencias.objects.filter(
                 idempleado=empleado,
                 rol_id=rol_id,
@@ -160,7 +148,7 @@ def cerrar_sesion(request):
             ).order_by('-fechaasistencia', '-horaentrada').first()
 
             if asistencia_abierta:
-                asistencia_abierta.horasalida = timezone.now().time()
+                asistencia_abierta.horasalida = timezone.localtime().time()
                 asistencia_abierta.save()
 
         except Empleado.DoesNotExist:
@@ -170,8 +158,6 @@ def cerrar_sesion(request):
 
     request.session.flush()
     return redirect('iniciar_sesion')
-
-# ... (pagina_inicio se mantiene igual) ...
 
 def pagina_inicio(request):
     """Página principal a la que se accede después de iniciar sesión."""
@@ -195,8 +181,6 @@ def pagina_inicio(request):
         'tiene_permiso_vista_previa': tiene_permiso_vista_previa,
     }
     return render(request, 'HTML/inicio.html', context)
-
-# ... (solicitar_usuario, ingresar_codigo, etc. se mantienen igual) ...
 
 def solicitar_usuario(request):
     """Primer paso para recuperar contraseña: el usuario ingresa su nombre."""
@@ -453,33 +437,56 @@ def api_registrar_empleado(request):
 
         puesto_id = puesto_seleccionado.get('id')
         if puesto_id:
-            puesto = Roles.objects.get(idroles=puesto_id)
-            UsuarioRol.objects.create(idusuarios=nuevo_usuario, idroles=puesto)
-
-            permisos_ids = data.get('permisos', [])
-            Permiso.objects.filter(rol=puesto).delete()
-            for herramienta_id in permisos_ids:
+            puesto_base = Roles.objects.get(idroles=puesto_id)
+            permisos_ids_seleccionados = data.get('permisos', [])
+            rol_personalizado = Roles.objects.create(
+                nombrerol=f"{puesto_base.nombrerol} ({nuevo_usuario.nombreusuario})",
+                area=puesto_base.area,
+                descripcionrol=f"Rol personalizado para el usuario {nuevo_usuario.nombreusuario}"
+            )
+            UsuarioRol.objects.create(idusuarios=nuevo_usuario, idroles=rol_personalizado)
+            
+            for herramienta_id in permisos_ids_seleccionados:
                 herramienta = Herramienta.objects.get(idherramienta=herramienta_id)
-                Permiso.objects.create(rol=puesto, herramienta=herramienta)
+                Permiso.objects.create(rol=rol_personalizado, herramienta=herramienta)
+            
+            nuevo_empleado.cargoempleado = rol_personalizado.nombrerol
+            nuevo_empleado.save()
         
             horario_data = data.get('horario', {})
             if horario_data:
                 dias_semana_map = {'Lu': 0, 'Ma': 1, 'Mi': 2, 'Ju': 3, 'Vi': 4, 'Sa': 5, 'Do': 6}
                 
-                horario_principal = Horario.objects.create(empleado=nuevo_empleado, rol=puesto)
+                horario_principal = Horario.objects.create(empleado=nuevo_empleado, rol=rol_personalizado)
                 
                 day_color_map = horario_data.get('dayColorMap', {})
                 schedule_data = horario_data.get('scheduleData', {})
+                week_id_map = {}
+                current_week_number = 1
+                sorted_week_ids = sorted(day_color_map.keys(), key=lambda k: int(k.split('-')[0][1:]) if '-' in k else 0)
+                
+                for key in sorted_week_ids:
+                    week_id = key.split('-')[0] if '-' in key else 'w0'
+                    if week_id not in week_id_map:
+                        week_id_map[week_id] = current_week_number
+                        current_week_number += 1
 
-                for day_key, color in day_color_map.items():
-                    # El day_key ahora es solo 'Lu', 'Ma', etc.
+                for composite_key, color in day_color_map.items():
+                    parts = composite_key.split('-')
+                    if len(parts) == 2:
+                        week_id_str, day_key = parts
+                        week_number = week_id_map.get(week_id_str, 1)
+                    else:
+                        day_key = parts[0]
+                        week_number = 1
+                    
                     day = dias_semana_map.get(day_key)
 
                     if day is not None:
-                        # YA NO SE GUARDA LA SEMANA
-                        dia_horario_obj = DiaHorario.objects.create(
+                        dia_horario_obj, created = DiaHorario.objects.get_or_create(
                             horario=horario_principal,
-                            dia_semana=day
+                            dia_semana=day,
+                            semana_del_mes=week_number
                         )
                         
                         tramos = schedule_data.get(color, [])
