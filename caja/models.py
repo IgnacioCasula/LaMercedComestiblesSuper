@@ -1,69 +1,13 @@
 from django.db import models
 import uuid
 
-class Area(models.Model):
-    idarea = models.AutoField(primary_key=True)
-    nombrearea = models.CharField(max_length=100, unique=True, verbose_name="Nombre del Área")
-    descripcion = models.TextField(blank=True, null=True)
-
-    class Meta:
-        db_table = 'areas'
-        verbose_name = "Área"
-        verbose_name_plural = "Áreas"
-
-    def __str__(self):
-        return self.nombrearea
-
-class Roles(models.Model):
-    idroles = models.AutoField(db_column='IdRoles', primary_key=True)
-    nombrerol = models.CharField(db_column='NombreRol', max_length=50)
-    descripcionrol = models.CharField(db_column='DescripcionRol', max_length=200, blank=True, null=True)
-    area = models.ForeignKey(Area, on_delete=models.SET_NULL, null=True, blank=True)
-
-    class Meta:
-        db_table = 'roles'
-
-    def __str__(self):
-        if self.area:
-            return f"{self.area.nombrearea} - {self.nombrerol}"
-        return self.nombrerol or ''
-
-class Usuarios(models.Model):
-    idusuarios = models.AutoField(db_column='IdUsuarios', primary_key=True)
-    nombreusuario = models.CharField(db_column='NombreUsuario', max_length=30, unique=True)
-    apellidousuario = models.CharField(db_column='ApellidoUsuario', max_length=30)
-    emailusuario = models.CharField(db_column='EmailUsuario', max_length=50, unique=True)
-    passwordusuario = models.CharField(db_column='PasswordUsuario', max_length=255)
-    fecharegistrousuario = models.DateField(db_column='FechaRegistroUsuario')
-    dniusuario = models.BigIntegerField(db_column='DNIUsuario', unique=True)
-    imagenusuario = models.TextField(db_column='ImagenUsuario', blank=True, null=True)
-    telefono = models.CharField(max_length=20, blank=True, null=True)
-    roles = models.ManyToManyField(Roles, through='Usuariosxrol')
-
-    class Meta:
-        db_table = 'usuarios'
-
-    def __str__(self):
-        return f'{self.nombreusuario} {self.apellidousuario}'
-
-class Empleados(models.Model):
-    idempleado = models.AutoField(db_column='IdEmpleado', primary_key=True)
-    salarioempleado = models.FloatField(db_column='SalarioEmpleado')
-    fechacontratado = models.DateField(db_column='FechaContratado')
-    cargoempleado = models.CharField(db_column='CargoEmpleado', max_length=100)
-    idusuarios = models.OneToOneField(Usuarios, on_delete=models.CASCADE, db_column='IdUsuarios')
-    estado = models.CharField(max_length=20, default='Trabajando')
-
-    class Meta:
-        db_table = 'empleados'
-
 class Codigopostal(models.Model):
     idcodigopostal = models.AutoField(db_column='IdCodigoPostal', primary_key=True)
     codigopostal = models.BigIntegerField(db_column='CodigoPostal')
     nombrelocalidad = models.CharField(db_column='NombreLocalidad', max_length=30)
 
     class Meta:
-        db_table = 'codigopostal'
+        db_table = 'codigosPostales'
 
 class Ubicaciones(models.Model):
     idubicacion = models.AutoField(db_column='IdUbicacion', primary_key=True)
@@ -94,22 +38,6 @@ class Proveedores(models.Model):
     class Meta:
         db_table = 'proveedores'
 
-class Cajas(models.Model):
-    idcaja = models.AutoField(db_column='IdCaja', primary_key=True)
-    nombrecaja = models.CharField(db_column='NombreCaja', max_length=50)
-    horaaperturacaja = models.TimeField(db_column='HoraAperturaCaja')
-    horacierrecaja = models.TimeField(db_column='HoraCierreCaja')
-    fechaaperturacaja = models.DateField(db_column='FechaAperturaCaja')
-    fechacierrecaja = models.DateField(db_column='FechaCierreCaja')
-    montoinicialcaja = models.FloatField(db_column='MontoInicialCaja')
-    montofinalcaja = models.FloatField(db_column='MontoFinalCaja')
-    observacionapertura = models.CharField(db_column='Observacionapertura', max_length=100, blank=True, null=True)
-    idsucursal = models.ForeignKey(Sucursales, on_delete=models.CASCADE, db_column='IdSucursal')
-    idusuarios = models.ForeignKey(Usuarios, on_delete=models.CASCADE, db_column='IdUsuarios')
-
-    class Meta:
-        db_table = 'cajas'
-
 class Categorias(models.Model):
     idcategoria = models.AutoField(db_column='IdCategoria', primary_key=True)
     nombrecategoria = models.CharField(db_column='NombreCategoria', max_length=30)
@@ -130,6 +58,115 @@ class Productos(models.Model):
     class Meta:
         db_table = 'productos'
 
+class Inventarios(models.Model):
+    idinventario = models.AutoField(primary_key=True)
+    producto = models.ForeignKey(Productos, on_delete=models.CASCADE)
+    sucursal = models.ForeignKey(Sucursales, on_delete=models.CASCADE)
+    cantidad = models.PositiveIntegerField()
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'inventarios'
+        unique_together = ('producto', 'sucursal')
+
+class Provxprod(models.Model):
+    idprovxprod = models.AutoField(primary_key=True)
+    idproveedor = models.ForeignKey(Proveedores, on_delete=models.CASCADE)
+    idproducto = models.ForeignKey(Productos, on_delete=models.CASCADE)
+
+    class Meta:
+        db_table = 'provxprod'
+
+class Provxsuc(models.Model):
+    idprovxsuc = models.AutoField(primary_key=True)
+    idproveedor = models.ForeignKey(Proveedores, on_delete=models.CASCADE)
+    idsucursal = models.ForeignKey(Sucursales, on_delete=models.CASCADE)
+
+    class Meta:
+        db_table = 'provxsuc'
+
+class Roles(models.Model):
+    idroles = models.AutoField(db_column='IdRoles', primary_key=True)
+    nombrerol = models.CharField(db_column='NombreRol', max_length=50)
+    descripcionrol = models.CharField(db_column='DescripcionRol', max_length=200, blank=True, null=True)
+    nombrearea = models.CharField(max_length=100, default="General")
+
+    class Meta:
+        db_table = 'roles'
+
+    def __str__(self):
+        return f"{self.nombrearea} - {self.nombrerol}"
+
+class Usuarios(models.Model):
+    idusuarios = models.AutoField(db_column='IdUsuarios', primary_key=True)
+    nombreusuario = models.CharField(db_column='NombreUsuario', max_length=30, unique=True)
+    apellidousuario = models.CharField(db_column='ApellidoUsuario', max_length=30)
+    emailusuario = models.CharField(db_column='EmailUsuario', max_length=50, unique=True)
+    passwordusuario = models.CharField(db_column='PasswordUsuario', max_length=255)
+    fecharegistrousuario = models.DateField(db_column='FechaRegistroUsuario')
+    dniusuario = models.BigIntegerField(db_column='DNIUsuario', unique=True)
+    imagenusuario = models.TextField(db_column='ImagenUsuario', blank=True, null=True)
+    telefono = models.CharField(max_length=20, blank=True, null=True)
+    roles = models.ManyToManyField(Roles, through='UsuxRoles')
+
+    class Meta:
+        db_table = 'usuarios'
+
+    def __str__(self):
+        return f'{self.nombreusuario} {self.apellidousuario}'
+
+class UsuxRoles(models.Model):
+    idusuarioxrol = models.AutoField(primary_key=True)
+    idusuarios = models.ForeignKey(Usuarios, on_delete=models.CASCADE, db_column='IdUsuarios')
+    idroles = models.ForeignKey(Roles, on_delete=models.CASCADE, db_column='IdRoles')
+
+    class Meta:
+        db_table = 'usuxRoles'
+        unique_together = [['idusuarios', 'idroles']]
+
+class Empleados(models.Model):
+    idempleado = models.AutoField(db_column='IdEmpleado', primary_key=True)
+    salarioempleado = models.FloatField(db_column='SalarioEmpleado')
+    fechacontratado = models.DateField(db_column='FechaContratado')
+    cargoempleado = models.CharField(db_column='CargoEmpleado', max_length=100)
+    idusuarios = models.OneToOneField(Usuarios, on_delete=models.CASCADE, db_column='IdUsuarios')
+    estado = models.CharField(max_length=20, default='Trabajando')
+
+    class Meta:
+        db_table = 'empleados'
+
+class EmpxSuc(models.Model):
+    idempxsuc = models.AutoField(primary_key=True)
+    idempleado = models.ForeignKey(Empleados, on_delete=models.CASCADE)
+    idsucursal = models.ForeignKey(Sucursales, on_delete=models.CASCADE)
+
+    class Meta:
+        db_table = 'empxSuc'
+
+class UsuxSuc(models.Model):
+    idusuxsuc = models.AutoField(primary_key=True)
+    idusuario = models.ForeignKey(Usuarios, on_delete=models.CASCADE)
+    idsucursal = models.ForeignKey(Sucursales, on_delete=models.CASCADE)
+
+    class Meta:
+        db_table = 'usuxSuc'
+
+class Caja(models.Model):
+    idcaja = models.AutoField(db_column='IdCaja', primary_key=True)
+    nombrecaja = models.CharField(db_column='NombreCaja', max_length=50)
+    horaaperturacaja = models.TimeField(db_column='HoraAperturaCaja')
+    horacierrecaja = models.TimeField(db_column='HoraCierreCaja')
+    fechaaperturacaja = models.DateField(db_column='FechaAperturaCaja')
+    fechacierrecaja = models.DateField(db_column='FechaCierreCaja')
+    montoinicialcaja = models.FloatField(db_column='MontoInicialCaja')
+    montofinalcaja = models.FloatField(db_column='MontoFinalCaja')
+    observacionapertura = models.CharField(db_column='Observacionapertura', max_length=100, blank=True, null=True)
+    idsucursal = models.ForeignKey(Sucursales, on_delete=models.CASCADE, db_column='IdSucursal')
+    idusuarios = models.ForeignKey(Usuarios, on_delete=models.CASCADE, db_column='IdUsuarios')
+
+    class Meta:
+        db_table = 'caja'
+
 class Compras(models.Model):
     idcompras = models.AutoField(db_column='IdCompras', primary_key=True)
     fechacompra = models.DateField(db_column='FechaCompra')
@@ -137,12 +174,12 @@ class Compras(models.Model):
     totalcompra = models.FloatField(db_column='TotalCompra')
     estadocompra = models.CharField(db_column='EstadoCompra', max_length=50)
     idproveedor = models.ForeignKey(Proveedores, on_delete=models.CASCADE, db_column='IdProveedor')
-    idcaja = models.ForeignKey(Cajas, on_delete=models.CASCADE, db_column='IdCaja')
+    idcaja = models.ForeignKey(Caja, on_delete=models.CASCADE, db_column='IdCaja')
 
     class Meta:
         db_table = 'compras'
 
-class Detallecompras(models.Model):
+class DetalleDeCompras(models.Model):
     iddetallecompras = models.AutoField(db_column='IdDetalleCompras', primary_key=True)
     cantidadcompra = models.IntegerField(db_column='CantidadCompra')
     preciounitariodc = models.FloatField(db_column='PrecioUnitarioDC')
@@ -151,32 +188,7 @@ class Detallecompras(models.Model):
     idproducto = models.ForeignKey(Productos, on_delete=models.CASCADE, db_column='IdProducto')
 
     class Meta:
-        db_table = 'detallecompras'
-
-class Ventas(models.Model):
-    idventa = models.AutoField(db_column='IdVenta', primary_key=True)
-    totalventa = models.FloatField(db_column='TotalVenta')
-    metodopago = models.CharField(db_column='MetodoPago', max_length=50)
-    estadoventa = models.CharField(db_column='EstadoVenta', max_length=50)
-    fechaventa = models.DateField(db_column='FechaVenta')
-    horaventa = models.TimeField(db_column='HoraVenta')
-    idusuarios = models.ForeignKey(Usuarios, on_delete=models.CASCADE, db_column='IdUsuarios')
-    idofertas = models.ForeignKey('Ofertas', on_delete=models.CASCADE, db_column='IdOfertas')
-    idcaja = models.ForeignKey(Cajas, on_delete=models.CASCADE, db_column='IdCaja')
-
-    class Meta:
-        db_table = 'ventas'
-
-class Detalleventas(models.Model):
-    iddetalleventas = models.AutoField(db_column='IdDetalleVentas', primary_key=True)
-    cantidadvendida = models.IntegerField(db_column='CantidadVendida')
-    preciounitariodv = models.FloatField(db_column='PrecioUnitarioDV')
-    subtotaldv = models.FloatField(db_column='SubtotalDV')
-    idventa = models.ForeignKey(Ventas, on_delete=models.CASCADE, db_column='IdVenta')
-    idprducto = models.ForeignKey(Productos, on_delete=models.CASCADE, db_column='IdPrducto')
-
-    class Meta:
-        db_table = 'detalleventas'
+        db_table = 'detalleDeCompras'
 
 class Ofertas(models.Model):
     idofertas = models.AutoField(db_column='IdOfertas', primary_key=True)
@@ -190,6 +202,31 @@ class Ofertas(models.Model):
     class Meta:
         db_table = 'ofertas'
 
+class Ventas(models.Model):
+    idventa = models.AutoField(db_column='IdVenta', primary_key=True)
+    totalventa = models.FloatField(db_column='TotalVenta')
+    metodopago = models.CharField(db_column='MetodoPago', max_length=50)
+    estadoventa = models.CharField(db_column='EstadoVenta', max_length=50)
+    fechaventa = models.DateField(db_column='FechaVenta')
+    horaventa = models.TimeField(db_column='HoraVenta')
+    idusuarios = models.ForeignKey(Usuarios, on_delete=models.CASCADE, db_column='IdUsuarios')
+    idofertas = models.ForeignKey(Ofertas, on_delete=models.CASCADE, db_column='IdOfertas')
+    idcaja = models.ForeignKey(Caja, on_delete=models.CASCADE, db_column='IdCaja')
+
+    class Meta:
+        db_table = 'ventas'
+
+class DetalleDeVentas(models.Model):
+    iddetalleventas = models.AutoField(db_column='IdDetalleVentas', primary_key=True)
+    cantidadvendida = models.IntegerField(db_column='CantidadVendida')
+    preciounitariodv = models.FloatField(db_column='PrecioUnitarioDV')
+    subtotaldv = models.FloatField(db_column='SubtotalDV')
+    idventa = models.ForeignKey(Ventas, on_delete=models.CASCADE, db_column='IdVenta')
+    idproducto = models.ForeignKey(Productos, on_delete=models.CASCADE, db_column='IdProducto')
+
+    class Meta:
+        db_table = 'detalleDeVentas'
+
 class Pedidos(models.Model):
     idpedidos = models.AutoField(db_column='IdPedidos', primary_key=True)
     fechapedido = models.DateField(db_column='FechaPedido')
@@ -202,7 +239,7 @@ class Pedidos(models.Model):
     class Meta:
         db_table = 'pedidos'
 
-class Detallepedido(models.Model):
+class DetalleDePedidos(models.Model):
     iddetallepedido = models.AutoField(db_column='IdDetallePedido', primary_key=True)
     cantidadpedido = models.IntegerField(db_column='CantidadPedido')
     preciounitariopedido = models.FloatField(db_column='PrecioUnitarioPedido')
@@ -210,16 +247,7 @@ class Detallepedido(models.Model):
     idproducto = models.ForeignKey(Productos, on_delete=models.CASCADE, db_column='IdProducto')
 
     class Meta:
-        db_table = 'detallepedido'
-
-class Usuariosxrol(models.Model):
-    idusuarioxrol = models.AutoField(primary_key=True)
-    idusuarios = models.ForeignKey(Usuarios, on_delete=models.CASCADE, db_column='IdUsuarios')
-    idroles = models.ForeignKey(Roles, on_delete=models.CASCADE, db_column='IdRoles')
-
-    class Meta:
-        db_table = 'usuariosxrol'
-        unique_together = [['idusuarios', 'idroles']]
+        db_table = 'detalleDePedidos'
 
 class Asistencias(models.Model):
     idasistencia = models.AutoField(db_column='IdAsistencia', primary_key=True)
@@ -232,84 +260,19 @@ class Asistencias(models.Model):
     class Meta:
         db_table = 'asistencias'
 
-class Empleadosxsucursales(models.Model):
-    idempleadosucursales = models.AutoField(db_column='IdEmpleadoSucursales', primary_key=True)
-    fechaaltaempleado = models.DateField(db_column='FechaAltaEmpleado')
-    fechabajaempleado = models.DateField(db_column='FechaBajaEmpleado', blank=True, null=True)
-    idsucursal = models.ForeignKey(Sucursales, on_delete=models.CASCADE, db_column='IdSucursal')
-    idempleado = models.ForeignKey(Empleados, on_delete=models.CASCADE, db_column='IdEmpleado')
-
+class Horario(models.Model):
+    idhorario = models.AutoField(primary_key=True)
+    empleado = models.ForeignKey(Empleados, on_delete=models.CASCADE, related_name="horarios")
+    rol = models.ForeignKey(Roles, on_delete=models.CASCADE, related_name="horarios", null=True)
+    dia_semana = models.IntegerField()  # Lunes=0, Domingo=6
+    semana_del_mes = models.IntegerField(default=1) # 1, 2, 3, 4
+    hora_inicio = models.TimeField()
+    hora_fin = models.TimeField()
+    
     class Meta:
-        db_table = 'empleadosxsucursales'
-
-class Proveedorxproductos(models.Model):
-    idproveedorxproducto = models.AutoField(db_column='IdProveedorxProducto', primary_key=True)
-    descripcionpxp = models.CharField(db_column='DescripcionPxP', max_length=50)
-    idproducto = models.ForeignKey(Productos, on_delete=models.CASCADE, db_column='IdProducto')
-    idproveedor = models.ForeignKey(Proveedores, on_delete=models.CASCADE, db_column='IdProveedor')
-
-    class Meta:
-        db_table = 'proveedorxproductos'
-
-class Proveedorxsucursales(models.Model):
-    idproveedorsucursal = models.AutoField(db_column='IdProveedorSucursal', primary_key=True)
-    fechavisita = models.DateField(db_column='FechaVisita')
-    idproveedor = models.ForeignKey(Proveedores, on_delete=models.CASCADE, db_column='IdProveedor')
-    idsucursal = models.ForeignKey(Sucursales, on_delete=models.CASCADE, db_column='IdSucursal')
-
-    class Meta:
-        db_table = 'proveedorxsucursales'
-
-class Usuarioxsucursales(models.Model):
-    idusuariosucursales = models.AutoField(db_column='IdUsuarioSucursales', primary_key=True)
-    idusuarios = models.ForeignKey(Usuarios, on_delete=models.CASCADE, db_column='IdUsuarios')
-    idsucursal = models.ForeignKey(Sucursales, on_delete=models.CASCADE, db_column='IdSucursal')
-
-    class Meta:
-        db_table = 'usuarioxsucursales'
-
-class RegistroSeguridad(models.Model):
-    id = models.AutoField(primary_key=True)
-    direccion_ip = models.CharField(max_length=50)
-    intento_usuario = models.CharField(max_length=100)
-    intento_contrasena = models.CharField(max_length=100)
-    timestamp = models.DateTimeField(auto_now_add=True)
-    motivo = models.CharField(max_length=255)
-
-class TokenRecuperacion(models.Model):
-    id = models.AutoField(primary_key=True)
-    usuario = models.ForeignKey(Usuarios, on_delete=models.CASCADE)
-    codigo_sms = models.CharField(max_length=5, blank=True, null=True)
-    expiracion_codigo_sms = models.DateTimeField(blank=True, null=True)
-    token_email = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    expiracion_token_email = models.DateTimeField()
-    activo = models.BooleanField(default=True)
-    creado_en = models.DateTimeField(auto_now_add=True)
-
-class Herramienta(models.Model):
-    idherramienta = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre de la Herramienta")
-    url_nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre de URL (para {% url %})")
-    icono = models.CharField(max_length=50, blank=True, null=True, verbose_name="Clase del Icono (ej: fa-users)")
-
-    class Meta:
-        db_table = 'herramientas'
-        verbose_name = "Herramienta"
-        verbose_name_plural = "Herramientas"
+        db_table = 'horarios'
+        verbose_name = "Horario"
+        verbose_name_plural = "Horarios"
 
     def __str__(self):
-        return self.nombre
-
-class Permiso(models.Model):
-    idpermiso = models.AutoField(primary_key=True)
-    rol = models.ForeignKey(Roles, on_delete=models.CASCADE, related_name="permisos")
-    herramienta = models.ForeignKey(Herramienta, on_delete=models.CASCADE)
-
-    class Meta:
-        db_table = 'permisos'
-        unique_together = [['rol', 'herramienta']]
-        verbose_name = "Permiso"
-        verbose_name_plural = "Permisos"
-
-    def __str__(self):
-        return f"El rol '{self.rol.nombrerol}' tiene permiso para '{self.herramienta.nombre}'"
+        return f"Turno de {self.empleado} para el rol {self.rol.nombrerol if self.rol else ''}"

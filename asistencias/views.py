@@ -1,7 +1,6 @@
 from django.shortcuts import render, redirect
 from nombredeapp.decorators import permiso_requerido
-from caja.models import Empleados, Asistencias, Roles, Area
-from .models import Horario
+from caja.models import Empleados, Asistencias, Roles, Horario
 from django.utils import timezone
 from datetime import datetime, timedelta
 from django.http import JsonResponse
@@ -9,17 +8,13 @@ from collections import defaultdict
 import math
 
 def get_week_of_month(date):
-    """
-    Calcula el número de semana dentro de un mes (1-4).
-    Una semana se considera iniciada el lunes.
-    """
     first_day_of_month = date.replace(day=1)
     first_day_weekday = first_day_of_month.weekday()
     adjusted_day = date.day + first_day_weekday
     week_number = math.ceil(adjusted_day / 7)
     return min(week_number, 4)
 
-@permiso_requerido('asistencias:ver_asistencias')
+@permiso_requerido(roles_permitidos=['Supervisor de Caja', 'Recursos Humanos'])
 def ver_asistencias(request):
     usuario_id = request.session.get('usuario_id')
     if not usuario_id:
@@ -48,8 +43,7 @@ def calendar_events(request):
     start_date = datetime.fromisoformat(start_str.split('T')[0]).date()
     end_date = datetime.fromisoformat(end_str.split('T')[0]).date()
 
-    horarios = Horario.objects.filter(empleado=empleado).prefetch_related('dias__tramos', 'rol__area')
-    
+    horarios = Horario.objects.filter(empleado=empleado).select_related('rol')
     asistencias = Asistencias.objects.filter(
         idempleado=empleado, 
         fechaasistencia__gte=start_date,
@@ -61,56 +55,27 @@ def calendar_events(request):
     asistencias_map = defaultdict(list)
     for a in asistencias:
         asistencias_map[a.fechaasistencia].append(a)
-    horarios_por_semana = defaultdict(list)
-    for horario in horarios:
-        for dia in horario.dias.all():
-            horarios_por_semana[dia.semana_del_mes].append({'horario': horario, 'dia': dia})
-    
-    num_semanas_configuradas = len(horarios_por_semana)
 
     total_days = (end_date - start_date).days
     for day_offset in range(total_days):
         current_date = start_date + timedelta(days=day_offset)
         dia_semana_actual = current_date.weekday()
         semana_del_mes_actual = get_week_of_month(current_date)
-        semana_a_usar = 1
-        if num_semanas_configuradas == 1:
-            semana_a_usar = 1
-        elif num_semanas_configuradas == 2:
-            semana_a_usar = 1 if semana_del_mes_actual in [1, 3] else 2
-        elif num_semanas_configuradas == 4:
-            semana_a_usar = semana_del_mes_actual
-        elif num_semanas_configuradas == 3:
-            month_cycle = (current_date.month - 1) % 3
-            if month_cycle == 0:
-                mapping = {1: 1, 2: 2, 3: 3, 4: 1}
-            elif month_cycle == 1:
-                mapping = {1: 2, 2: 3, 3: 1, 4: 2}
-            else:
-                mapping = {1: 3, 2: 1, 3: 2, 4: 3}
-            semana_a_usar = mapping[semana_del_mes_actual]
-
-        turnos_programados = []
-        dias_horario_aplicables = horarios_por_semana.get(semana_a_usar, [])
-        for item in dias_horario_aplicables:
-            if item['dia'].dia_semana == dia_semana_actual:
-                for tramo in item['dia'].tramos.all():
-                    turnos_programados.append({'horario': item['horario'], 'tramo': tramo})
+        
+        turnos_programados = [
+            h for h in horarios 
+            if h.dia_semana == dia_semana_actual and h.semana_del_mes == semana_del_mes_actual
+        ]
         
         asistencias_del_dia = asistencias_map.get(current_date, [])
         asistencias_procesadas = set()
 
         for turno in turnos_programados:
-            horario = turno['horario']
-            tramo = turno['tramo']
-            rol = horario.rol
-
-            if not tramo.hora_inicio or not tramo.hora_fin:
-                continue
+            rol = turno.rol
             
-            fecha_hora_inicio = timezone.make_aware(datetime.combine(current_date, tramo.hora_inicio))
-            fecha_hora_fin = timezone.make_aware(datetime.combine(current_date, tramo.hora_fin))
-            if tramo.hora_fin < tramo.hora_inicio:
+            fecha_hora_inicio = timezone.make_aware(datetime.combine(current_date, turno.hora_inicio))
+            fecha_hora_fin = timezone.make_aware(datetime.combine(current_date, turno.hora_fin))
+            if turno.hora_fin < turno.hora_inicio:
                 fecha_hora_fin += timedelta(days=1)
             
             mejor_asistencia = None
@@ -127,7 +92,7 @@ def calendar_events(request):
                             mejor_asistencia = asistencia
 
             titulo = f"{rol.nombrerol if rol else 'Sin Rol'}"
-            area = rol.area.nombrearea if rol and rol.area else 'Sin Área'
+            area = rol.nombrearea if rol else 'Sin Área'
 
             if mejor_asistencia:
                 asistencias_procesadas.add(mejor_asistencia.idasistencia)
@@ -162,7 +127,7 @@ def calendar_events(request):
         for asistencia in asistencias_del_dia:
             if asistencia.idasistencia not in asistencias_procesadas:
                 titulo = f"{asistencia.rol.nombrerol if asistencia.rol else 'Sin Rol'}"
-                area = asistencia.rol.area.nombrearea if asistencia.rol and asistencia.rol.area else 'Sin Área'
+                area = asistencia.rol.nombrearea if asistencia.rol else 'Sin Área'
                 start_time = timezone.make_aware(datetime.combine(current_date, asistencia.horaentrada)) if asistencia.horaentrada else None
                 events.append({
                     'title': titulo,
