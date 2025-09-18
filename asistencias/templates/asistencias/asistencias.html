@@ -1,0 +1,183 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Asistencias</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/calendario_styles.css' %}">
+</head>
+<body>
+    <div class="container my-4">
+        <div class="card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="fw-bold m-0 text-secondary">INFORME DE ASISTENCIA</h4>
+                <a href="{% url 'inicio' %}" class="btn btn-outline-secondary">VOLVER</a>
+            </div>
+            <div class="d-flex align-items-center">
+                {% if empleado.idusuarios.imagenusuario %}
+                    <img src="{{ empleado.idusuarios.imagenusuario }}" alt="Foto de perfil" class="profile-img me-3">
+                {% endif %}
+                <div>
+                    <p class="mb-0 text-muted">Hola</p>
+                    <h3 class="fw-bold m-0">{{ empleado.idusuarios.nombreusuario|upper }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-lg-9">
+                <div class="card p-3">
+                    <div id='calendar' data-events-url="{% url 'asistencias:calendar_events' %}"></div>
+                </div>
+            </div>
+            <div class="col-lg-3">
+                <div class="card p-3">
+                    <h5>Leyenda</h5>
+                    <ul class="list-unstyled mb-0">
+                        <li class="d-flex align-items-center mb-2">
+                            <span class="leyenda-color" style="background-color: #181818; border: 1px solid #252727;"></span>
+                            <i class="fa-solid fa-calendar-days fa-fw me-2 text-secondary"></i>
+                            <span>Programado</span>
+                        </li>
+                        <li class="d-flex align-items-center mb-2">
+                            <span class="leyenda-color" style="background-color: #3498db;"></span>
+                            <i class="fa-solid fa-hourglass-start fa-fw me-2 text-secondary"></i>
+                            <span>Temprano</span>
+                        </li>
+                        <li class="d-flex align-items-center mb-2">
+                            <span class="leyenda-color" style="background-color: #27ae60;"></span>
+                            <i class="fa-solid fa-circle-check fa-fw me-2 text-secondary"></i>
+                            <span>Justo</span>
+                        </li>
+                        <li class="d-flex align-items-center mb-2">
+                            <span class="leyenda-color" style="background-color: #e67e22;"></span>
+                            <i class="fa-solid fa-clock fa-fw me-2 text-secondary"></i>
+                            <span>Tarde</span>
+                        </li>
+                        <li class="d-flex align-items-center mb-2">
+                            <span class="leyenda-color" style="background-color: #e74c3c;"></span>
+                            <i class="fa-solid fa-circle-xmark fa-fw me-2 text-secondary"></i>
+                            <span>Ausente</span>
+                        </li>
+                        <li class="d-flex align-items-center">
+                            <span class="leyenda-color" style="background-color: #34495e;"></span>
+                            <i class="fa-solid fa-triangle-exclamation fa-fw me-2 text-secondary"></i>
+                            <span>Fuera de Turno</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var calendarEl = document.getElementById('calendar');
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                locale: 'es',
+                height: 'auto',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                },
+                buttonText: {
+                    today:    'Hoy',
+                    month:    'Mes',
+                    week:     'Semana',
+                    day:      'Día'
+                },
+                
+                events: function(fetchInfo, successCallback, failureCallback) {
+                    const params = new URLSearchParams({
+                        start: fetchInfo.startStr,
+                        end: fetchInfo.endStr
+                    });
+
+                    fetch(`${calendarEl.dataset.eventsUrl}?${params.toString()}`)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('La respuesta de la red no fue correcta.');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            successCallback(data);
+                        })
+                        .catch(error => {
+                            console.error('Error al obtener los eventos del calendario:', error);
+                            failureCallback(error);
+                            alert('No se pudieron cargar los eventos. Por favor, recargue la página.');
+                        });
+                },
+
+                noEventsContent: {
+                    html: '<div style="text-align:center; padding: 20px; color: #777;">No hay turnos ni asistencias registradas en este período.</div>'
+                },
+                
+                eventContent: function(arg) {
+                    let props = arg.event.extendedProps;
+                    let html = '';
+                    let iconHtml = '';
+
+                    switch(props.estado) {
+                        case 'Justo': iconHtml = '<i class="fa-solid fa-circle-check event-icon"></i>'; break;
+                        case 'Temprano': iconHtml = '<i class="fa-solid fa-hourglass-start event-icon"></i>'; break;
+                        case 'Tarde': iconHtml = '<i class="fa-solid fa-clock event-icon"></i>'; break;
+                        case 'Ausente': iconHtml = '<i class="fa-solid fa-circle-xmark event-icon"></i>'; break;
+                        case 'Programado': iconHtml = '<i class="fa-solid fa-calendar-days event-icon"></i>'; break;
+                        case 'Fuera de Turno': iconHtml = '<i class="fa-solid fa-triangle-exclamation event-icon"></i>'; break;
+                    }
+                    
+                    const formatOptions = { hour: '2-digit', minute: '2-digit' };
+                    let startTime = arg.event.start ? arg.event.start.toLocaleTimeString('es-ES', formatOptions) : '';
+                    let endTime = arg.event.end ? arg.event.end.toLocaleTimeString('es-ES', formatOptions) : '';
+                    let timeText = endTime ? `${startTime} - ${endTime}` : startTime;
+
+                    html = `
+                        <div class="fc-event-main fc-event-main-text">
+                            <div class="event-line"><strong>${timeText}</strong></div>
+                            <div class="event-line">${arg.event.title}</div>
+                            <div class="event-line event-status">${iconHtml} ${props.estado}</div>
+                        </div>
+                    `;
+
+                    return { html: html };
+                },
+
+                eventDidMount: function(info) {
+                    const props = info.event.extendedProps;
+                    tippy(info.el, {
+                        content: `
+                            <div style="text-align: left; padding: 5px; font-size: 14px;">
+                                <strong>Puesto:</strong> ${info.event.title}<br>
+                                <strong>Área:</strong> ${props.area}<br>
+                                <hr style="margin: 4px 0;">
+                                <strong>Estado:</strong> ${props.estado}<br>
+                                <strong>Entrada:</strong> ${props.entrada_registrada}
+                            </div>
+                        `,
+                        allowHTML: true,
+                        animation: 'scale-subtle',
+                        theme: 'light-border',
+                        delay: [250, 50],
+                    });
+                },
+                eventTimeFormat: {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    meridiem: false
+                }
+            });
+            calendar.render();
+        });
+    </script>
+</body>
+</html>

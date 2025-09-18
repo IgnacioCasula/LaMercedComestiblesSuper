@@ -1,58 +1,73 @@
-# ignaciocasula/lamercedcomestiblessuper/LaMercedComestiblesSuper-01f8d833acd495d85802e57720fa43f65e7b42b3/nombredeapp/management/commands/crear_usuarios.py
-
 from django.core.management.base import BaseCommand
-from datetime import date
-from caja.models import Usuarios as Usuario, Empleados as Empleado, Roles as Rol, Usuariosxrol as UsuarioRol, Area, Herramienta, Permiso
+from datetime import date, time
+from caja.models import Usuarios, Empleados, Roles, UsuxRoles, Horario
 
 class Command(BaseCommand):
-    help = 'Crea usuarios de prueba con sus areas, puestos y permisos.'
+    help = 'Crea usuarios de prueba con sus areas, puestos y horarios.'
 
     def handle(self, *args, **kwargs):
         self.stdout.write(self.style.SUCCESS("Iniciando la insercion de datos de prueba..."))
 
-        # --- 1. Crear Areas ---
-        area_caja, _ = Area.objects.get_or_create(nombrearea='Caja')
-        area_admin, _ = Area.objects.get_or_create(nombrearea='Administracion')
-        self.stdout.write("Areas creadas/verificadas.")
-
-        # --- 2. Crear Puestos (Roles) ---
-        puesto_super_caja, _ = Rol.objects.get_or_create(nombrerol='Supervisor de Caja', defaults={'area': area_caja})
-        puesto_rrhh, _ = Rol.objects.get_or_create(nombrerol='Recursos Humanos', defaults={'area': area_admin})
+        # --- Crear Puestos (Roles) ---
+        puesto_super_caja, _ = Roles.objects.get_or_create(nombrerol='Supervisor de Caja', defaults={'nombrearea': 'Caja'})
+        puesto_rrhh, _ = Roles.objects.get_or_create(nombrerol='Recursos Humanos', defaults={'nombrearea': 'Administracion'})
         self.stdout.write("Puestos (Roles) creados/verificados.")
         
-        # --- 3. Crear Herramientas y Permisos ---
-        self.stdout.write("Creando herramientas y asignando permisos...")
-        herramienta_crear_empleado, _ = Herramienta.objects.get_or_create(
-            nombre='Crear Empleado',
-            defaults={'url_nombre': 'crear_empleado', 'icono': 'fas fa-user-plus'}
+        # --- Crear Empleados y Horarios ---
+        self.stdout.write("Creando usuarios de prueba y sus horarios...")
+        
+        # Usuario 1: Laura Gómez
+        usuario_laura, created_laura = Usuarios.objects.get_or_create(
+            nombreusuario='L',
+            defaults={
+                'apellidousuario': 'Gomez', 
+                'emailusuario': 'laura.gomez@ejemplo.com', 
+                'passwordusuario': 'waza', 
+                'dniusuario': 33111222, 
+                'fecharegistrousuario': date.today()
+            }
         )
-        Permiso.objects.get_or_create(rol=puesto_rrhh, herramienta=herramienta_crear_empleado)
+        if created_laura:
+            empleado_laura = Empleados.objects.create(idusuarios=usuario_laura, cargoempleado='Cajera Principal', salarioempleado=50000.00, fechacontratado=date.today())
+            UsuxRoles.objects.create(idusuarios=usuario_laura, idroles=puesto_super_caja)
+            # Horario para Laura (Lunes a Viernes, 8-16h)
+            for dia in range(5):
+                for semana in range(1, 5): # 4 semanas del mes
+                    Horario.objects.create(
+                        empleado=empleado_laura, 
+                        rol=puesto_super_caja, 
+                        dia_semana=dia, 
+                        semana_del_mes=semana, 
+                        hora_inicio=time(8, 0), 
+                        hora_fin=time(16, 0)
+                    )
+            self.stdout.write(self.style.SUCCESS(f"-> Usuario {usuario_laura.nombreusuario} creado con horario."))
 
-        # --- LÍNEA CORREGIDA ---
-        # Guardamos el nombre completo de la URL con el prefijo de la app 'caja'
-        herramienta_caja, _ = Herramienta.objects.get_or_create(
-            nombre='Caja',
-            defaults={'url_nombre': 'caja:menu_caja', 'icono': 'fas fa-cash-register'}
+        # Usuario 2: Ana Robles
+        usuario_ana, created_ana = Usuarios.objects.get_or_create(
+            nombreusuario='Ana',
+            defaults={
+                'apellidousuario': 'Robles', 
+                'emailusuario': 'ana.robles@ejemplo.com', 
+                'passwordusuario': '777', 
+                'dniusuario': 35555666, 
+                'fecharegistrousuario': date.today()
+            }
         )
-        Permiso.objects.get_or_create(rol=puesto_super_caja, herramienta=herramienta_caja)
-        self.stdout.write("-> Permisos asignados correctamente.")
-
-        # --- 4. Crear Empleados ---
-        self.stdout.write("Creando usuarios de prueba...")
-        usuario_laura, created = Usuario.objects.get_or_create(
-            nombreusuario='lgomez',
-            defaults={'apellidousuario': 'Gomez', 'emailusuario': 'laura.gomez@ejemplo.com', 'passwordusuario': 'clave123', 'dniusuario': 33111222, 'fecharegistrousuario': date.today()}
-        )
-        if created:
-            Empleado.objects.create(idusuarios=usuario_laura, cargoempleado='Cajera Principal', salarioempleado=50000.00, fechacontratado=date.today())
-            UsuarioRol.objects.create(idusuarios=usuario_laura, idroles=puesto_super_caja)
-
-        usuario_ana, created = Usuario.objects.get_or_create(
-            nombreusuario='arobles',
-            defaults={'apellidousuario': 'Robles', 'emailusuario': 'ana.robles@ejemplo.com', 'passwordusuario': 'clave789', 'dniusuario': 35555666, 'fecharegistrousuario': date.today()}
-        )
-        if created:
-            Empleado.objects.create(idusuarios=usuario_ana, cargoempleado='Analista de RRHH', salarioempleado=65000.00, fechacontratado=date.today())
-            UsuarioRol.objects.create(idusuarios=usuario_ana, idroles=puesto_rrhh)
+        if created_ana:
+            empleado_ana = Empleados.objects.create(idusuarios=usuario_ana, cargoempleado='Analista de RRHH', salarioempleado=65000.00, fechacontratado=date.today())
+            UsuxRoles.objects.create(idusuarios=usuario_ana, idroles=puesto_rrhh)
+            # Horario para Ana (Lunes, Miércoles, Viernes 9-17h)
+            for dia in [0, 2, 4]: 
+                for semana in range(1, 5): # 4 semanas del mes
+                    Horario.objects.create(
+                        empleado=empleado_ana, 
+                        rol=puesto_rrhh, 
+                        dia_semana=dia, 
+                        semana_del_mes=semana, 
+                        hora_inicio=time(9, 0), 
+                        hora_fin=time(17, 0)
+                    )
+            self.stdout.write(self.style.SUCCESS(f"-> Usuario {usuario_ana.nombreusuario} creado con horario."))
         
         self.stdout.write(self.style.SUCCESS("\n¡Proceso finalizado!"))
