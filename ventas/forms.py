@@ -1,22 +1,29 @@
-# ventas/forms.py
+# Ruta: LaMercedComestiblesSuper/venta/forms.py
 from django import forms
-from django.forms import inlineformset_factory
-from .models import Venta, DetalleVenta
 
-class VentaForm(forms.ModelForm):
-    class Meta:
-        model = Venta
-        fields = ["fecha", "recargo"]
+class VentaForm(forms.Form):
+    metodo_pago = forms.ChoiceField(
+        choices=[
+            ('EFECTIVO', 'EFECTIVO'),
+            ('TARJETA DEBITO', 'TARJETA DÉBITO'),
+            ('TARJETA CREDITO', 'TARJETA CRÉDITO'),
+            ('TRANSFERENCIA', 'TRANSFERENCIA'),
+        ],
+        widget=forms.Select(attrs={
+            'class': 'inpt',
+            'id': 'metodoPago'
+        })
+    )
 
-class DetalleVentaForm(forms.ModelForm):
-    class Meta:
-        model = DetalleVenta
-        fields = ["producto", "cantidad"]
-
-DetalleVentaFormSet = inlineformset_factory(
-    Venta,
-    DetalleVenta,
-    form=DetalleVentaForm,
-    extra=1,
-    can_delete=True
-)
+class RecargoForm(forms.Form):
+    recargo = forms.DecimalField(
+        required=False,
+        initial=0,
+        max_digits=10,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={
+            'class': 'inpt',
+            'id': 'recargo',
+            'step': '0.01'
+        })
+    )

@@ -8,6 +8,7 @@ urlpatterns = [
     path('caja/', include('caja.urls')),
     path('asistencias/', include('asistencias.urls')),
     path('', include('nombredeapp.urls')),
+    path('ventas/', include('ventas.urls')),
     #path('GestionDeStock/', include('GestionDeStock.urls')),
 ]
 if settings.DEBUG:
