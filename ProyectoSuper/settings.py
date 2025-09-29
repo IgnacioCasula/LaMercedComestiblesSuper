@@ -1,7 +1,6 @@
 from pathlib import Path
 import os
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-y0*h--s7@_@*f49@_z9asrh65_&ks*lnc$k(%$!dg0g7e%ql$p'
@@ -18,6 +17,7 @@ INSTALLED_APPS = [
     'nombredeapp',
     'caja',
     'asistencias',
+    'ventas',
 ]
 
 MIDDLEWARE = [
@@ -72,7 +72,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = 'es-ar'
-TIME_ZONE = 'America/Argentina/Buenos_Aires'
+TIME_ZONE = 'America/Argentina/Salta'
 USE_I18N = True
 USE_TZ = True
 

@@ -1,5 +1,5 @@
 from django import forms
-from .models import Cajas
+from .models import Caja
 
 class AperturaCajaForm(forms.ModelForm):
     """
@@ -7,7 +7,7 @@ class AperturaCajaForm(forms.ModelForm):
     Validación clave: montoinicialcaja >= 0.
     """
     class Meta:
-        model = Cajas
+        model = Caja
         fields = ["montoinicialcaja", "observacionapertura"]
         widgets = {
             "montoinicialcaja": forms.NumberInput(attrs={
