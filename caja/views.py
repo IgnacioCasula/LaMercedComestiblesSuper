@@ -76,4 +76,5 @@ def cierre_caja_view(request):
         messages.error(request, "No se encontró la caja abierta.")
         request.session.pop('caja_abierta', None)
         request.session.pop('id_caja', None)
+        print(f"DEBUG - Usuario: {usuario_id}, Caja ID: {id_caja_abierta}, Caja objeto: {caja_abierta}")
     return redirect("caja:menu_caja")
