@@ -196,19 +196,205 @@ def pagina_inicio(request):
     return render(request, 'HTML/inicio.html', context)
 
 def solicitar_usuario(request):
-    return render(request, 'HTML/solicitar_usuario.html', {'error': 'Funcionalidad no disponible.'})
+    """Solicita el nombre de usuario para recuperar contraseña."""
+    if request.method == 'POST':
+        username_from_login = request.POST.get('username_from_login', '').strip()
+        username = request.POST.get('username', '').strip()
+        
+        # Si viene del login con username prellenado
+        if username_from_login:
+            try:
+                usuario = Usuarios.objects.get(nombreusuario=username_from_login)
+                # Usuario existe, generar código y redirigir
+                codigo = ''.join(random.choices(string.digits, k=5))
+                request.session['recovery_code'] = codigo
+                request.session['recovery_username'] = username_from_login
+                request.session['code_generated_at'] = timezone.now().isoformat()
+                
+                # Simulación: Imprimir código en consola
+                print(f"\n{'='*50}")
+                print(f"CÓDIGO DE RECUPERACIÓN PARA: {username_from_login}")
+                print(f"CÓDIGO: {codigo}")
+                print(f"Email del usuario: {usuario.emailusuario}")
+                print(f"Válido por 5 minutos")
+                print(f"{'='*50}\n")
+                
+                return redirect('ingresar_codigo')
+            except Usuarios.DoesNotExist:
+                # Usuario no existe, ir a solicitar_usuario
+                return redirect('solicitar_usuario')
+        
+        # Si viene del formulario de solicitar usuario
+        if username:
+            # Verificar intentos de bloqueo
+            intentos = request.session.get('recovery_attempts', 0)
+            tiempo_bloqueo = request.session.get('blocked_until')
+            
+            if tiempo_bloqueo:
+                tiempo_bloqueo_dt = datetime.fromisoformat(tiempo_bloqueo)
+                if timezone.now() < tiempo_bloqueo_dt:
+                    tiempo_restante = (tiempo_bloqueo_dt - timezone.now()).seconds // 60
+                    return render(request, 'HTML/solicitar_usuario.html', {
+                        'error': f'Demasiados intentos fallidos. Intente nuevamente en {tiempo_restante + 1} minutos.'
+                    })
+                else:
+                    # El bloqueo expiró, resetear intentos
+                    request.session['recovery_attempts'] = 0
+                    request.session['blocked_until'] = None
+            
+            try:
+                usuario = Usuarios.objects.get(nombreusuario=username)
+                # Usuario existe, generar código
+                codigo = ''.join(random.choices(string.digits, k=5))
+                request.session['recovery_code'] = codigo
+                request.session['recovery_username'] = username
+                request.session['code_generated_at'] = timezone.now().isoformat()
+                request.session['recovery_attempts'] = 0
+                request.session['blocked_until'] = None
+                
+                # Simulación: Imprimir código en consola
+                print(f"\n{'='*50}")
+                print(f"CÓDIGO DE RECUPERACIÓN PARA: {username}")
+                print(f"CÓDIGO: {codigo}")
+                print(f"Email del usuario: {usuario.emailusuario}")
+                print(f"Válido por 5 minutos")
+                print(f"{'='*50}\n")
+                
+                return redirect('ingresar_codigo')
+                
+            except Usuarios.DoesNotExist:
+                intentos += 1
+                request.session['recovery_attempts'] = intentos
+                
+                if intentos >= 3:
+                    # Bloquear por 5 minutos
+                    tiempo_bloqueo = timezone.now() + timedelta(minutes=5)
+                    request.session['blocked_until'] = tiempo_bloqueo.isoformat()
+                    return render(request, 'HTML/solicitar_usuario.html', {
+                        'error': 'Ha alcanzado el máximo de intentos. Debe esperar 5 minutos para intentar nuevamente.'
+                    })
+                
+                intentos_restantes = 3 - intentos
+                return render(request, 'HTML/solicitar_usuario.html', {
+                    'error': f'Usuario no encontrado. Le quedan {intentos_restantes} intento(s).'
+                })
+    
+    return render(request, 'HTML/solicitar_usuario.html')
 
 def ingresar_codigo(request):
-    return render(request, 'HTML/ingresar_codigo.html', {'error': 'Funcionalidad no disponible.'})
+    """Valida el código de recuperación ingresado."""
+    recovery_username = request.session.get('recovery_username')
+    recovery_code = request.session.get('recovery_code')
+    code_generated_at = request.session.get('code_generated_at')
+    
+    if not all([recovery_username, recovery_code, code_generated_at]):
+        return redirect('solicitar_usuario')
+    
+    # Verificar si el código ha expirado (5 minutos)
+    generated_time = datetime.fromisoformat(code_generated_at)
+    if timezone.now() > generated_time + timedelta(minutes=5):
+        request.session['recovery_code'] = None
+        request.session['code_generated_at'] = None
+        return render(request, 'HTML/ingresar_codigo.html', {
+            'error': 'El código ha expirado. Por favor, solicite uno nuevo.'
+        })
+    
+    if request.method == 'POST':
+        # Recoger los 5 dígitos del código
+        code_digits = [
+            request.POST.get('code1', ''),
+            request.POST.get('code2', ''),
+            request.POST.get('code3', ''),
+            request.POST.get('code4', ''),
+            request.POST.get('code5', '')
+        ]
+        codigo_ingresado = ''.join(code_digits)
+        
+        if codigo_ingresado == recovery_code:
+            # Código correcto, redirigir a cambiar contraseña
+            request.session['recovery_verified'] = True
+            return redirect('cambiar_contrasena')
+        else:
+            return render(request, 'HTML/ingresar_codigo.html', {
+                'error': 'Código incorrecto. Por favor, intente nuevamente.'
+            })
+    
+    return render(request, 'HTML/ingresar_codigo.html')
 
 def reenviar_codigo(request):
-    return redirect('solicitar_usuario')
+    """Reenvía el código de recuperación."""
+    recovery_username = request.session.get('recovery_username')
+    
+    if not recovery_username:
+        return redirect('solicitar_usuario')
+    
+    try:
+        usuario = Usuarios.objects.get(nombreusuario=recovery_username)
+        # Generar nuevo código
+        codigo = ''.join(random.choices(string.digits, k=5))
+        request.session['recovery_code'] = codigo
+        request.session['code_generated_at'] = timezone.now().isoformat()
+        
+        # Simulación: Imprimir código en consola
+        print(f"\n{'='*50}")
+        print(f"CÓDIGO REENVIADO PARA: {recovery_username}")
+        print(f"CÓDIGO: {codigo}")
+        print(f"Email del usuario: {usuario.emailusuario}")
+        print(f"Válido por 5 minutos")
+        print(f"{'='*50}\n")
+        
+        return render(request, 'HTML/ingresar_codigo.html', {
+            'message': 'Código reenviado exitosamente. Revise su consola.'
+        })
+    except Usuarios.DoesNotExist:
+        return redirect('solicitar_usuario')
 
 def verificar_email(request, token):
     return redirect('acceso_denegado')
 
 def cambiar_contrasena(request):
-    return render(request, 'HTML/cambiar_contrasena.html', {'error': 'Funcionalidad no disponible.'})
+    """Permite al usuario cambiar su contraseña."""
+    recovery_verified = request.session.get('recovery_verified')
+    recovery_username = request.session.get('recovery_username')
+    
+    if not recovery_verified or not recovery_username:
+        return redirect('solicitar_usuario')
+    
+    if request.method == 'POST':
+        nueva_contrasena = request.POST.get('new_password')
+        confirmar_contrasena = request.POST.get('confirm_password')
+        
+        if nueva_contrasena != confirmar_contrasena:
+            return render(request, 'HTML/cambiar_contrasena.html', {
+                'error': 'Las contraseñas no coinciden.'
+            })
+        
+        if len(nueva_contrasena) < 5:
+            return render(request, 'HTML/cambiar_contrasena.html', {
+                'error': 'La contraseña debe tener al menos 5 caracteres.'
+            })
+        
+        try:
+            usuario = Usuarios.objects.get(nombreusuario=recovery_username)
+            usuario.passwordusuario = nueva_contrasena
+            usuario.save()
+            
+            # Limpiar sesión
+            request.session['recovery_code'] = None
+            request.session['recovery_username'] = None
+            request.session['recovery_verified'] = None
+            request.session['code_generated_at'] = None
+            request.session['recovery_attempts'] = 0
+            request.session['blocked_until'] = None
+            
+            return render(request, 'HTML/cambiar_contrasena.html', {
+                'success': True,
+                'message': 'Contraseña cambiada exitosamente. Puede iniciar sesión ahora.'
+            })
+        except Usuarios.DoesNotExist:
+            return redirect('solicitar_usuario')
+    
+    return render(request, 'HTML/cambiar_contrasena.html')
 
 def acceso_denegado(request):
     """Página que se muestra si el usuario cancela la recuperación o el token es inválido."""
@@ -244,9 +430,9 @@ def api_crear_area(request):
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Método no permitido'}, status=405)
 
-def api_puestos_por_area(request, area_id):
+def api_puestos_por_area(request, area_nombre):
     """Devuelve todos los puestos para un área específica."""
-    puestos = Roles.objects.filter(nombrearea=area_id)
+    puestos = Roles.objects.filter(nombrearea=area_nombre)
     data = [{'id': puesto.idroles, 'nombre': puesto.nombrerol} for puesto in puestos]
     return JsonResponse(data, safe=False)
 

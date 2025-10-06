@@ -86,6 +86,16 @@ body {
     margin-bottom: 15px;
 }
 
+.success-message {
+    background-color: #ddffdd;
+    color: #0c8000;
+    border: 1px solid #0c8000;
+    padding: 10px;
+    border-radius: 5px;
+    text-align: center;
+    margin-bottom: 15px;
+}
+
 h1, p {
     text-align: center;
 }
@@ -143,4 +153,3 @@ a {
 .resend-btn:hover {
     background-color: #e0e0e0;
 }
-

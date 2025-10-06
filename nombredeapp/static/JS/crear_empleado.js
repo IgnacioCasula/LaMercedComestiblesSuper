@@ -1,7 +1,9 @@
 document.addEventListener('DOMContentLoaded', function() {
+    // ===== FOTO DE PERFIL =====
     const photoUploader = document.getElementById('photo-uploader');
     const photoInput = document.getElementById('photo-input');
     const photoButton = document.getElementById('photo-button');
+    
     photoUploader.addEventListener('click', () => photoInput.click());
     photoInput.addEventListener('change', (event) => {
         const file = event.target.files[0];
@@ -15,7 +17,37 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // ===== VALIDACIONES DE CAMPOS =====
+    const nombreInput = document.getElementById('nombre');
+    const apellidoInput = document.getElementById('apellido');
+    const dniInput = document.getElementById('dni');
+    const telefonoInput = document.getElementById('telefono');
+    const emailInput = document.getElementById('email');
+    const codPaisInput = document.getElementById('cod_pais');
     const fechaNacimientoInput = document.getElementById('fecha_nacimiento');
+
+    function allowOnlyLetters(event) {
+        event.target.value = event.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
+    }
+    nombreInput.addEventListener('input', allowOnlyLetters);
+    apellidoInput.addEventListener('input', allowOnlyLetters);
+
+    function allowOnlyNumbers(event) {
+        event.target.value = event.target.value.replace(/\D/g, '');
+    }
+    dniInput.addEventListener('input', allowOnlyNumbers);
+    telefonoInput.addEventListener('input', allowOnlyNumbers);
+
+    codPaisInput.addEventListener('input', (event) => {
+        let value = event.target.value;
+        if (!value.startsWith('+')) {
+            value = '+' + value.replace(/\D/g, '');
+        } else {
+            value = '+' + value.substring(1).replace(/\D/g, '');
+        }
+        event.target.value = value;
+    });
+    
     fechaNacimientoInput.addEventListener('input', (e) => {
         let value = e.target.value.replace(/\D/g, '');
         let formattedValue = '';
@@ -25,52 +57,33 @@ document.addEventListener('DOMContentLoaded', function() {
         e.target.value = formattedValue;
     });
 
+    codPaisInput.value = '+54';
+
+    emailInput.addEventListener('blur', (event) => {
+        let emailValue = event.target.value.trim();
+        if (emailValue && !emailValue.includes('@')) {
+            event.target.value = emailValue + '@gmail.com';
+        }
+    });
+
+    // ===== BOTONES DE ACCIÓN =====
     document.getElementById('btn-cancel').addEventListener('click', () => {
         if (confirm('¿Está seguro de que desea cancelar? Se perderán todos los datos ingresados.')) {
             window.location.href = document.body.dataset.inicioUrl;
         }
     });
 
-    const nombreInput = document.getElementById('nombre');
-    const apellidoInput = document.getElementById('apellido');
-    const dniInput = document.getElementById('dni');
-    const telefonoInput = document.getElementById('telefono');
-    const emailInput = document.getElementById('email');
-    const codPaisInput = document.getElementById('cod_pais');
-
-    function allowOnlyLetters(event) { event.target.value = event.target.value.replace(/[^a-zA-Z\sñÑáéíóúÁÉÍÓÚ]/g, ''); }
-    nombreInput.addEventListener('input', allowOnlyLetters);
-    apellidoInput.addEventListener('input', allowOnlyLetters);
-
-    function allowOnlyNumbers(event) { event.target.value = event.target.value.replace(/\D/g, ''); }
-    dniInput.addEventListener('input', allowOnlyNumbers);
-    telefonoInput.addEventListener('input', allowOnlyNumbers);
-
-    codPaisInput.addEventListener('input', (event) => {
-        let value = event.target.value;
-        let numbers = value.replace(/\D/g, '');
-        event.target.value = '+' + numbers;
-    });
-    codPaisInput.addEventListener('blur', (event) => {
-        if (event.target.value === '' || event.target.value === '+') { event.target.value = '+'; }
-    });
-    codPaisInput.value = '+';
-    
-    emailInput.addEventListener('input', (event) => {
-        let emailValue = event.target.value;
-        if (emailValue.endsWith('@')) {
-            event.target.value = emailValue + 'gmail.com';
-        }
-    });
-
     const btnAddLaboral = document.getElementById('btn-add-laboral');
+    const btnCargarDatos = document.getElementById('btn-cargar-datos');
     const laboralDataSection = document.getElementById('laboral-data');
+    
     btnAddLaboral.addEventListener('click', () => {
         laboralDataSection.style.display = 'block';
         btnAddLaboral.style.display = 'none';
+        btnCargarDatos.style.display = 'inline-block';
     });
-    
-    // --- LÓGICA DEL HORARIO ---
+
+    // ===== LÓGICA DEL HORARIO =====
     const colorPaletteContainer = document.getElementById('color-palette');
     const addColorBtn = document.getElementById('add-color');
     const scheduleContainer = document.getElementById('schedule-container');
@@ -188,6 +201,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const dayBtn = document.createElement('button');
             dayBtn.className = 'day-btn';
             dayBtn.textContent = day;
+            dayBtn.type = 'button';
             dayBtn.dataset.day = day;
             dayBtn.addEventListener('click', () => toggleDayColor(dayBtn));
             weekDiv.appendChild(dayBtn);
@@ -197,12 +211,14 @@ document.addEventListener('DOMContentLoaded', function() {
         actionsDiv.className = 'week-actions-individual';
         
         const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
         removeBtn.className = 'remove-btn';
         removeBtn.innerHTML = `<img src="${document.body.dataset.removeIconUrl}" alt="Quitar Semana">`;
         removeBtn.addEventListener('click', removeWeek);
         actionsDiv.appendChild(removeBtn);
 
         const addBtn = document.createElement('button');
+        addBtn.type = 'button';
         addBtn.className = 'add-btn';
         addBtn.innerHTML = `<img src="${document.body.dataset.addIconUrl}" alt="Añadir Semana">`;
         addBtn.addEventListener('click', addWeek);
@@ -292,10 +308,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 endTimeInput.value = slot.end;
                 endTimeInput.onchange = (e) => scheduleData[color][index].end = e.target.value;
                 const addTimeSlotBtn = document.createElement('button');
+                addTimeSlotBtn.type = 'button';
                 addTimeSlotBtn.className = 'add-btn';
                 addTimeSlotBtn.innerHTML = `<img src="${document.body.dataset.addIconUrl}" alt="Añadir horario">`;
                 addTimeSlotBtn.onclick = () => { scheduleData[color].push({ start: '', end: '' }); renderDailySchedules(); };
                 const removeTimeSlotBtn = document.createElement('button');
+                removeTimeSlotBtn.type = 'button';
                 removeTimeSlotBtn.className = 'remove-btn';
                 removeTimeSlotBtn.innerHTML = `<img src="${document.body.dataset.removeIconUrl}" alt="Eliminar horario">`;
                 removeTimeSlotBtn.onclick = () => { if (scheduleData[color].length > 1) { scheduleData[color].splice(index, 1); renderDailySchedules(); } };
@@ -316,6 +334,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateWeeksUI();
     renderDailySchedules();
 
+    // ===== LÓGICA DE ÁREA Y PUESTO =====
     let selectedArea = null;
     let selectedPuesto = null;
     const btnArea = document.getElementById('btn-area');
@@ -354,11 +373,25 @@ document.addEventListener('DOMContentLoaded', function() {
     window.abrirModal = (id) => document.getElementById(id).style.display = 'flex';
     window.cerrarModal = (id) => document.getElementById(id).style.display = 'none';
 
-    btnArea.addEventListener('click', () => { currentSelectionMode = 'area'; opcionesTitulo.textContent = 'Seleccionar Área'; abrirModal('modal-opciones'); });
-    btnPuesto.addEventListener('click', () => { currentSelectionMode = 'puesto'; opcionesTitulo.textContent = 'Seleccionar Puesto'; abrirModal('modal-opciones'); });
+    btnArea.addEventListener('click', () => {
+        currentSelectionMode = 'area';
+        opcionesTitulo.textContent = 'Seleccionar Área';
+        abrirModal('modal-opciones');
+    });
+    
+    btnPuesto.addEventListener('click', () => {
+        if (!selectedArea) {
+            alert('Primero debes seleccionar un área');
+            return;
+        }
+        currentSelectionMode = 'puesto';
+        opcionesTitulo.textContent = 'Seleccionar Puesto';
+        abrirModal('modal-opciones');
+    });
 
     btnOpcionCargar.addEventListener('click', () => {
         cerrarModal('modal-opciones');
+        searchInput.value = '';
         if (currentSelectionMode === 'area') {
             cargarTitulo.textContent = 'Cargar Área';
             cargarResultados('area');
@@ -391,7 +424,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (tipo === 'area') {
             url = `${document.body.dataset.apiAreasUrl}?q=${query}`;
         } else if (tipo === 'puesto' && selectedArea) {
-            url = `/api/puestos/${selectedArea.id}/`;
+            url = `/api/puestos/${encodeURIComponent(selectedArea.id)}/`;
         } else {
             resultsList.innerHTML = '<li>Selecciona un área primero</li>';
             return;
@@ -453,6 +486,10 @@ document.addEventListener('DOMContentLoaded', function() {
             url = document.body.dataset.apiCrearAreaUrl;
             body = { nombre: nombre };
         } else {
+            if (!selectedArea) {
+                crearErrorMsg.textContent = 'Debes seleccionar un área primero.';
+                return;
+            }
             url = document.body.dataset.apiCrearPuestoUrl;
             body = { nombre: nombre, area_id: selectedArea.id };
         }
@@ -476,6 +513,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // ===== LÓGICA DE PERMISOS =====
+    window.toggleAllPermisos = function() {
+        const checkboxes = document.querySelectorAll('input[name="permisos"]');
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        checkboxes.forEach(cb => cb.checked = !allChecked);
+    };
+
+    // ===== ENVÍO FINAL =====
     const btnListo = document.querySelector('.btn-success');
 
     const toBase64 = file => new Promise((resolve, reject) => {
@@ -494,14 +539,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const data = {
             personal: {
-                nombre: document.getElementById('nombre').value,
-                apellido: document.getElementById('apellido').value,
-                dni: document.getElementById('dni').value,
-                telefono: document.getElementById('telefono').value,
-                email: document.getElementById('email').value,
-                codigo_telefonico: document.getElementById('cod_pais').value,
-                direccion: document.getElementById('direccion').value,
-                fecha_nacimiento: document.getElementById('fecha_nacimiento').value,
+                nombre: document.getElementById('nombre').value.trim(),
+                apellido: document.getElementById('apellido').value.trim(),
+                dni: document.getElementById('dni').value.trim(),
+                telefono: document.getElementById('telefono').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                codigo_telefonico: document.getElementById('cod_pais').value.trim(),
+                direccion: document.getElementById('direccion').value.trim(),
+                fecha_nacimiento: document.getElementById('fecha_nacimiento').value.trim(),
                 foto: fotoBase64
             },
             area: selectedArea,
@@ -530,15 +575,16 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             const result = await response.json();
             if (response.ok) {
-                alert(result.message);
+                alert(result.message + '\n\nUsuario: ' + result.username);
                 window.location.href = document.body.dataset.inicioUrl;
             } else {
                 alert(`Error: ${result.error}`);
+                btnListo.disabled = false;
+                btnListo.textContent = 'Listo';
             }
         } catch (error) {
             console.error('Error al enviar el formulario:', error);
             alert('Ocurrió un error de red. Inténtalo de nuevo.');
-        } finally {
             btnListo.disabled = false;
             btnListo.textContent = 'Listo';
         }
