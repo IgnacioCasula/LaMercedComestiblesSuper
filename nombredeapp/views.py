@@ -201,17 +201,14 @@ def solicitar_usuario(request):
         username_from_login = request.POST.get('username_from_login', '').strip()
         username = request.POST.get('username', '').strip()
         
-        # Si viene del login con username prellenado
         if username_from_login:
             try:
                 usuario = Usuarios.objects.get(nombreusuario=username_from_login)
-                # Usuario existe, generar código y redirigir
                 codigo = ''.join(random.choices(string.digits, k=5))
                 request.session['recovery_code'] = codigo
                 request.session['recovery_username'] = username_from_login
                 request.session['code_generated_at'] = timezone.now().isoformat()
                 
-                # Simulación: Imprimir código en consola
                 print(f"\n{'='*50}")
                 print(f"CÓDIGO DE RECUPERACIÓN PARA: {username_from_login}")
                 print(f"CÓDIGO: {codigo}")
@@ -221,12 +218,9 @@ def solicitar_usuario(request):
                 
                 return redirect('ingresar_codigo')
             except Usuarios.DoesNotExist:
-                # Usuario no existe, ir a solicitar_usuario
                 return redirect('solicitar_usuario')
         
-        # Si viene del formulario de solicitar usuario
         if username:
-            # Verificar intentos de bloqueo
             intentos = request.session.get('recovery_attempts', 0)
             tiempo_bloqueo = request.session.get('blocked_until')
             
@@ -238,13 +232,11 @@ def solicitar_usuario(request):
                         'error': f'Demasiados intentos fallidos. Intente nuevamente en {tiempo_restante + 1} minutos.'
                     })
                 else:
-                    # El bloqueo expiró, resetear intentos
                     request.session['recovery_attempts'] = 0
                     request.session['blocked_until'] = None
             
             try:
                 usuario = Usuarios.objects.get(nombreusuario=username)
-                # Usuario existe, generar código
                 codigo = ''.join(random.choices(string.digits, k=5))
                 request.session['recovery_code'] = codigo
                 request.session['recovery_username'] = username
@@ -252,7 +244,6 @@ def solicitar_usuario(request):
                 request.session['recovery_attempts'] = 0
                 request.session['blocked_until'] = None
                 
-                # Simulación: Imprimir código en consola
                 print(f"\n{'='*50}")
                 print(f"CÓDIGO DE RECUPERACIÓN PARA: {username}")
                 print(f"CÓDIGO: {codigo}")
@@ -267,7 +258,6 @@ def solicitar_usuario(request):
                 request.session['recovery_attempts'] = intentos
                 
                 if intentos >= 3:
-                    # Bloquear por 5 minutos
                     tiempo_bloqueo = timezone.now() + timedelta(minutes=5)
                     request.session['blocked_until'] = tiempo_bloqueo.isoformat()
                     return render(request, 'HTML/solicitar_usuario.html', {
@@ -290,7 +280,6 @@ def ingresar_codigo(request):
     if not all([recovery_username, recovery_code, code_generated_at]):
         return redirect('solicitar_usuario')
     
-    # Verificar si el código ha expirado (5 minutos)
     generated_time = datetime.fromisoformat(code_generated_at)
     if timezone.now() > generated_time + timedelta(minutes=5):
         request.session['recovery_code'] = None
@@ -300,7 +289,6 @@ def ingresar_codigo(request):
         })
     
     if request.method == 'POST':
-        # Recoger los 5 dígitos del código
         code_digits = [
             request.POST.get('code1', ''),
             request.POST.get('code2', ''),
@@ -311,7 +299,6 @@ def ingresar_codigo(request):
         codigo_ingresado = ''.join(code_digits)
         
         if codigo_ingresado == recovery_code:
-            # Código correcto, redirigir a cambiar contraseña
             request.session['recovery_verified'] = True
             return redirect('cambiar_contrasena')
         else:
@@ -330,12 +317,10 @@ def reenviar_codigo(request):
     
     try:
         usuario = Usuarios.objects.get(nombreusuario=recovery_username)
-        # Generar nuevo código
         codigo = ''.join(random.choices(string.digits, k=5))
         request.session['recovery_code'] = codigo
         request.session['code_generated_at'] = timezone.now().isoformat()
         
-        # Simulación: Imprimir código en consola
         print(f"\n{'='*50}")
         print(f"CÓDIGO REENVIADO PARA: {recovery_username}")
         print(f"CÓDIGO: {codigo}")
@@ -379,7 +364,6 @@ def cambiar_contrasena(request):
             usuario.passwordusuario = nueva_contrasena
             usuario.save()
             
-            # Limpiar sesión
             request.session['recovery_code'] = None
             request.session['recovery_username'] = None
             request.session['recovery_verified'] = None
@@ -430,9 +414,9 @@ def api_crear_area(request):
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Método no permitido'}, status=405)
 
-def api_puestos_por_area(request, area_nombre):
+def api_puestos_por_area(request, area_id):
     """Devuelve todos los puestos para un área específica."""
-    puestos = Roles.objects.filter(nombrearea=area_nombre)
+    puestos = Roles.objects.filter(nombrearea=area_id)
     data = [{'id': puesto.idroles, 'nombre': puesto.nombrerol} for puesto in puestos]
     return JsonResponse(data, safe=False)
 
@@ -556,6 +540,25 @@ def api_registrar_empleado(request):
                                     hora_inicio=tramo['start'],
                                     hora_fin=tramo['end']
                                 )
+
+        # PROCESAR PERMISOS
+        permisos = data.get('permisos', [])
+        roles_mapa = {
+            'caja': 'Supervisor de Caja',
+            'crear_empleado': 'Recursos Humanos',
+            'asistencias': 'Recursos Humanos',
+            'stock': 'Gestor de Inventario'
+        }
+        
+        for permiso in permisos:
+            rol_nombre = roles_mapa.get(permiso)
+            if rol_nombre:
+                try:
+                    rol_existente = Roles.objects.filter(nombrerol=rol_nombre).first()
+                    if rol_existente and not UsuxRoles.objects.filter(idusuarios=nuevo_usuario, idroles=rol_existente).exists():
+                        UsuxRoles.objects.create(idusuarios=nuevo_usuario, idroles=rol_existente)
+                except Exception as e:
+                    print(f"Error al asignar permiso {permiso}: {e}")
 
         send_mail(
             subject='¡Bienvenido! Tus credenciales de acceso',
