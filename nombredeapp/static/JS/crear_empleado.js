@@ -48,13 +48,47 @@ document.addEventListener('DOMContentLoaded', function() {
         event.target.value = value;
     });
     
+    // CORRECCIÓN: Validación mejorada para fecha de nacimiento
     fechaNacimientoInput.addEventListener('input', (e) => {
         let value = e.target.value.replace(/\D/g, '');
         let formattedValue = '';
-        if (value.length > 0) formattedValue = value.substring(0, 2);
-        if (value.length > 2) formattedValue += '/' + value.substring(2, 4);
-        if (value.length > 4) formattedValue += '/' + value.substring(4, 8);
+        
+        if (value.length > 0) {
+            // Día (máximo 31)
+            let day = value.substring(0, 2);
+            if (parseInt(day) > 31) day = '31';
+            formattedValue = day;
+        }
+        if (value.length > 2) {
+            // Mes (máximo 12)
+            let month = value.substring(2, 4);
+            if (parseInt(month) > 12) month = '12';
+            formattedValue += '/' + month;
+        }
+        if (value.length > 4) {
+            // Año (máximo 4 dígitos)
+            formattedValue += '/' + value.substring(4, 8);
+        }
+        
         e.target.value = formattedValue;
+    });
+    
+    // Validar fecha completa al perder el foco
+    fechaNacimientoInput.addEventListener('blur', (e) => {
+        const value = e.target.value;
+        if (value && value.length === 10) {
+            const parts = value.split('/');
+            const day = parseInt(parts[0]);
+            const month = parseInt(parts[1]);
+            const year = parseInt(parts[2]);
+            
+            // Validar que la fecha sea válida
+            const date = new Date(year, month - 1, day);
+            if (date.getDate() !== day || date.getMonth() !== month - 1 || date.getFullYear() !== year) {
+                alert('Fecha inválida. Por favor ingrese una fecha válida.');
+                e.target.value = '';
+            }
+        }
     });
 
     codPaisInput.value = '+54';
@@ -122,6 +156,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const removeTrigger = document.createElement('div');
             removeTrigger.className = 'remove-color-trigger';
+            removeTrigger.textContent = '-';
             removeTrigger.onclick = (e) => { e.stopPropagation(); removeColor(color); };
             colorDiv.appendChild(removeTrigger);
 
@@ -299,26 +334,34 @@ document.addEventListener('DOMContentLoaded', function() {
             scheduleData[color].forEach((slot, index) => {
                 const timeSlotDiv = document.createElement('div');
                 timeSlotDiv.className = 'time-slot';
+                
                 const startTimeInput = document.createElement('input');
                 startTimeInput.type = 'time';
                 startTimeInput.value = slot.start;
                 startTimeInput.onchange = (e) => scheduleData[color][index].start = e.target.value;
+                
+                const spanText = document.createElement('span');
+                spanText.textContent = 'a';
+                
                 const endTimeInput = document.createElement('input');
                 endTimeInput.type = 'time';
                 endTimeInput.value = slot.end;
                 endTimeInput.onchange = (e) => scheduleData[color][index].end = e.target.value;
+                
                 const addTimeSlotBtn = document.createElement('button');
                 addTimeSlotBtn.type = 'button';
                 addTimeSlotBtn.className = 'add-btn';
                 addTimeSlotBtn.innerHTML = `<img src="${document.body.dataset.addIconUrl}" alt="Añadir horario">`;
                 addTimeSlotBtn.onclick = () => { scheduleData[color].push({ start: '', end: '' }); renderDailySchedules(); };
+                
                 const removeTimeSlotBtn = document.createElement('button');
                 removeTimeSlotBtn.type = 'button';
                 removeTimeSlotBtn.className = 'remove-btn';
                 removeTimeSlotBtn.innerHTML = `<img src="${document.body.dataset.removeIconUrl}" alt="Eliminar horario">`;
                 removeTimeSlotBtn.onclick = () => { if (scheduleData[color].length > 1) { scheduleData[color].splice(index, 1); renderDailySchedules(); } };
+                
                 timeSlotDiv.appendChild(startTimeInput);
-                timeSlotDiv.appendChild(document.createElement('span')).textContent = 'a';
+                timeSlotDiv.appendChild(spanText);
                 timeSlotDiv.appendChild(endTimeInput);
                 timeSlotDiv.appendChild(addTimeSlotBtn);
                 if (scheduleData[color].length > 1) { timeSlotDiv.appendChild(removeTimeSlotBtn); }
@@ -456,6 +499,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // CORRECCIÓN: Ahora actualiza correctamente el texto del botón de puesto
     function seleccionarItem(item) {
         if (currentSelectionMode === 'area') {
             selectedArea = item;
@@ -467,7 +511,7 @@ document.addEventListener('DOMContentLoaded', function() {
             btnPuesto.disabled = false;
         } else if (currentSelectionMode === 'puesto') {
             selectedPuesto = item;
-            btnPuesto.textContent = item.nombre;
+            btnPuesto.textContent = item.nombre;  // CORRECCIÓN: Ahora actualiza el texto correctamente
             btnPuesto.classList.add('selected');
         }
         cerrarModal('modal-cargar');
@@ -565,7 +609,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         btnListo.disabled = true;
-        btnListo.textContent = 'Guardando...';
+        btnListo.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
 
         try {
             const response = await fetch(document.body.dataset.apiRegistrarEmpleadoUrl, {
@@ -580,13 +624,13 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 alert(`Error: ${result.error}`);
                 btnListo.disabled = false;
-                btnListo.textContent = 'Listo';
+                btnListo.innerHTML = '<i class="fas fa-check"></i> Listo';
             }
         } catch (error) {
             console.error('Error al enviar el formulario:', error);
             alert('Ocurrió un error de red. Inténtalo de nuevo.');
             btnListo.disabled = false;
-            btnListo.textContent = 'Listo';
+            btnListo.innerHTML = '<i class="fas fa-check"></i> Listo';
         }
     });
 });

@@ -18,54 +18,71 @@
         <h1>Hola, {{ nombre_usuario }}</h1>
     </header>
 
+    <!-- Botones fuera de cuadros como pediste -->
+    <div class="quick-actions">
+        <a href="{% url 'asistencias:ver_asistencias' %}" class="action-btn asistencias">
+            <i class="fas fa-clock"></i> Ver asistencias
+        </a>
+        <a href="#" id="logout-btn" class="action-btn logout">
+            <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+        </a>
+    </div>
+
     <main class="main-container">
-        <section class="panel preview-panel">
-            <h2>Vista Previa</h2>
+        <!-- Panel de Administración (solo para admin) -->
+        {% if is_admin %}
+        <section class="panel admin-panel">
+            <h2>Administración</h2>
             <div class="panel-content">
-                 {% if tiene_permiso_vista_previa %}
-                    <div class="preview-placeholder">
-                        <img src="{% static 'iconos/Trending_up.png' %}" alt="Icono de vista previa" class="preview-icon">
-                        <p>Vista previa</p>
-                        <button class="select-button" disabled>Seleccionar</button>
-                    </div>
-                {% else %}
-                    <div class="preview-placeholder">
-                        <img src="{% static 'iconos/Dangero_us.png' %}" alt="Icono de peligro" class="preview-icon no-permission-icon">
-                        <p>No tienes permiso.</p>
-                    </div>
-                {% endif %}
+                <div class="tools-grid">
+                    <a href="{% url 'crear_empleado' %}" class="tool-button">
+                        <i class="fas fa-user-plus tool-icon"></i>
+                        <span>Crear empleado</span>
+                    </a>
+                    <a href="#" class="tool-button">
+                        <i class="fas fa-list tool-icon"></i>
+                        <span>Lista de empleados</span>
+                    </a>
+                </div>
             </div>
         </section>
+        {% endif %}
 
-        <section class="panel tools-panel">
+        <!-- Panel de Herramientas (Caja y Stock combinados) -->
+        {% if has_caja or has_gestion_stock %}
+        <section class="panel herramientas-panel">
             <h2>Herramientas</h2>
             <div class="panel-content">
-                <div class="tools-actions">
-                    <h3>{{ request.session.rol_nombre|default:"RRHH" }}</h3>
-                    <div class="buttons-wrapper">
-                        <a href="{% url 'cerrar_sesion' %}" id="logout-btn" class="action-btn logout">Cerrar Sesión</a>
-                        <a href="#" class="action-btn profile">Perfil</a>
-                    </div>
-                </div>
                 <div class="tools-grid">
-                    {% if herramientas %}
-                        {% for herramienta in herramientas %}
-                            <a href="{% url herramienta.url_nombre %}" class="tool-button">
-                                {% if herramienta.icono %}
-                                    <i class="{{ herramienta.icono }} tool-icon"></i>
-                                {% endif %}
-                                <span>{{ herramienta.nombre }}</span>
-                            </a>
-                        {% endfor %}
-                    {% else %}
-                        <p class="no-tools-message">No tienes herramientas asignadas.</p>
+                    {% if has_caja %}
+                    <a href="{% url 'caja:menu_caja' %}" class="tool-button">
+                        <i class="fas fa-cash-register tool-icon"></i>
+                        <span>Ir a Caja</span>
+                    </a>
+                    {% endif %}
+                    {% if has_gestion_stock %}
+                    <a href="{% url 'gestion_stock' %}" class="tool-button">
+                        <i class="fas fa-boxes tool-icon"></i>
+                        <span>Ir a Stock</span>
+                    </a>
                     {% endif %}
                 </div>
             </div>
         </section>
+        {% endif %}
         
         <div style="height: 1000px;"></div>
     </main>
+
+    <dialog id="logout-modal">
+        <form method="dialog">
+            <p>¿Seguro que deseas cerrar sesión?</p>
+            <menu>
+                <button value="cancel">Cancelar</button>
+                <button value="confirm" id="logout-confirm">Sí, cerrar</button>
+            </menu>
+        </form>
+    </dialog>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -167,15 +184,37 @@
 
             }, { passive: false });
 
-
             // --- LÓGICA DE CIERRE DE SESIÓN ---
-            document.getElementById('logout-btn').addEventListener('click', function(event) {
-                event.preventDefault(); 
-                const confirmLogout = confirm('¿Está seguro de que desea cerrar sesión? Si lo hace, se registrará como el fin de su jornada laboral.\n\nTendrá 10 minutos para volver a iniciar sesión y continuar su trabajo sin que se registre la salida.');
-                if (confirmLogout) {
-                    window.location.href = "{% url 'cerrar_sesion' %}";
-                }
-            });
+            const logoutBtn = document.getElementById('logout-btn');
+            const logoutModal = document.getElementById('logout-modal');
+            const logoutConfirm = document.getElementById('logout-confirm');
+
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    if (logoutModal && typeof logoutModal.showModal === 'function') {
+                        logoutModal.showModal();
+                    } else {
+                        const confirmLogout = confirm('¿Está seguro de que desea cerrar sesión? Si lo hace, se registrará como el fin de su jornada laboral.\n\nTendrá 2 minutos para volver a iniciar sesión y continuar su trabajo sin que se registre la salida.');
+                        if (confirmLogout) {
+                            doLogout();
+                        }
+                    }
+                });
+            }
+
+            const doLogout = function(){
+                fetch('/logout/', { method:'POST', headers:{ 'X-Requested-With':'fetch' } })
+                    .then(function(){ window.location.href = '/login/'; })
+                    .catch(function(){ window.location.href = '/login/'; });
+            };
+
+            if (logoutConfirm) {
+                logoutConfirm.addEventListener('click', function(e){ 
+                    e.preventDefault(); 
+                    doLogout(); 
+                });
+            }
 
             // Quitar la clase de carga para activar las animaciones
             setTimeout(() => {
