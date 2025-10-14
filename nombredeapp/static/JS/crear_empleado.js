@@ -1,9 +1,9 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // --- LÓGICA DE FOTO Y DATOS PERSONALES ---
-    // ... (esta parte se mantiene igual que la versión anterior) ...
+    // ===== FOTO DE PERFIL =====
     const photoUploader = document.getElementById('photo-uploader');
     const photoInput = document.getElementById('photo-input');
     const photoButton = document.getElementById('photo-button');
+    
     photoUploader.addEventListener('click', () => photoInput.click());
     photoInput.addEventListener('change', (event) => {
         const file = event.target.files[0];
@@ -17,7 +17,37 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // ===== VALIDACIONES DE CAMPOS =====
+    const nombreInput = document.getElementById('nombre');
+    const apellidoInput = document.getElementById('apellido');
+    const dniInput = document.getElementById('dni');
+    const telefonoInput = document.getElementById('telefono');
+    const emailInput = document.getElementById('email');
+    const codPaisInput = document.getElementById('cod_pais');
     const fechaNacimientoInput = document.getElementById('fecha_nacimiento');
+
+    function allowOnlyLetters(event) {
+        event.target.value = event.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
+    }
+    nombreInput.addEventListener('input', allowOnlyLetters);
+    apellidoInput.addEventListener('input', allowOnlyLetters);
+
+    function allowOnlyNumbers(event) {
+        event.target.value = event.target.value.replace(/\D/g, '');
+    }
+    dniInput.addEventListener('input', allowOnlyNumbers);
+    telefonoInput.addEventListener('input', allowOnlyNumbers);
+
+    codPaisInput.addEventListener('input', (event) => {
+        let value = event.target.value;
+        if (!value.startsWith('+')) {
+            value = '+' + value.replace(/\D/g, '');
+        } else {
+            value = '+' + value.substring(1).replace(/\D/g, '');
+        }
+        event.target.value = value;
+    });
+    
     fechaNacimientoInput.addEventListener('input', (e) => {
         let value = e.target.value.replace(/\D/g, '');
         let formattedValue = '';
@@ -27,37 +57,8 @@ document.addEventListener('DOMContentLoaded', function() {
         e.target.value = formattedValue;
     });
 
-    document.getElementById('btn-cancel').addEventListener('click', () => {
-        if (confirm('¿Está seguro de que desea cancelar? Se perderán todos los datos ingresados.')) {
-            window.location.href = document.body.dataset.inicioUrl;
-        }
-    });
+    codPaisInput.value = '+54';
 
-    const nombreInput = document.getElementById('nombre');
-    const apellidoInput = document.getElementById('apellido');
-    const dniInput = document.getElementById('dni');
-    const telefonoInput = document.getElementById('telefono');
-    const emailInput = document.getElementById('email');
-    const codPaisInput = document.getElementById('cod_pais');
-
-    function allowOnlyLetters(event) { event.target.value = event.target.value.replace(/[^a-zA-Z\sñÑáéíóúÁÉÍÓÚ]/g, ''); }
-    nombreInput.addEventListener('input', allowOnlyLetters);
-    apellidoInput.addEventListener('input', allowOnlyLetters);
-
-    function allowOnlyNumbers(event) { event.target.value = event.target.value.replace(/\D/g, ''); }
-    dniInput.addEventListener('input', allowOnlyNumbers);
-    telefonoInput.addEventListener('input', allowOnlyNumbers);
-
-    codPaisInput.addEventListener('input', (event) => {
-        let value = event.target.value;
-        let numbers = value.replace(/\D/g, '');
-        event.target.value = '+' + numbers;
-    });
-    codPaisInput.addEventListener('blur', (event) => {
-        if (event.target.value === '' || event.target.value === '+') { event.target.value = '+'; }
-    });
-    codPaisInput.value = '+';
-    
     emailInput.addEventListener('blur', (event) => {
         let emailValue = event.target.value.trim();
         if (emailValue && !emailValue.includes('@')) {
@@ -65,17 +66,27 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // ===== BOTONES DE ACCIÓN =====
+    document.getElementById('btn-cancel').addEventListener('click', () => {
+        if (confirm('¿Está seguro de que desea cancelar? Se perderán todos los datos ingresados.')) {
+            window.location.href = document.body.dataset.inicioUrl;
+        }
+    });
+
     const btnAddLaboral = document.getElementById('btn-add-laboral');
+    const btnCargarDatos = document.getElementById('btn-cargar-datos');
     const laboralDataSection = document.getElementById('laboral-data');
+    
     btnAddLaboral.addEventListener('click', () => {
         laboralDataSection.style.display = 'block';
         btnAddLaboral.style.display = 'none';
+        btnCargarDatos.style.display = 'inline-block';
     });
-    
-    // --- LÓGICA DEL HORARIO ---
+
+    // ===== LÓGICA DEL HORARIO =====
     const colorPaletteContainer = document.getElementById('color-palette');
     const addColorBtn = document.getElementById('add-color');
-    const scheduleContainer = document.getElementById('schedule-container'); // Cambiado de weeksContainer
+    const scheduleContainer = document.getElementById('schedule-container');
     const dailyScheduleContainer = document.getElementById('daily-schedule-container');
 
     const daysOfWeek = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do'];
@@ -85,6 +96,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     let scheduleData = {};
     let dayColorMap = {};
+    let weekIdCounter = 1;
 
     function getContrastColor(hexcolor){
         if (hexcolor.startsWith('#')) hexcolor = hexcolor.slice(1);
@@ -121,8 +133,10 @@ document.addEventListener('DOMContentLoaded', function() {
     function removeColor(colorToRemove) {
         if (activeColors.length <= 1) return;
         document.querySelectorAll(`.day-btn[data-color="${colorToRemove}"]`).forEach(btn => {
-            const dayKey = btn.dataset.day; // Simplificado
-            delete dayColorMap[dayKey];
+            const dayKey = btn.dataset.day;
+            const weekId = btn.closest('.schedule-week').dataset.weekId;
+            const compositeKey = `w${weekId}-${dayKey}`;
+            delete dayColorMap[compositeKey];
             delete btn.dataset.color;
             btn.style.backgroundColor = '';
             btn.classList.remove('text-light', 'text-dark');
@@ -138,33 +152,94 @@ document.addEventListener('DOMContentLoaded', function() {
         const nextColor = availableColors.find(c => !activeColors.includes(c));
         if (nextColor) { activeColors.push(nextColor); renderPalette(); }
     });
-    
-    // --- FUNCIÓN SIMPLIFICADA PARA CREAR LA FILA DE DÍAS ---
-    function createDayRow() {
-        scheduleContainer.innerHTML = ''; // Limpiamos el contenedor
+
+    function addWeek(event) {
+        const allWeeks = scheduleContainer.querySelectorAll('.schedule-week');
+        if (allWeeks.length >= 4) return;
+        if (event) {
+            event.target.closest('.add-btn').style.display = 'none';
+        }
+        createAndAppendWeek();
+        updateWeeksUI();
+    }
+
+    function removeWeek(event) {
+        const weekToRemove = event.target.closest('.schedule-week');
+        const weekId = weekToRemove.dataset.weekId;
+        for (const key in dayColorMap) {
+            if (key.startsWith(`w${weekId}-`)) {
+                delete dayColorMap[key];
+            }
+        }
+        weekToRemove.remove();
+        updateWeeksUI();
+        renderDailySchedules();
+    }
+
+    function updateWeeksUI() {
+        const allWeeks = scheduleContainer.querySelectorAll('.schedule-week');
+        allWeeks.forEach((week, index) => {
+            week.querySelector('.week-label').textContent = `Semana ${index + 1}:`;
+            const addBtn = week.querySelector('.add-btn');
+            const removeBtn = week.querySelector('.remove-btn');
+            if (removeBtn) removeBtn.style.display = (index > 0) ? 'flex' : 'none';
+            if (addBtn) addBtn.style.display = (index === allWeeks.length - 1 && allWeeks.length < 4) ? 'flex' : 'none';
+        });
+    }
+
+    function createAndAppendWeek() {
+        const weekId = weekIdCounter++;
         const weekDiv = document.createElement('div');
-        weekDiv.className = 'schedule-week'; // Reutilizamos la clase
+        weekDiv.className = 'schedule-week';
+        weekDiv.dataset.weekId = weekId;
+
+        const weekLabel = document.createElement('span');
+        weekLabel.className = 'week-label';
+        weekDiv.appendChild(weekLabel);
         
         daysOfWeek.forEach(day => {
             const dayBtn = document.createElement('button');
             dayBtn.className = 'day-btn';
             dayBtn.textContent = day;
+            dayBtn.type = 'button';
             dayBtn.dataset.day = day;
             dayBtn.addEventListener('click', () => toggleDayColor(dayBtn));
             weekDiv.appendChild(dayBtn);
         });
+
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'week-actions-individual';
+        
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'remove-btn';
+        removeBtn.innerHTML = `<img src="${document.body.dataset.removeIconUrl}" alt="Quitar Semana">`;
+        removeBtn.addEventListener('click', removeWeek);
+        actionsDiv.appendChild(removeBtn);
+
+        const addBtn = document.createElement('button');
+        addBtn.type = 'button';
+        addBtn.className = 'add-btn';
+        addBtn.innerHTML = `<img src="${document.body.dataset.addIconUrl}" alt="Añadir Semana">`;
+        addBtn.addEventListener('click', addWeek);
+        actionsDiv.appendChild(addBtn);
+
+        weekDiv.appendChild(actionsDiv);
         scheduleContainer.appendChild(weekDiv);
     }
-    
+
     function toggleDayColor(dayBtn) {
-        const dayKey = dayBtn.dataset.day; // Ya no necesitamos la semana
-        if (dayColorMap[dayKey] === selectedColor) {
-            delete dayColorMap[dayKey];
+        const dayKey = dayBtn.dataset.day;
+        const weekId = dayBtn.closest('.schedule-week').dataset.weekId;
+        const compositeKey = `w${weekId}-${dayKey}`;
+
+        if (dayColorMap[compositeKey] === selectedColor) {
+            delete dayColorMap[compositeKey];
             delete dayBtn.dataset.color;
             dayBtn.style.backgroundColor = '';
             dayBtn.classList.remove('text-light', 'text-dark');
         } else {
-            dayColorMap[dayKey] = selectedColor;
+            dayColorMap[compositeKey] = selectedColor;
             dayBtn.dataset.color = selectedColor;
             dayBtn.style.backgroundColor = selectedColor;
             dayBtn.classList.remove('text-light', 'text-dark');
@@ -176,26 +251,49 @@ document.addEventListener('DOMContentLoaded', function() {
     function renderDailySchedules() {
         dailyScheduleContainer.innerHTML = '';
         const groupedDaysByColor = {};
-        for(const dayKey in dayColorMap) {
-            const color = dayColorMap[dayKey];
+        for (const compositeKey in dayColorMap) {
+            const color = dayColorMap[compositeKey];
             if (!groupedDaysByColor[color]) { groupedDaysByColor[color] = []; }
-            groupedDaysByColor[color].push(dayKey);
+            groupedDaysByColor[color].push(compositeKey);
         }
-        if (Object.keys(groupedDaysByColor).length === 0) { dailyScheduleContainer.style.display = 'none'; return; }
+
+        if (Object.keys(groupedDaysByColor).length === 0) {
+            dailyScheduleContainer.style.display = 'none';
+            return;
+        }
         dailyScheduleContainer.style.display = 'block';
+
+        const weekIndexMap = {};
+        scheduleContainer.querySelectorAll('.schedule-week').forEach((week, index) => {
+            weekIndexMap[week.dataset.weekId] = index + 1;
+        });
+
         for (const color in groupedDaysByColor) {
-            if (!scheduleData[color]) { scheduleData[color] = [{ start: '', end: '' }]; }
+            if (!scheduleData[color]) {
+                scheduleData[color] = [{ start: '', end: '' }];
+            }
             const scheduleRow = document.createElement('div');
             scheduleRow.className = 'schedule-day-row';
             scheduleRow.style.borderColor = color;
             const contrastClass = getContrastColor(color);
             scheduleRow.classList.add(contrastClass);
+            
             const title = document.createElement('h4');
-            const titleParts = groupedDaysByColor[color]
-                .sort((a,b) => daysOfWeek.indexOf(a) - daysOfWeek.indexOf(b));
-            title.textContent = titleParts.join(', ');
+            const titleParts = groupedDaysByColor[color].map(key => {
+                const weekId = key.split('-')[0].substring(1);
+                const day = key.split('-')[1];
+                const weekNum = weekIndexMap[weekId] || '?';
+                return `S${weekNum}-${day}`;
+            });
+            title.textContent = titleParts.sort((a, b) => {
+                const [aWeek, aDay] = a.substring(1).split('-');
+                const [bWeek, bDay] = b.substring(1).split('-');
+                if (aWeek !== bWeek) return parseInt(aWeek) - parseInt(bWeek);
+                return daysOfWeek.indexOf(aDay) - daysOfWeek.indexOf(bDay);
+            }).join(', ');
             title.style.backgroundColor = color;
             scheduleRow.appendChild(title);
+
             const timeSlotsContainer = document.createElement('div');
             timeSlotsContainer.className = 'time-slots-container';
             scheduleData[color].forEach((slot, index) => {
@@ -210,10 +308,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 endTimeInput.value = slot.end;
                 endTimeInput.onchange = (e) => scheduleData[color][index].end = e.target.value;
                 const addTimeSlotBtn = document.createElement('button');
+                addTimeSlotBtn.type = 'button';
                 addTimeSlotBtn.className = 'add-btn';
                 addTimeSlotBtn.innerHTML = `<img src="${document.body.dataset.addIconUrl}" alt="Añadir horario">`;
                 addTimeSlotBtn.onclick = () => { scheduleData[color].push({ start: '', end: '' }); renderDailySchedules(); };
                 const removeTimeSlotBtn = document.createElement('button');
+                removeTimeSlotBtn.type = 'button';
                 removeTimeSlotBtn.className = 'remove-btn';
                 removeTimeSlotBtn.innerHTML = `<img src="${document.body.dataset.removeIconUrl}" alt="Eliminar horario">`;
                 removeTimeSlotBtn.onclick = () => { if (scheduleData[color].length > 1) { scheduleData[color].splice(index, 1); renderDailySchedules(); } };
@@ -228,12 +328,13 @@ document.addEventListener('DOMContentLoaded', function() {
             dailyScheduleContainer.appendChild(scheduleRow);
         }
     }
+
     renderPalette();
-    createDayRow(); // Llamamos a la nueva función simplificada
+    createAndAppendWeek();
+    updateWeeksUI();
     renderDailySchedules();
 
-    // --- SCRIPT PARA ÁREA Y PUESTO ---
-    // ... (esta parte se mantiene igual que la versión anterior) ...
+    // ===== LÓGICA DE ÁREA Y PUESTO =====
     let selectedArea = null;
     let selectedPuesto = null;
     const btnArea = document.getElementById('btn-area');
@@ -272,11 +373,25 @@ document.addEventListener('DOMContentLoaded', function() {
     window.abrirModal = (id) => document.getElementById(id).style.display = 'flex';
     window.cerrarModal = (id) => document.getElementById(id).style.display = 'none';
 
-    btnArea.addEventListener('click', () => { currentSelectionMode = 'area'; opcionesTitulo.textContent = 'Seleccionar Área'; abrirModal('modal-opciones'); });
-    btnPuesto.addEventListener('click', () => { currentSelectionMode = 'puesto'; opcionesTitulo.textContent = 'Seleccionar Puesto'; abrirModal('modal-opciones'); });
+    btnArea.addEventListener('click', () => {
+        currentSelectionMode = 'area';
+        opcionesTitulo.textContent = 'Seleccionar Área';
+        abrirModal('modal-opciones');
+    });
+    
+    btnPuesto.addEventListener('click', () => {
+        if (!selectedArea) {
+            alert('Primero debes seleccionar un área');
+            return;
+        }
+        currentSelectionMode = 'puesto';
+        opcionesTitulo.textContent = 'Seleccionar Puesto';
+        abrirModal('modal-opciones');
+    });
 
     btnOpcionCargar.addEventListener('click', () => {
         cerrarModal('modal-opciones');
+        searchInput.value = '';
         if (currentSelectionMode === 'area') {
             cargarTitulo.textContent = 'Cargar Área';
             cargarResultados('area');
@@ -309,7 +424,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (tipo === 'area') {
             url = `${document.body.dataset.apiAreasUrl}?q=${query}`;
         } else if (tipo === 'puesto' && selectedArea) {
-            url = `/api/puestos/${selectedArea.id}/`;
+            url = `/api/puestos/${encodeURIComponent(selectedArea.id)}/`;
         } else {
             resultsList.innerHTML = '<li>Selecciona un área primero</li>';
             return;
@@ -371,6 +486,10 @@ document.addEventListener('DOMContentLoaded', function() {
             url = document.body.dataset.apiCrearAreaUrl;
             body = { nombre: nombre };
         } else {
+            if (!selectedArea) {
+                crearErrorMsg.textContent = 'Debes seleccionar un área primero.';
+                return;
+            }
             url = document.body.dataset.apiCrearPuestoUrl;
             body = { nombre: nombre, area_id: selectedArea.id };
         }
@@ -394,7 +513,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // --- LÓGICA PARA EL BOTÓN "LISTO" (CON GUARDADO DE FOTO) ---
+    // ===== LÓGICA DE PERMISOS =====
+    window.toggleAllPermisos = function() {
+        const checkboxes = document.querySelectorAll('input[name="permisos"]');
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        checkboxes.forEach(cb => cb.checked = !allChecked);
+    };
+
+    // ===== ENVÍO FINAL =====
     const btnListo = document.querySelector('.btn-success');
 
     const toBase64 = file => new Promise((resolve, reject) => {
@@ -413,14 +539,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const data = {
             personal: {
-                nombre: document.getElementById('nombre').value,
-                apellido: document.getElementById('apellido').value,
-                dni: document.getElementById('dni').value,
-                telefono: document.getElementById('telefono').value,
-                email: document.getElementById('email').value,
-                codigo_telefonico: document.getElementById('cod_pais').value,
-                direccion: document.getElementById('direccion').value,
-                fecha_nacimiento: document.getElementById('fecha_nacimiento').value,
+                nombre: document.getElementById('nombre').value.trim(),
+                apellido: document.getElementById('apellido').value.trim(),
+                dni: document.getElementById('dni').value.trim(),
+                telefono: document.getElementById('telefono').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                codigo_telefonico: document.getElementById('cod_pais').value.trim(),
+                direccion: document.getElementById('direccion').value.trim(),
+                fecha_nacimiento: document.getElementById('fecha_nacimiento').value.trim(),
                 foto: fotoBase64
             },
             area: selectedArea,
@@ -449,15 +575,16 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             const result = await response.json();
             if (response.ok) {
-                alert(result.message);
+                alert(result.message + '\n\nUsuario: ' + result.username);
                 window.location.href = document.body.dataset.inicioUrl;
             } else {
                 alert(`Error: ${result.error}`);
+                btnListo.disabled = false;
+                btnListo.textContent = 'Listo';
             }
         } catch (error) {
             console.error('Error al enviar el formulario:', error);
             alert('Ocurrió un error de red. Inténtalo de nuevo.');
-        } finally {
             btnListo.disabled = false;
             btnListo.textContent = 'Listo';
         }

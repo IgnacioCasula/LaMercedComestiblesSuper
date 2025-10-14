@@ -20,49 +20,78 @@
 <div class="form-container">
     <h1>Añadir Nuevo Empleado</h1>
 
+    <!-- SECCIÓN 1: DATOS PERSONALES -->
     <div class="section">
+        <h2 class="section-title">📋 Datos Personales</h2>
         <div class="personal-data-grid">
             <div class="photo-uploader" id="photo-uploader">
                 <input type="file" id="photo-input" accept="image/*" style="display: none;">
-                <button id="photo-button">Añadir Foto</button>
+                <button type="button" id="photo-button">Añadir Foto</button>
             </div>
             <div class="fields-grid">
-                <div class="form-group"><label for="nombre">Nombre:</label><input type="text" id="nombre"></div>
-                <div class="form-group"><label for="apellido">Apellido:</label><input type="text" id="apellido"></div>
-                <div class="form-group"><label for="dni">DNI:</label><input type="text" id="dni"></div>
-                <div class="form-group"><label for="telefono">Telefono:</label><input type="text" id="telefono"></div>
-                <div class="form-group"><label for="email">Email:</label><input type="email" id="email"></div>
-                <div class="form-group"><label for="cod_pais">Codigo Telefonico:</label><input type="text" id="cod_pais"></div>
-                <div class="form-group"><label for="direccion">Direccion:</label><input type="text" id="direccion"></div>
-                <div class="form-group"><label for="fecha_nacimiento">Fecha nacimiento:</label><input type="text" id="fecha_nacimiento" placeholder="DD/MM/AAAA"></div>
+                <div class="form-group">
+                    <label for="nombre">Nombre: <span class="required">*</span></label>
+                    <input type="text" id="nombre" required>
+                </div>
+                <div class="form-group">
+                    <label for="apellido">Apellido: <span class="required">*</span></label>
+                    <input type="text" id="apellido" required>
+                </div>
+                <div class="form-group">
+                    <label for="dni">DNI: <span class="required">*</span></label>
+                    <input type="text" id="dni" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email: <span class="required">*</span></label>
+                    <input type="email" id="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="telefono">Teléfono:</label>
+                    <input type="text" id="telefono">
+                </div>
+                <div class="form-group">
+                    <label for="cod_pais">Código Telefónico:</label>
+                    <input type="text" id="cod_pais" value="+54">
+                </div>
+                <div class="form-group">
+                    <label for="direccion">Dirección:</label>
+                    <input type="text" id="direccion">
+                </div>
+                <div class="form-group">
+                    <label for="fecha_nacimiento">Fecha de Nacimiento:</label>
+                    <input type="text" id="fecha_nacimiento" placeholder="DD/MM/AAAA">
+                </div>
             </div>
         </div>
         <div class="form-actions-initial">
-            <button id="btn-add-laboral" class="btn btn-secondary">Añadir datos laborales</button>
-            <button class="btn btn-light">Predeterminado</button>
+            <button type="button" id="btn-add-laboral" class="btn btn-secondary">Añadir datos laborales</button>
+            <button type="button" id="btn-cargar-datos" class="btn btn-light" style="display: none;">Cargar datos laborales</button>
         </div>
     </div>
 
+    <!-- SECCIÓN 2: DATOS LABORALES -->
     <div id="laboral-data" class="laboral-data">
         <div class="section">
+            <h2 class="section-title">💼 Datos Laborales</h2>
             <div class="area-puesto">
                 <div class="form-group" style="flex-grow: 1;">
-                    <label>Area:</label>
-                    <button id="btn-area" class="selector-btn">Selecciona un área</button>
+                    <label>Área: <span class="required">*</span></label>
+                    <button type="button" id="btn-area" class="selector-btn">Selecciona un área</button>
                 </div>
                 <div class="form-group" style="flex-grow: 1;">
-                    <label>Puesto:</label>
-                    <button id="btn-puesto" class="selector-btn" disabled>Selecciona un puesto</button>
+                    <label>Puesto: <span class="required">*</span></label>
+                    <button type="button" id="btn-puesto" class="selector-btn" disabled>Selecciona un puesto</button>
                 </div>
             </div>
         </div>
         
+        <!-- SECCIÓN 3: HORARIO -->
         <div class="section schedule-section">
-            <h3>Horario Semanal Recurrente</h3>
+            <h2 class="section-title">🕐 Horario Semanal Recurrente</h2>
             <div class="color-palette-container">
                 <span>Mismo horario para:</span>
                 <div id="color-palette" class="color-palette"></div>
-                <button id="add-color" class="add-btn">
+                <button type="button" id="add-color" class="add-btn">
                     <img src="{% static 'iconos/add_circle.png' %}" alt="Añadir color">
                 </button>
             </div>
@@ -70,71 +99,143 @@
             <div class="daily-schedule-container" id="daily-schedule-container"></div>
         </div>
 
+        <!-- SECCIÓN 4: PERMISOS (MEJORADA) -->
         <div class="section permissions-section">
             <div class="permissions-header">
-                <h3>Permisos y Herramientas</h3>
-                <div class="mode-selector">
-                    <span>Modo:</span>
-                    <button id="permissions-mode-btn" class="btn btn-light-alt">Personalizado</button>
+                <h2 class="section-title">🔐 Permisos del Sistema</h2>
+                <button type="button" class="btn btn-light-alt" onclick="toggleAllPermisos()">
+                    <i class="fas fa-check-double"></i> Marcar/Desmarcar Todos
+                </button>
+            </div>
+            <p class="permissions-description">
+                Selecciona los permisos que tendrá este empleado. Los permisos determinarán qué herramientas y funciones podrá utilizar en el sistema.
+            </p>
+            
+            <div id="permissions-list" class="permissions-list-modern">
+                <!-- Permiso: Caja -->
+                <div class="permission-card-modern">
+                    <div class="permission-header-modern">
+                        <label class="switch">
+                            <input type="checkbox" name="permisos" value="caja">
+                            <span class="slider"></span>
+                        </label>
+                        <div class="permission-info">
+                            <h4 class="permission-name">
+                                <i class="fas fa-cash-register"></i> Caja
+                            </h4>
+                            <p class="permission-desc">
+                                Permite abrir y cerrar cajas, registrar ventas y gestionar operaciones de punto de venta.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="permission-badge">Operaciones</div>
+                </div>
+
+                <!-- Permiso: Crear Empleado -->
+                <div class="permission-card-modern">
+                    <div class="permission-header-modern">
+                        <label class="switch">
+                            <input type="checkbox" name="permisos" value="crear_empleado">
+                            <span class="slider"></span>
+                        </label>
+                        <div class="permission-info">
+                            <h4 class="permission-name">
+                                <i class="fas fa-user-plus"></i> Crear Empleado
+                            </h4>
+                            <p class="permission-desc">
+                                Acceso al módulo de recursos humanos para registrar nuevos empleados, asignar roles y configurar horarios.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="permission-badge badge-admin">Administración</div>
+                </div>
+
+                <!-- Permiso: Asistencias -->
+                <div class="permission-card-modern">
+                    <div class="permission-header-modern">
+                        <label class="switch">
+                            <input type="checkbox" name="permisos" value="asistencias">
+                            <span class="slider"></span>
+                        </label>
+                        <div class="permission-info">
+                            <h4 class="permission-name">
+                                <i class="fas fa-clock"></i> Ver Asistencias
+                            </h4>
+                            <p class="permission-desc">
+                                Consultar registros de entrada y salida de empleados, horarios y reportes de asistencia.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="permission-badge badge-reports">Reportes</div>
+                </div>
+
+                <!-- Permiso: Gestión de Stock -->
+                <div class="permission-card-modern">
+                    <div class="permission-header-modern">
+                        <label class="switch">
+                            <input type="checkbox" name="permisos" value="stock">
+                            <span class="slider"></span>
+                        </label>
+                        <div class="permission-info">
+                            <h4 class="permission-name">
+                                <i class="fas fa-boxes"></i> Gestión de Stock
+                            </h4>
+                            <p class="permission-desc">
+                                Administrar inventario, registrar entradas y salidas de productos, y actualizar existencias.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="permission-badge badge-inventory">Inventario</div>
                 </div>
             </div>
-            <div id="permissions-list" class="permissions-list-grid">
-                 {% if herramientas %}
-                    {% for herramienta in herramientas %}
-                    <div class="permission-card">
-                        <div class="permission-main">
-                            <label class="switch">
-                                <input type="checkbox" id="perm-{{ herramienta.idherramienta }}" name="permisos" value="{{ herramienta.idherramienta }}">
-                                <span class="slider"></span>
-                            </label>
-                            <label for="perm-{{ herramienta.idherramienta }}" class="permission-label">{{ herramienta.nombre }}</label>
-                        </div>
-                        <p class="permission-description">
-                            {% if herramienta.url_nombre == 'caja:menu_caja' %}
-                                Otorga acceso al menú de caja para realizar aperturas, cierres y registrar ventas.
-                            {% elif herramienta.url_nombre == 'crear_empleado' %}
-                                Permite al usuario acceder al formulario para registrar nuevos empleados en el sistema.
-                            {% else %}
-                                Descripción no disponible.
-                            {% endif %}
-                        </p>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                    <p>No hay herramientas disponibles para asignar.</p>
-                {% endif %}
+
+            <div class="permissions-summary">
+                <i class="fas fa-info-circle"></i>
+                <span>Los permisos pueden ser modificados posteriormente desde la configuración de usuario.</span>
             </div>
         </div>
     </div>
 
+    <!-- BOTONES FINALES -->
     <div class="main-form-actions">
-        <button id="btn-cancel" class="btn btn-danger">Cancelar</button>
-        <button class="btn btn-success">Listo</button>
+        <button type="button" id="btn-cancel" class="btn btn-danger">
+            <i class="fas fa-times"></i> Cancelar
+        </button>
+        <button type="button" class="btn btn-success">
+            <i class="fas fa-check"></i> Listo
+        </button>
     </div>
 </div>
 
+<!-- MODALES -->
 <div id="modal-opciones" class="modal-overlay">
     <div class="modal-content">
         <h2 id="opciones-titulo"></h2>
         <div class="modal-options">
-            <button id="btn-opcion-cargar" class="modal-btn">Cargar existente</button>
-            <button id="btn-opcion-crear" class="modal-btn">Crear nuevo</button>
+            <button type="button" id="btn-opcion-cargar" class="modal-btn">
+                <i class="fas fa-folder-open"></i> Cargar existente
+            </button>
+            <button type="button" id="btn-opcion-crear" class="modal-btn">
+                <i class="fas fa-plus-circle"></i> Crear nuevo
+            </button>
         </div>
         <div class="modal-actions">
-            <button class="btn btn-light" onclick="cerrarModal('modal-opciones')">Volver</button>
+            <button type="button" class="btn btn-light" onclick="cerrarModal('modal-opciones')">Volver</button>
         </div>
     </div>
 </div>
+
 <div id="modal-cargar" class="modal-overlay">
     <div class="modal-content">
         <h2 id="cargar-titulo"></h2>
         <input type="text" id="searchInput" placeholder="Buscar...">
         <ul id="resultsList"></ul>
         <div class="modal-actions">
-            <button class="btn btn-light" id="btn-cargar-volver">Volver</button>
+            <button type="button" class="btn btn-light" id="btn-cargar-volver">Volver</button>
         </div>
     </div>
 </div>
+
 <div id="modal-crear" class="modal-overlay">
     <div class="modal-content">
         <h2 id="crear-titulo"></h2>
@@ -144,8 +245,8 @@
         </div>
         <div id="crear-error-msg" style="color: red; margin-top: 10px; text-align: center;"></div>
         <div class="modal-actions">
-            <button class="btn btn-light" id="btn-crear-volver">Volver</button>
-            <button class="btn btn-success" id="btn-crear-confirmar">Crear</button>
+            <button type="button" class="btn btn-light" id="btn-crear-volver">Volver</button>
+            <button type="button" class="btn btn-success" id="btn-crear-confirmar">Crear</button>
         </div>
     </div>
 </div>

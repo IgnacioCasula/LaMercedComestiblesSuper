@@ -10,7 +10,7 @@
     <div class="login-container">
         <form class="login-form" method="post" action="{% url 'ingresar_codigo' %}">
             {% csrf_token %}
-            <p style="text-align: center;">Se le envió un código a su teléfono, caducará en 5 minutos.</p>
+            <p style="text-align: center;">Se le envió un código a su correo electrónico, caducará en 5 minutos.</p>
             <div class="code-inputs">
                 <input type="text" name="code1" maxlength="1" required pattern="[0-9]">
                 <input type="text" name="code2" maxlength="1" required pattern="[0-9]">
@@ -25,7 +25,7 @@
             <div class="success-message">{{ message }}</div>
             {% endif %}
             <button type="submit" class="submit-btn">Enviar</button>
-            <p style="font-size: 12px; text-align: center; margin-top: 10px;">Si el código es correcto, se le enviará un mensaje por correo.</p>
+            <p style="font-size: 12px; text-align: center; margin-top: 10px;">Si el código es correcto, podrá cambiar su contraseña.</p>
             <a href="{% url 'reenviar_codigo' %}" class="resend-btn">Volver a enviar código</a>
         </form>
     </div>
