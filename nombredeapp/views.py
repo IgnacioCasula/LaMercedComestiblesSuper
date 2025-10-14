@@ -573,4 +573,68 @@ def _generar_y_enviar_codigo(request: HttpRequest, destino: str) -> None:
     except Exception:
         pass
 
+# Agregar estas funciones a tu views.py existente
 
+def menu_caja_view(request: HttpRequest) -> HttpResponse:
+    """Vista para el menú de caja."""
+    usuario_id = request.session.get('usuario_id')
+    if not usuario_id:
+        return redirect('login')
+    
+    # Verificar permisos de caja
+    usuario = Usuarios.objects.filter(idusuarios=usuario_id).first()
+    if not usuario:
+        return redirect('login')
+    
+    roles_usuario = list(
+        Roles.objects.filter(usuxroles__idusuarios_id=usuario_id).values_list('nombrerol', flat=True)
+    )
+    
+    # Verificar si tiene permiso de caja
+    is_admin = 'Administrador' in roles_usuario or 'Recursos Humanos' in roles_usuario
+    has_caja = 'Supervisor de Caja' in roles_usuario or 'Caja' in roles_usuario
+    
+    if not (is_admin or has_caja):
+        messages.error(request, 'No tienes permisos para acceder a Caja.')
+        return redirect('inicio')
+    
+    # Renderizar el template de caja
+    # Probamos varias rutas posibles
+    try:
+        return render(request, 'caja/menucaja.html')
+    except:
+        try:
+            return render(request, 'menucaja.html')
+        except:
+            return render(request, 'aperturadecaja.html')
+
+
+def gestion_stock_view(request: HttpRequest) -> HttpResponse:
+    """Vista para gestión de stock."""
+    usuario_id = request.session.get('usuario_id')
+    if not usuario_id:
+        return redirect('login')
+    
+    # Verificar permisos de stock
+    usuario = Usuarios.objects.filter(idusuarios=usuario_id).first()
+    if not usuario:
+        return redirect('login')
+    
+    roles_usuario = list(
+        Roles.objects.filter(usuxroles__idusuarios_id=usuario_id).values_list('nombrerol', flat=True)
+    )
+    
+    # Verificar si tiene permiso de stock
+    is_admin = 'Administrador' in roles_usuario or 'Recursos Humanos' in roles_usuario
+    has_gestion_stock = 'Gestor de Inventario' in roles_usuario or 'Gestión de Stock' in roles_usuario or 'Stock' in roles_usuario
+    
+    if not (is_admin or has_gestion_stock):
+        messages.error(request, 'No tienes permisos para acceder a Gestión de Stock.')
+        return redirect('inicio')
+    
+    # Renderizar el template de stock
+    # Probamos varias rutas posibles
+    try:
+        return render(request, 'GestionDeStock/index.html')
+    except:
+        return render(request, 'index.html')

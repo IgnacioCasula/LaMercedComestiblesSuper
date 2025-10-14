@@ -10,6 +10,7 @@
 </head>
 <body class="is-loading">
 
+    <!-- Sonidos originales del header -->
     <audio id="sound-expand" src="{% static 'effects/shine-1.mp3' %}" preload="auto"></audio>
     <audio id="sound-shrink" src="{% static 'effects/magazine-swiped.mp3' %}" preload="auto"></audio>
 
@@ -55,7 +56,7 @@
             <div class="panel-content">
                 <div class="tools-grid">
                     {% if has_caja %}
-                    <a href="{% url 'caja:menu_caja' %}" class="tool-button">
+                    <a href="{% url 'menu_caja' %}" class="tool-button">
                         <i class="fas fa-cash-register tool-icon"></i>
                         <span>Ir a Caja</span>
                     </a>
@@ -84,6 +85,9 @@
         </form>
     </dialog>
 
+    <!-- Cargar sistema de audio primero -->
+    <script src="{% static 'JS/audio-system.js' %}"></script>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // --- CONFIGURACIÓN Y ELEMENTOS DEL DOM ---
@@ -106,24 +110,22 @@
             };
             const UNLOCK_THRESHOLD = 3;
 
-            // --- CORRECCIÓN 1: FUNCIÓN PARA HABILITAR EL AUDIO ---
+            // --- FUNCIÓN PARA HABILITAR EL AUDIO ---
             function unlockAudio() {
                 if (!state.audioUnlocked) {
                     soundExpand.play().then(() => soundExpand.pause()).catch(() => {});
                     soundShrink.play().then(() => soundShrink.pause()).catch(() => {});
                     state.audioUnlocked = true;
-                    // Se remueven los listeners una vez que el audio está habilitado
                     window.removeEventListener('click', unlockAudio);
                     window.removeEventListener('scroll', unlockAudio);
                     window.removeEventListener('wheel', unlockAudio);
                 }
             }
-            // Se añade el listener a múltiples eventos para asegurar la activación
             window.addEventListener('click', unlockAudio);
             window.addEventListener('scroll', unlockAudio);
             window.addEventListener('wheel', unlockAudio);
 
-            // --- CORRECCIÓN 2: SONIDO AL CARGAR LA PÁGINA ---
+            // --- SONIDO AL CARGAR LA PÁGINA ---
             setTimeout(() => {
                 soundExpand.currentTime = 0;
                 soundExpand.play().catch(() => {});
@@ -139,13 +141,13 @@
                         soundShrink.currentTime = 0;
                         soundShrink.play().catch(() => {});
 
-                        // --- CORRECCIÓN 3: EFECTO DE TEMBLOR AL FINALIZAR ---
+                        // Efecto de temblor al finalizar
                         setTimeout(() => {
                             header.classList.add('effect-shake');
                             setTimeout(() => {
                                 header.classList.remove('effect-shake');
-                            }, 300); // Duración de la animación de temblor
-                        }, 400); // Retraso para que coincida con el fin de la transición
+                            }, 300);
+                        }, 400);
                     }
                 }
                 state.isTicking = false;
@@ -184,6 +186,29 @@
 
             }, { passive: false });
 
+            // --- SONIDOS EN BOTONES HOVER ---
+            const toolButtons = document.querySelectorAll('.tool-button');
+            toolButtons.forEach(button => {
+                button.addEventListener('mouseenter', () => {
+                    if (window.audioSystem) window.audioSystem.play('hover');
+                });
+                button.addEventListener('click', () => {
+                    if (window.audioSystem) window.audioSystem.play('select');
+                });
+            });
+
+            const actionButtons = document.querySelectorAll('.action-btn');
+            actionButtons.forEach(button => {
+                button.addEventListener('mouseenter', () => {
+                    if (window.audioSystem) window.audioSystem.play('hover');
+                });
+                button.addEventListener('click', (e) => {
+                    if (!button.id || button.id !== 'logout-btn') {
+                        if (window.audioSystem) window.audioSystem.play('select');
+                    }
+                });
+            });
+
             // --- LÓGICA DE CIERRE DE SESIÓN ---
             const logoutBtn = document.getElementById('logout-btn');
             const logoutModal = document.getElementById('logout-modal');
@@ -192,6 +217,8 @@
             if (logoutBtn) {
                 logoutBtn.addEventListener('click', function(event) {
                     event.preventDefault();
+                    if (window.audioSystem) window.audioSystem.play('select');
+                    
                     if (logoutModal && typeof logoutModal.showModal === 'function') {
                         logoutModal.showModal();
                     } else {
@@ -204,15 +231,30 @@
             }
 
             const doLogout = function(){
+                if (window.audioSystem) window.audioSystem.play('negative');
                 fetch('/logout/', { method:'POST', headers:{ 'X-Requested-With':'fetch' } })
                     .then(function(){ window.location.href = '/login/'; })
                     .catch(function(){ window.location.href = '/login/'; });
             };
 
             if (logoutConfirm) {
+                logoutConfirm.addEventListener('mouseenter', () => {
+                    if (window.audioSystem) window.audioSystem.play('hover');
+                });
                 logoutConfirm.addEventListener('click', function(e){ 
                     e.preventDefault(); 
                     doLogout(); 
+                });
+            }
+
+            // Sonido en botón cancelar del modal
+            const cancelButton = logoutModal ? logoutModal.querySelector('button[value="cancel"]') : null;
+            if (cancelButton) {
+                cancelButton.addEventListener('mouseenter', () => {
+                    if (window.audioSystem) window.audioSystem.play('hover');
+                });
+                cancelButton.addEventListener('click', () => {
+                    if (window.audioSystem) window.audioSystem.play('select');
                 });
             }
 

@@ -102,7 +102,7 @@
         <!-- SECCIÓN 4: PERMISOS -->
         <div class="section permissions-section">
             <div class="permissions-header">
-                <h2 class="section-title">🔒 Permisos del Sistema</h2>
+                <h2 class="section-title">🔑 Permisos del Sistema</h2>
                 <button type="button" class="btn btn-light-alt" onclick="toggleAllPermisos()">
                     <i class="fas fa-check-double"></i> Marcar/Desmarcar Todos
                 </button>
@@ -213,6 +213,9 @@
     </div>
 </div>
 
+<!-- CARGAR SISTEMA DE AUDIO PRIMERO -->
+<script src="{% static 'JS/audio-system.js' %}"></script>
+<!-- LUEGO CARGAR EL SCRIPT PRINCIPAL -->
 <script src="{% static 'JS/crear_empleado.js' %}"></script>
 </body>
 </html>

@@ -35,7 +35,11 @@ ROOT_URLCONF = 'ProyectoSuper.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')],
+        'DIRS': [
+            BASE_DIR / 'nombredeapp' / 'templates',
+            BASE_DIR / 'caja' / 'templates',
+            BASE_DIR / 'GestionDeStock' / 'templates',
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

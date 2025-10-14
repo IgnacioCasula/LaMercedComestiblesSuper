@@ -4,10 +4,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const photoInput = document.getElementById('photo-input');
     const photoButton = document.getElementById('photo-button');
     
-    photoUploader.addEventListener('click', () => photoInput.click());
+    photoUploader.addEventListener('click', () => {
+        window.audioSystem.play('select');
+        photoInput.click();
+    });
+    
     photoInput.addEventListener('change', (event) => {
         const file = event.target.files[0];
         if (file) {
+            window.audioSystem.play('positive');
             const reader = new FileReader();
             reader.onload = (e) => {
                 photoUploader.style.backgroundImage = `url('${e.target.result}')`;
@@ -27,13 +32,21 @@ document.addEventListener('DOMContentLoaded', function() {
     const fechaNacimientoInput = document.getElementById('fecha_nacimiento');
 
     function allowOnlyLetters(event) {
+        const oldValue = event.target.value;
         event.target.value = event.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
+        if (oldValue !== event.target.value) {
+            window.audioSystem.play('negative');
+        }
     }
     nombreInput.addEventListener('input', allowOnlyLetters);
     apellidoInput.addEventListener('input', allowOnlyLetters);
 
     function allowOnlyNumbers(event) {
+        const oldValue = event.target.value;
         event.target.value = event.target.value.replace(/\D/g, '');
+        if (oldValue !== event.target.value) {
+            window.audioSystem.play('negative');
+        }
     }
     dniInput.addEventListener('input', allowOnlyNumbers);
     telefonoInput.addEventListener('input', allowOnlyNumbers);
@@ -48,32 +61,27 @@ document.addEventListener('DOMContentLoaded', function() {
         event.target.value = value;
     });
     
-    // CORRECCIÓN: Validación mejorada para fecha de nacimiento
     fechaNacimientoInput.addEventListener('input', (e) => {
         let value = e.target.value.replace(/\D/g, '');
         let formattedValue = '';
         
         if (value.length > 0) {
-            // Día (máximo 31)
             let day = value.substring(0, 2);
             if (parseInt(day) > 31) day = '31';
             formattedValue = day;
         }
         if (value.length > 2) {
-            // Mes (máximo 12)
             let month = value.substring(2, 4);
             if (parseInt(month) > 12) month = '12';
             formattedValue += '/' + month;
         }
         if (value.length > 4) {
-            // Año (máximo 4 dígitos)
             formattedValue += '/' + value.substring(4, 8);
         }
         
         e.target.value = formattedValue;
     });
     
-    // Validar fecha completa al perder el foco
     fechaNacimientoInput.addEventListener('blur', (e) => {
         const value = e.target.value;
         if (value && value.length === 10) {
@@ -82,9 +90,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const month = parseInt(parts[1]);
             const year = parseInt(parts[2]);
             
-            // Validar que la fecha sea válida
             const date = new Date(year, month - 1, day);
             if (date.getDate() !== day || date.getMonth() !== month - 1 || date.getFullYear() !== year) {
+                window.audioSystem.play('error');
                 alert('Fecha inválida. Por favor ingrese una fecha válida.');
                 e.target.value = '';
             }
@@ -97,12 +105,15 @@ document.addEventListener('DOMContentLoaded', function() {
         let emailValue = event.target.value.trim();
         if (emailValue && !emailValue.includes('@')) {
             event.target.value = emailValue + '@gmail.com';
+            window.audioSystem.play('positive');
         }
     });
 
     // ===== BOTONES DE ACCIÓN =====
     document.getElementById('btn-cancel').addEventListener('click', () => {
+        window.audioSystem.play('select');
         if (confirm('¿Está seguro de que desea cancelar? Se perderán todos los datos ingresados.')) {
+            window.audioSystem.play('negative');
             window.location.href = document.body.dataset.inicioUrl;
         }
     });
@@ -112,6 +123,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const laboralDataSection = document.getElementById('laboral-data');
     
     btnAddLaboral.addEventListener('click', () => {
+        window.audioSystem.play('select');
         laboralDataSection.style.display = 'block';
         btnAddLaboral.style.display = 'none';
         btnCargarDatos.style.display = 'inline-block';
@@ -149,7 +161,9 @@ document.addEventListener('DOMContentLoaded', function() {
             colorDiv.style.backgroundColor = color;
             if (color === selectedColor) colorDiv.classList.add('selected');
             
+            colorDiv.addEventListener('mouseenter', () => window.audioSystem.play('hover'));
             colorDiv.addEventListener('click', () => {
+                window.audioSystem.play('select');
                 selectedColor = color;
                 renderPalette();
             });
@@ -157,7 +171,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const removeTrigger = document.createElement('div');
             removeTrigger.className = 'remove-color-trigger';
             removeTrigger.textContent = '-';
-            removeTrigger.onclick = (e) => { e.stopPropagation(); removeColor(color); };
+            removeTrigger.onclick = (e) => { 
+                e.stopPropagation(); 
+                window.audioSystem.play('negative');
+                removeColor(color); 
+            };
             colorDiv.appendChild(removeTrigger);
 
             if (activeColors.length <= 1) { colorDiv.classList.add('is-last'); }
@@ -185,12 +203,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
     addColorBtn.addEventListener('click', () => {
         const nextColor = availableColors.find(c => !activeColors.includes(c));
-        if (nextColor) { activeColors.push(nextColor); renderPalette(); }
+        if (nextColor) { 
+            window.audioSystem.play('positive');
+            activeColors.push(nextColor); 
+            renderPalette(); 
+        } else {
+            window.audioSystem.play('negative');
+        }
     });
 
     function addWeek(event) {
         const allWeeks = scheduleContainer.querySelectorAll('.schedule-week');
-        if (allWeeks.length >= 4) return;
+        if (allWeeks.length >= 4) {
+            window.audioSystem.play('negative');
+            return;
+        }
+        window.audioSystem.play('positive');
         if (event) {
             event.target.closest('.add-btn').style.display = 'none';
         }
@@ -199,6 +227,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function removeWeek(event) {
+        window.audioSystem.play('negative');
         const weekToRemove = event.target.closest('.schedule-week');
         const weekId = weekToRemove.dataset.weekId;
         for (const key in dayColorMap) {
@@ -238,7 +267,11 @@ document.addEventListener('DOMContentLoaded', function() {
             dayBtn.textContent = day;
             dayBtn.type = 'button';
             dayBtn.dataset.day = day;
-            dayBtn.addEventListener('click', () => toggleDayColor(dayBtn));
+            dayBtn.addEventListener('mouseenter', () => window.audioSystem.play('hover'));
+            dayBtn.addEventListener('click', () => {
+                window.audioSystem.play('select');
+                toggleDayColor(dayBtn);
+            });
             weekDiv.appendChild(dayBtn);
         });
 
@@ -249,6 +282,7 @@ document.addEventListener('DOMContentLoaded', function() {
         removeBtn.type = 'button';
         removeBtn.className = 'remove-btn';
         removeBtn.innerHTML = `<img src="${document.body.dataset.removeIconUrl}" alt="Quitar Semana">`;
+        removeBtn.addEventListener('mouseenter', () => window.audioSystem.play('hover'));
         removeBtn.addEventListener('click', removeWeek);
         actionsDiv.appendChild(removeBtn);
 
@@ -256,6 +290,7 @@ document.addEventListener('DOMContentLoaded', function() {
         addBtn.type = 'button';
         addBtn.className = 'add-btn';
         addBtn.innerHTML = `<img src="${document.body.dataset.addIconUrl}" alt="Añadir Semana">`;
+        addBtn.addEventListener('mouseenter', () => window.audioSystem.play('hover'));
         addBtn.addEventListener('click', addWeek);
         actionsDiv.appendChild(addBtn);
 
@@ -338,7 +373,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 const startTimeInput = document.createElement('input');
                 startTimeInput.type = 'time';
                 startTimeInput.value = slot.start;
-                startTimeInput.onchange = (e) => scheduleData[color][index].start = e.target.value;
+                startTimeInput.onchange = (e) => {
+                    window.audioSystem.play('select');
+                    scheduleData[color][index].start = e.target.value;
+                };
                 
                 const spanText = document.createElement('span');
                 spanText.textContent = 'a';
@@ -346,19 +384,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 const endTimeInput = document.createElement('input');
                 endTimeInput.type = 'time';
                 endTimeInput.value = slot.end;
-                endTimeInput.onchange = (e) => scheduleData[color][index].end = e.target.value;
+                endTimeInput.onchange = (e) => {
+                    window.audioSystem.play('select');
+                    scheduleData[color][index].end = e.target.value;
+                };
                 
                 const addTimeSlotBtn = document.createElement('button');
                 addTimeSlotBtn.type = 'button';
                 addTimeSlotBtn.className = 'add-btn';
                 addTimeSlotBtn.innerHTML = `<img src="${document.body.dataset.addIconUrl}" alt="Añadir horario">`;
-                addTimeSlotBtn.onclick = () => { scheduleData[color].push({ start: '', end: '' }); renderDailySchedules(); };
+                addTimeSlotBtn.addEventListener('mouseenter', () => window.audioSystem.play('hover'));
+                addTimeSlotBtn.onclick = () => { 
+                    window.audioSystem.play('positive');
+                    scheduleData[color].push({ start: '', end: '' }); 
+                    renderDailySchedules(); 
+                };
                 
                 const removeTimeSlotBtn = document.createElement('button');
                 removeTimeSlotBtn.type = 'button';
                 removeTimeSlotBtn.className = 'remove-btn';
                 removeTimeSlotBtn.innerHTML = `<img src="${document.body.dataset.removeIconUrl}" alt="Eliminar horario">`;
-                removeTimeSlotBtn.onclick = () => { if (scheduleData[color].length > 1) { scheduleData[color].splice(index, 1); renderDailySchedules(); } };
+                removeTimeSlotBtn.addEventListener('mouseenter', () => window.audioSystem.play('hover'));
+                removeTimeSlotBtn.onclick = () => { 
+                    if (scheduleData[color].length > 1) { 
+                        window.audioSystem.play('negative');
+                        scheduleData[color].splice(index, 1); 
+                        renderDailySchedules(); 
+                    } 
+                };
                 
                 timeSlotDiv.appendChild(startTimeInput);
                 timeSlotDiv.appendChild(spanText);
@@ -413,10 +466,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     const csrftoken = getCookie('csrftoken');
 
-    window.abrirModal = (id) => document.getElementById(id).style.display = 'flex';
-    window.cerrarModal = (id) => document.getElementById(id).style.display = 'none';
+    window.abrirModal = (id) => {
+        window.audioSystem.play('positive');
+        document.getElementById(id).style.display = 'flex';
+    };
+    window.cerrarModal = (id) => {
+        window.audioSystem.play('negative');
+        document.getElementById(id).style.display = 'none';
+    };
 
     btnArea.addEventListener('click', () => {
+        window.audioSystem.play('select');
         currentSelectionMode = 'area';
         opcionesTitulo.textContent = 'Seleccionar Área';
         abrirModal('modal-opciones');
@@ -424,15 +484,18 @@ document.addEventListener('DOMContentLoaded', function() {
     
     btnPuesto.addEventListener('click', () => {
         if (!selectedArea) {
+            window.audioSystem.play('error');
             alert('Primero debes seleccionar un área');
             return;
         }
+        window.audioSystem.play('select');
         currentSelectionMode = 'puesto';
         opcionesTitulo.textContent = 'Seleccionar Puesto';
         abrirModal('modal-opciones');
     });
 
     btnOpcionCargar.addEventListener('click', () => {
+        window.audioSystem.play('select');
         cerrarModal('modal-opciones');
         searchInput.value = '';
         if (currentSelectionMode === 'area') {
@@ -446,6 +509,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     btnOpcionCrear.addEventListener('click', () => {
+        window.audioSystem.play('select');
         cerrarModal('modal-opciones');
         newItemInput.value = '';
         crearErrorMsg.textContent = '';
@@ -459,8 +523,16 @@ document.addEventListener('DOMContentLoaded', function() {
         abrirModal('modal-crear');
     });
     
-    btnCargarVolver.addEventListener('click', () => { cerrarModal('modal-cargar'); abrirModal('modal-opciones'); });
-    btnCrearVolver.addEventListener('click', () => { cerrarModal('modal-crear'); abrirModal('modal-opciones'); });
+    btnCargarVolver.addEventListener('click', () => { 
+        window.audioSystem.play('select');
+        cerrarModal('modal-cargar'); 
+        abrirModal('modal-opciones'); 
+    });
+    btnCrearVolver.addEventListener('click', () => { 
+        window.audioSystem.play('select');
+        cerrarModal('modal-crear'); 
+        abrirModal('modal-opciones'); 
+    });
 
     async function cargarResultados(tipo, query = '') {
         let url = '';
@@ -484,11 +556,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 const li = document.createElement('li');
                 li.textContent = item.nombre;
                 li.dataset.id = item.id;
-                li.addEventListener('click', () => seleccionarItem(item));
+                li.addEventListener('mouseenter', () => window.audioSystem.play('hover'));
+                li.addEventListener('click', () => {
+                    window.audioSystem.play('select');
+                    seleccionarItem(item);
+                });
                 resultsList.appendChild(li);
             });
         } catch (error) {
             console.error("Error al cargar resultados:", error);
+            window.audioSystem.play('error');
             resultsList.innerHTML = '<li>Error al cargar datos</li>';
         }
     }
@@ -499,8 +576,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // CORRECCIÓN: Ahora actualiza correctamente el texto del botón de puesto
     function seleccionarItem(item) {
+        window.audioSystem.play('positive');
         if (currentSelectionMode === 'area') {
             selectedArea = item;
             btnArea.textContent = item.nombre;
@@ -511,7 +588,7 @@ document.addEventListener('DOMContentLoaded', function() {
             btnPuesto.disabled = false;
         } else if (currentSelectionMode === 'puesto') {
             selectedPuesto = item;
-            btnPuesto.textContent = item.nombre;  // CORRECCIÓN: Ahora actualiza el texto correctamente
+            btnPuesto.textContent = item.nombre;
             btnPuesto.classList.add('selected');
         }
         cerrarModal('modal-cargar');
@@ -520,6 +597,7 @@ document.addEventListener('DOMContentLoaded', function() {
     btnCrearConfirmar.addEventListener('click', async () => {
         const nombre = newItemInput.value.trim();
         if (!nombre) {
+            window.audioSystem.play('error');
             crearErrorMsg.textContent = 'El nombre no puede estar vacío.';
             return;
         }
@@ -531,6 +609,7 @@ document.addEventListener('DOMContentLoaded', function() {
             body = { nombre: nombre };
         } else {
             if (!selectedArea) {
+                window.audioSystem.play('error');
                 crearErrorMsg.textContent = 'Debes seleccionar un área primero.';
                 return;
             }
@@ -546,23 +625,34 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             const data = await response.json();
             if (response.ok) {
+                window.audioSystem.play('positive');
                 seleccionarItem(data);
                 cerrarModal('modal-crear');
             } else {
+                window.audioSystem.play('error');
                 crearErrorMsg.textContent = data.error || 'Ocurrió un error.';
             }
         } catch(error) {
             console.error("Error al crear:", error);
+            window.audioSystem.play('error');
             crearErrorMsg.textContent = "Error de red al intentar crear.";
         }
     });
 
     // ===== LÓGICA DE PERMISOS =====
     window.toggleAllPermisos = function() {
+        window.audioSystem.play('select');
         const checkboxes = document.querySelectorAll('input[name="permisos"]');
         const allChecked = Array.from(checkboxes).every(cb => cb.checked);
         checkboxes.forEach(cb => cb.checked = !allChecked);
     };
+
+    // Agregar sonido al hacer click en checkboxes de permisos
+    document.querySelectorAll('input[name="permisos"]').forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+            window.audioSystem.play('select');
+        });
+    });
 
     // ===== ENVÍO FINAL =====
     const btnListo = document.querySelector('.btn-success');
@@ -575,6 +665,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     btnListo.addEventListener('click', async () => {
+        window.audioSystem.play('select');
+        
         let fotoBase64 = null;
         const fotoInput = document.getElementById('photo-input');
         if (fotoInput.files[0]) {
@@ -600,10 +692,12 @@ document.addEventListener('DOMContentLoaded', function() {
         };
 
         if (!data.personal.nombre || !data.personal.apellido || !data.personal.email || !data.personal.dni) {
+            window.audioSystem.play('error');
             alert('Por favor, completa los campos obligatorios: Nombre, Apellido, DNI y Email.');
             return;
         }
         if (!data.area || !data.puesto) {
+            window.audioSystem.play('error');
             alert('Por favor, selecciona un Área y un Puesto para el empleado.');
             return;
         }
@@ -619,15 +713,18 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             const result = await response.json();
             if (response.ok) {
+                window.audioSystem.play('positive');
                 alert(result.message + '\n\nUsuario: ' + result.username);
                 window.location.href = document.body.dataset.inicioUrl;
             } else {
+                window.audioSystem.play('error');
                 alert(`Error: ${result.error}`);
                 btnListo.disabled = false;
                 btnListo.innerHTML = '<i class="fas fa-check"></i> Listo';
             }
         } catch (error) {
             console.error('Error al enviar el formulario:', error);
+            window.audioSystem.play('error');
             alert('Ocurrió un error de red. Inténtalo de nuevo.');
             btnListo.disabled = false;
             btnListo.innerHTML = '<i class="fas fa-check"></i> Listo';

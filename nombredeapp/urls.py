@@ -13,6 +13,9 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('crear-empleado/', views.crear_empleado_view, name='crear_empleado'),
     path('lista-empleados/', views.lista_empleados_view, name='lista_empleados'),
+    
+    # Rutas para Caja y Stock
+    path('menu-caja/', views.menu_caja_view, name='menu_caja'),
     path('gestion-stock/', views.gestion_stock_view, name='gestion_stock'),
     
     # Rutas de API para crear empleado
