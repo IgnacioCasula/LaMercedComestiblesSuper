@@ -276,3 +276,20 @@ class Horario(models.Model):
 
     def __str__(self):
         return f"Turno de {self.empleado} para el rol {self.rol.nombrerol if self.rol else ''}"
+    
+
+class Movimientosdecaja(models.Model):
+    idmovcaja = models.AutoField(db_column='IdMovCaja', primary_key=True)
+    nombreusuariomovcaja = models.CharField(db_column='NombreUsuarioMovCaja', max_length=50)
+    fechamovcaja = models.DateField(db_column='FechaMovCaja')
+    horamovcaja = models.TimeField(db_column='HoraMovCaja')
+    nombrecajamovcaja = models.CharField(db_column='NombreCajaMovCaja', max_length=50)
+    tipomovcaja = models.CharField(db_column='TipoMovCaja', max_length=50)
+    conceptomovcaja = models.CharField(db_column='ConceptoMovCaja', max_length=50)
+    valormovcaja = models.FloatField(db_column='ValorMovCaja')
+    saldomovcaja = models.FloatField(db_column='SaldoMovCaja')
+    idusuarios = models.ForeignKey('Usuarios', on_delete=models.CASCADE, db_column='IdUsuarios', null=True, blank=True)
+    idcaja = models.ForeignKey('Caja', on_delete=models.CASCADE, db_column='IdCaja', null=True, blank=True)
+
+    class Meta:
+        db_table = 'movimientosdecaja'
