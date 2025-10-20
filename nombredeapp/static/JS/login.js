@@ -2,15 +2,26 @@ document.addEventListener('DOMContentLoaded', function () {
   // ===== TOGGLE DE CONTRASEÑA =====
   var toggle = document.getElementById('togglePwd');
   var pwd = document.getElementById('password');
-  if (toggle && pwd) {
+  var eyeIcon = document.getElementById('eyeIcon');
+  
+  if (toggle && pwd && eyeIcon) {
     toggle.addEventListener('mouseenter', () => {
       if (window.audioSystem) window.audioSystem.play('hover');
     });
+    
     toggle.addEventListener('click', function () {
       if (window.audioSystem) window.audioSystem.play('select');
       var isPassword = pwd.getAttribute('type') === 'password';
       pwd.setAttribute('type', isPassword ? 'text' : 'password');
-      toggle.src = toggle.src.includes('eyeX') ? toggle.src.replace('eyeX', 'eye') : toggle.src.replace('eye', 'eyeX');
+      
+      // Cambiar ícono
+      if (isPassword) {
+        eyeIcon.classList.remove('fa-eye');
+        eyeIcon.classList.add('fa-eye-slash');
+      } else {
+        eyeIcon.classList.remove('fa-eye-slash');
+        eyeIcon.classList.add('fa-eye');
+      }
     });
   }
 
@@ -67,87 +78,4 @@ document.addEventListener('DOMContentLoaded', function () {
       if (window.audioSystem) window.audioSystem.play('select');
     });
   });
-
-  // ===== INICIO PAGE BEHAVIOR =====
-  var panel = document.getElementById('greeting-panel');
-  var audioShine = document.getElementById('audio-shine');
-  var audioSwipe = document.getElementById('audio-swipe');
-  var logoutBtn = document.getElementById('logout-btn');
-  var logoutModal = document.getElementById('logout-modal');
-  var logoutConfirm = document.getElementById('logout-confirm');
-
-  if (panel) {
-    if (audioShine) { try { audioShine.currentTime = 0; audioShine.play(); } catch(e){} }
-    var lastIsShrunk = false;
-    var ticking = false;
-    var onScroll = function(){
-      var y = window.scrollY || window.pageYOffset || 0;
-      var shouldShrink = y > 30;
-      if (shouldShrink !== lastIsShrunk) {
-        panel.classList.toggle('shrunk', shouldShrink);
-        if (shouldShrink) {
-          if (audioSwipe) { try { audioSwipe.currentTime = 0; audioSwipe.play(); } catch(e){} }
-          var handler = function(){
-            panel.removeEventListener('transitionend', handler);
-            panel.classList.add('shake');
-            setTimeout(function(){ panel.classList.remove('shake'); }, 450);
-          };
-          panel.addEventListener('transitionend', handler);
-        } else {
-          if (audioShine) { try { audioShine.currentTime = 0; audioShine.play(); } catch(e){} }
-        }
-        lastIsShrunk = shouldShrink;
-      }
-      ticking = false;
-    };
-    window.addEventListener('scroll', function(){
-      if (!ticking) {
-        window.requestAnimationFrame(onScroll);
-        ticking = true;
-      }
-    }, { passive:true });
-  }
-
-  if (logoutBtn) {
-    logoutBtn.addEventListener('mouseenter', () => {
-      if (window.audioSystem) window.audioSystem.play('hover');
-    });
-    
-    var doLogout = function(){
-      if (window.audioSystem) window.audioSystem.play('negative');
-      fetch('/logout/', { method:'POST', headers:{ 'X-Requested-With':'fetch' } })
-        .then(function(){ window.location.href = '/login/'; })
-        .catch(function(){ window.location.href = '/login/'; });
-    };
-    
-    logoutBtn.addEventListener('click', function(){
-      if (window.audioSystem) window.audioSystem.play('select');
-      if (logoutModal && typeof logoutModal.showModal === 'function') {
-        logoutModal.showModal();
-      } else {
-        if (confirm('¿Seguro que deseas cerrar sesión?')) doLogout();
-      }
-    });
-    
-    if (logoutConfirm) {
-      logoutConfirm.addEventListener('mouseenter', () => {
-        if (window.audioSystem) window.audioSystem.play('hover');
-      });
-      logoutConfirm.addEventListener('click', function(e){ 
-        e.preventDefault(); 
-        doLogout(); 
-      });
-    }
-    
-    // Botón cancelar del modal
-    var logoutCancelBtn = logoutModal ? logoutModal.querySelector('button[value="cancel"]') : null;
-    if (logoutCancelBtn) {
-      logoutCancelBtn.addEventListener('mouseenter', () => {
-        if (window.audioSystem) window.audioSystem.play('hover');
-      });
-      logoutCancelBtn.addEventListener('click', () => {
-        if (window.audioSystem) window.audioSystem.play('select');
-      });
-    }
-  }
 });

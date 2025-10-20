@@ -13,8 +13,7 @@
     data-add-icon-url="{% static 'iconos/add_circle.png' %}"
     data-remove-icon-url="{% static 'iconos/remove_circle.png' %}"
     data-api-areas-url="{% url 'api_areas' %}"
-    data-api-crear-area-url="{% url 'api_crear_area' %}"
-    data-api-crear-puesto-url="{% url 'api_crear_puesto' %}"
+    data-api-puestos-por-area-url="/api/puestos/"
     data-api-registrar-empleado-url="{% url 'api_registrar_empleado' %}">
 
 <div class="form-container">
@@ -65,7 +64,6 @@
         </div>
         <div class="form-actions-initial">
             <button type="button" id="btn-add-laboral" class="btn btn-secondary">Añadir datos laborales</button>
-            <button type="button" id="btn-cargar-datos" class="btn btn-light" style="display: none;">Cargar datos laborales</button>
         </div>
     </div>
 
@@ -83,6 +81,10 @@
                     <button type="button" id="btn-puesto" class="selector-btn" disabled>Selecciona un puesto</button>
                 </div>
             </div>
+            <div class="permisos-info" id="permisos-info" style="display: none;">
+                <h3>🔒 Permisos del Puesto</h3>
+                <div id="permisos-display" class="permisos-display"></div>
+            </div>
         </div>
         
         <!-- SECCIÓN 3: HORARIO -->
@@ -98,64 +100,6 @@
             <div id="schedule-container"></div>
             <div class="daily-schedule-container" id="daily-schedule-container"></div>
         </div>
-
-        <!-- SECCIÓN 4: PERMISOS -->
-        <div class="section permissions-section">
-            <div class="permissions-header">
-                <h2 class="section-title">🔑 Permisos del Sistema</h2>
-                <button type="button" class="btn btn-light-alt" onclick="toggleAllPermisos()">
-                    <i class="fas fa-check-double"></i> Marcar/Desmarcar Todos
-                </button>
-            </div>
-            <p class="permissions-description">
-                Selecciona los permisos que tendrá este empleado. Los permisos determinarán qué herramientas y funciones podrá utilizar en el sistema.
-            </p>
-            
-            <div id="permissions-list" class="permissions-list-modern">
-                <!-- Permiso: Caja -->
-                <div class="permission-card-modern">
-                    <div class="permission-header-modern">
-                        <label class="switch">
-                            <input type="checkbox" name="permisos" value="caja">
-                            <span class="slider"></span>
-                        </label>
-                        <div class="permission-info">
-                            <h4 class="permission-name">
-                                <i class="fas fa-cash-register"></i> Caja
-                            </h4>
-                            <p class="permission-desc">
-                                Permite abrir y cerrar cajas, registrar ventas y gestionar operaciones de punto de venta.
-                            </p>
-                        </div>
-                    </div>
-                    <div class="permission-badge">Operaciones</div>
-                </div>
-
-                <!-- Permiso: Gestión de Stock -->
-                <div class="permission-card-modern">
-                    <div class="permission-header-modern">
-                        <label class="switch">
-                            <input type="checkbox" name="permisos" value="stock">
-                            <span class="slider"></span>
-                        </label>
-                        <div class="permission-info">
-                            <h4 class="permission-name">
-                                <i class="fas fa-boxes"></i> Gestión de Stock
-                            </h4>
-                            <p class="permission-desc">
-                                Administrar inventario, registrar entradas y salidas de productos, y actualizar existencias.
-                            </p>
-                        </div>
-                    </div>
-                    <div class="permission-badge badge-inventory">Inventario</div>
-                </div>
-            </div>
-
-            <div class="permissions-summary">
-                <i class="fas fa-info-circle"></i>
-                <span>Los permisos pueden ser modificados posteriormente desde la configuración de usuario.</span>
-            </div>
-        </div>
     </div>
 
     <!-- BOTONES FINALES -->
@@ -163,59 +107,27 @@
         <button type="button" id="btn-cancel" class="btn btn-danger">
             <i class="fas fa-times"></i> Cancelar
         </button>
-        <button type="button" class="btn btn-success">
+        <button type="button" class="btn btn-success" id="btn-listo">
             <i class="fas fa-check"></i> Listo
         </button>
     </div>
 </div>
 
-<!-- MODALES -->
-<div id="modal-opciones" class="modal-overlay">
+<!-- MODAL PARA SELECCIONAR ÁREA/PUESTO -->
+<div id="modal-seleccionar" class="modal-overlay">
     <div class="modal-content">
-        <h2 id="opciones-titulo"></h2>
-        <div class="modal-options">
-            <button type="button" id="btn-opcion-cargar" class="modal-btn">
-                <i class="fas fa-folder-open"></i> Cargar existente
-            </button>
-            <button type="button" id="btn-opcion-crear" class="modal-btn">
-                <i class="fas fa-plus-circle"></i> Crear nuevo
-            </button>
-        </div>
-        <div class="modal-actions">
-            <button type="button" class="btn btn-light" onclick="cerrarModal('modal-opciones')">Volver</button>
-        </div>
-    </div>
-</div>
-
-<div id="modal-cargar" class="modal-overlay">
-    <div class="modal-content">
-        <h2 id="cargar-titulo"></h2>
+        <h2 id="seleccionar-titulo"></h2>
         <input type="text" id="searchInput" placeholder="Buscar...">
         <ul id="resultsList"></ul>
         <div class="modal-actions">
-            <button type="button" class="btn btn-light" id="btn-cargar-volver">Volver</button>
-        </div>
-    </div>
-</div>
-
-<div id="modal-crear" class="modal-overlay">
-    <div class="modal-content">
-        <h2 id="crear-titulo"></h2>
-        <div class="form-group">
-            <label for="new-item-name" id="crear-label"></label>
-            <input type="text" id="new-item-name" class="form-control">
-        </div>
-        <div id="crear-error-msg" style="color: red; margin-top: 10px; text-align: center;"></div>
-        <div class="modal-actions">
-            <button type="button" class="btn btn-light" id="btn-crear-volver">Volver</button>
-            <button type="button" class="btn btn-success" id="btn-crear-confirmar">Crear</button>
+            <button type="button" class="btn btn-light" id="btn-seleccionar-volver">Cerrar</button>
         </div>
     </div>
 </div>
 
 <!-- CARGAR SISTEMA DE AUDIO PRIMERO -->
 <script src="{% static 'JS/audio-system.js' %}"></script>
-<!-- LUEGO CARGAR EL SCRIPT PRINCIPAL -->
+<!-- LUEGO CARGAR EL SCRIPT PRINCIPAL - CORREGIDO EL NOMBRE -->
 <script src="{% static 'JS/crear_empleado.js' %}"></script>
 </body>
 </html>

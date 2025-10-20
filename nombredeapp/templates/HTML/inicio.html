@@ -10,7 +10,6 @@
 </head>
 <body class="is-loading">
 
-    <!-- Sonidos originales del header -->
     <audio id="sound-expand" src="{% static 'effects/shine-1.mp3' %}" preload="auto"></audio>
     <audio id="sound-shrink" src="{% static 'effects/magazine-swiped.mp3' %}" preload="auto"></audio>
 
@@ -19,8 +18,8 @@
         <h1>Hola, {{ nombre_usuario }}</h1>
     </header>
 
-    <!-- Botones fuera de cuadros como pediste -->
     <div class="quick-actions">
+        <!-- CORREGIDO: Cambiada la URL de asistencias -->
         <a href="{% url 'asistencias:ver_asistencias' %}" class="action-btn asistencias">
             <i class="fas fa-clock"></i> Ver asistencias
         </a>
@@ -30,7 +29,6 @@
     </div>
 
     <main class="main-container">
-        <!-- Panel de Administración (solo para admin) -->
         {% if is_admin %}
         <section class="panel admin-panel">
             <h2>Administración</h2>
@@ -40,7 +38,11 @@
                         <i class="fas fa-user-plus tool-icon"></i>
                         <span>Crear empleado</span>
                     </a>
-                    <a href="#" class="tool-button">
+                    <a href="{% url 'gestion_areas_puestos' %}" class="tool-button">
+                        <i class="fas fa-sitemap tool-icon"></i>
+                        <span>Áreas y Puestos</span>
+                    </a>
+                    <a href="{% url 'lista_empleados' %}" class="tool-button">
                         <i class="fas fa-list tool-icon"></i>
                         <span>Lista de empleados</span>
                     </a>
@@ -49,18 +51,24 @@
         </section>
         {% endif %}
 
-        <!-- Panel de Herramientas (Caja y Stock combinados) -->
-        {% if has_caja or has_gestion_stock %}
         <section class="panel herramientas-panel">
             <h2>Herramientas</h2>
             <div class="panel-content">
                 <div class="tools-grid">
                     {% if has_caja %}
-                    <a href="{% url 'menu_caja' %}" class="tool-button">
+                    <a href="{% url 'menu_caja' %}" class="tool-button caja-btn" id="btn-caja-status">
                         <i class="fas fa-cash-register tool-icon"></i>
-                        <span>Ir a Caja</span>
+                        <span id="caja-text">Abrir Caja</span>
                     </a>
                     {% endif %}
+                    
+                    {% if has_registrar_venta %}
+                    <a href="#" class="tool-button registrar-venta-btn" id="btn-registrar-venta">
+                        <i class="fas fa-receipt tool-icon"></i>
+                        <span>Registrar Venta</span>
+                    </a>
+                    {% endif %}
+                    
                     {% if has_gestion_stock %}
                     <a href="{% url 'gestion_stock' %}" class="tool-button">
                         <i class="fas fa-boxes tool-icon"></i>
@@ -70,27 +78,54 @@
                 </div>
             </div>
         </section>
-        {% endif %}
         
         <div style="height: 1000px;"></div>
     </main>
 
-    <dialog id="logout-modal">
-        <form method="dialog">
-            <p>¿Seguro que deseas cerrar sesión?</p>
-            <menu>
-                <button value="cancel">Cancelar</button>
-                <button value="confirm" id="logout-confirm">Sí, cerrar</button>
-            </menu>
-        </form>
+    <!-- MODAL: LOGOUT -->
+    <dialog id="logout-modal" class="logout-modal">
+        <div class="logout-modal-content">
+            <div class="logout-modal-header">
+                <i class="fas fa-exclamation-circle"></i>
+                <h2>Confirmar Cierre de Sesión</h2>
+            </div>
+            <p class="logout-modal-message">
+                ¿Estás seguro de que deseas cerrar sesión? Si lo haces, se registrará como el fin de tu jornada laboral.
+            </p>
+            <p class="logout-modal-note">
+                <i class="fas fa-info-circle"></i>
+                Tendrás 2 minutos para volver a iniciar sesión y continuar tu trabajo sin que se registre la salida.
+            </p>
+            <div class="logout-modal-actions">
+                <button class="btn-modal cancel" id="logout-cancel">Cancelar</button>
+                <button class="btn-modal confirm" id="logout-confirm">Sí, cerrar sesión</button>
+            </div>
+        </div>
     </dialog>
 
-    <!-- Cargar sistema de audio primero -->
-    <script src="{% static 'JS/audio-system.js' %}"></script>
+    <!-- MODAL: CAJA NO ABIERTA -->
+    <dialog id="caja-no-abierta-modal" class="logout-modal">
+        <div class="logout-modal-content">
+            <div class="logout-modal-header">
+                <i class="fas fa-lock"></i>
+                <h2>Caja Cerrada</h2>
+            </div>
+            <p class="logout-modal-message">
+                Para registrar ventas, primero debes abrir la caja.
+            </p>
+            <p class="logout-modal-note">
+                <i class="fas fa-arrow-right"></i>
+                Haz clic en el botón "Abrir Caja" para comenzar tu jornada.
+            </p>
+            <div class="logout-modal-actions">
+                <button class="btn-modal cancel" id="caja-no-abierta-ok">Entendido</button>
+            </div>
+        </div>
+    </dialog>
 
+    <script src="{% static 'JS/audio-system.js' %}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // --- CONFIGURACIÓN Y ELEMENTOS DEL DOM ---
             const header = document.querySelector('.main-header');
             const body = document.body;
             const soundExpand = document.getElementById('sound-expand');
@@ -101,16 +136,15 @@
             }
             window.scrollTo(0, 0);
 
-            // --- ESTADO Y PARÁMETROS ---
             const state = {
                 unlockCounter: 0,
                 isTicking: false,
                 isExpanded: true,
-                audioUnlocked: false
+                audioUnlocked: false,
+                cajaAbierta: false
             };
             const UNLOCK_THRESHOLD = 3;
 
-            // --- FUNCIÓN PARA HABILITAR EL AUDIO ---
             function unlockAudio() {
                 if (!state.audioUnlocked) {
                     soundExpand.play().then(() => soundExpand.pause()).catch(() => {});
@@ -125,13 +159,11 @@
             window.addEventListener('scroll', unlockAudio);
             window.addEventListener('wheel', unlockAudio);
 
-            // --- SONIDO AL CARGAR LA PÁGINA ---
             setTimeout(() => {
                 soundExpand.currentTime = 0;
                 soundExpand.play().catch(() => {});
             }, 200);
 
-            // --- LISTENER DE SCROLL ---
             function handleScroll() {
                 if (window.scrollY > 0) {
                     if (state.isExpanded) {
@@ -141,7 +173,6 @@
                         soundShrink.currentTime = 0;
                         soundShrink.play().catch(() => {});
 
-                        // Efecto de temblor al finalizar
                         setTimeout(() => {
                             header.classList.add('effect-shake');
                             setTimeout(() => {
@@ -160,7 +191,6 @@
                 }
             });
 
-            // --- LISTENER DE WHEEL ---
             window.addEventListener('wheel', (event) => {
                 const isScrollingUp = event.deltaY < 0;
                 const isAtTop = window.scrollY === 0;
@@ -186,79 +216,118 @@
 
             }, { passive: false });
 
-            // --- SONIDOS EN BOTONES HOVER ---
+            // Botones de herramientas
             const toolButtons = document.querySelectorAll('.tool-button');
             toolButtons.forEach(button => {
                 button.addEventListener('mouseenter', () => {
                     if (window.audioSystem) window.audioSystem.play('hover');
                 });
-                button.addEventListener('click', () => {
-                    if (window.audioSystem) window.audioSystem.play('select');
-                });
-            });
-
-            const actionButtons = document.querySelectorAll('.action-btn');
-            actionButtons.forEach(button => {
-                button.addEventListener('mouseenter', () => {
-                    if (window.audioSystem) window.audioSystem.play('hover');
-                });
                 button.addEventListener('click', (e) => {
-                    if (!button.id || button.id !== 'logout-btn') {
+                    if (button.id !== 'btn-registrar-venta') {
                         if (window.audioSystem) window.audioSystem.play('select');
                     }
                 });
             });
 
-            // --- LÓGICA DE CIERRE DE SESIÓN ---
+            // Botones de acción rápida
+            const actionButtons = document.querySelectorAll('.action-btn');
+            actionButtons.forEach(button => {
+                button.addEventListener('mouseenter', () => {
+                    if (window.audioSystem) window.audioSystem.play('hover');
+                });
+                // Agregar sonido de click para asistencias
+                button.addEventListener('click', () => {
+                    if (window.audioSystem) window.audioSystem.play('select');
+                });
+            });
+
+            // Lógica de Caja
+            const btnCajaStatus = document.getElementById('btn-caja-status');
+            const cajaText = document.getElementById('caja-text');
+            
+            function actualizarEstadoCaja() {
+                fetch('/api/caja-status/', { method: 'GET' })
+                    .then(r => r.json())
+                    .then(data => {
+                        state.cajaAbierta = data.abierta;
+                        if (state.cajaAbierta) {
+                            btnCajaStatus.classList.add('caja-abierta');
+                            cajaText.textContent = 'Cerrar Caja';
+                            btnCajaStatus.href = '/caja/cierre/';
+                        } else {
+                            btnCajaStatus.classList.remove('caja-abierta');
+                            cajaText.textContent = 'Abrir Caja';
+                            btnCajaStatus.href = '/caja/apertura/';
+                        }
+                    })
+                    .catch(() => {
+                        console.log('No se pudo obtener el estado de caja');
+                    });
+            }
+
+            if (btnCajaStatus) {
+                actualizarEstadoCaja();
+                setInterval(actualizarEstadoCaja, 5000);
+            }
+
+            // Botón registrar venta
+            const btnRegistrarVenta = document.getElementById('btn-registrar-venta');
+            if (btnRegistrarVenta) {
+                btnRegistrarVenta.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (window.audioSystem) window.audioSystem.play('select');
+                    
+                    if (!state.cajaAbierta) {
+                        document.getElementById('caja-no-abierta-modal').showModal();
+                        if (window.audioSystem) window.audioSystem.play('negative');
+                    } else {
+                        window.location.href = '/ventas/registrar/';
+                    }
+                });
+            }
+
+            // Modal caja no abierta
+            document.getElementById('caja-no-abierta-ok')?.addEventListener('click', () => {
+                if (window.audioSystem) window.audioSystem.play('select');
+                document.getElementById('caja-no-abierta-modal').close();
+            });
+
+            // Logout
             const logoutBtn = document.getElementById('logout-btn');
             const logoutModal = document.getElementById('logout-modal');
             const logoutConfirm = document.getElementById('logout-confirm');
+            const logoutCancel = document.getElementById('logout-cancel');
 
             if (logoutBtn) {
                 logoutBtn.addEventListener('click', function(event) {
                     event.preventDefault();
                     if (window.audioSystem) window.audioSystem.play('select');
-                    
-                    if (logoutModal && typeof logoutModal.showModal === 'function') {
-                        logoutModal.showModal();
-                    } else {
-                        const confirmLogout = confirm('¿Está seguro de que desea cerrar sesión? Si lo hace, se registrará como el fin de su jornada laboral.\n\nTendrá 2 minutos para volver a iniciar sesión y continuar su trabajo sin que se registre la salida.');
-                        if (confirmLogout) {
-                            doLogout();
-                        }
-                    }
+                    logoutModal.showModal();
                 });
             }
-
-            const doLogout = function(){
-                if (window.audioSystem) window.audioSystem.play('negative');
-                fetch('/logout/', { method:'POST', headers:{ 'X-Requested-With':'fetch' } })
-                    .then(function(){ window.location.href = '/login/'; })
-                    .catch(function(){ window.location.href = '/login/'; });
-            };
 
             if (logoutConfirm) {
                 logoutConfirm.addEventListener('mouseenter', () => {
                     if (window.audioSystem) window.audioSystem.play('hover');
                 });
-                logoutConfirm.addEventListener('click', function(e){ 
-                    e.preventDefault(); 
-                    doLogout(); 
+                logoutConfirm.addEventListener('click', function() { 
+                    if (window.audioSystem) window.audioSystem.play('negative');
+                    fetch('/logout/', { method:'POST', headers:{ 'X-Requested-With':'fetch' } })
+                        .then(() => window.location.href = '/login/')
+                        .catch(() => window.location.href = '/login/');
                 });
             }
 
-            // Sonido en botón cancelar del modal
-            const cancelButton = logoutModal ? logoutModal.querySelector('button[value="cancel"]') : null;
-            if (cancelButton) {
-                cancelButton.addEventListener('mouseenter', () => {
+            if (logoutCancel) {
+                logoutCancel.addEventListener('mouseenter', () => {
                     if (window.audioSystem) window.audioSystem.play('hover');
                 });
-                cancelButton.addEventListener('click', () => {
+                logoutCancel.addEventListener('click', () => {
                     if (window.audioSystem) window.audioSystem.play('select');
+                    logoutModal.close();
                 });
             }
 
-            // Quitar la clase de carga para activar las animaciones
             setTimeout(() => {
                 body.classList.remove('is-loading');
             }, 150);

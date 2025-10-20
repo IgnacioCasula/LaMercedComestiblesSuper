@@ -26,8 +26,10 @@
 
         <label><i class="fas fa-key"></i> Contraseña</label>
         <div class="password-field">
-            <input type="password" id="password" name="password" placeholder="********" required />
-            <img id="togglePwd" src="{% static 'iconos/eyeX.png' %}" alt="toggle" />
+            <input type="password" id="password" name="password" placeholder="••••••••" required />
+            <button type="button" id="togglePwd" class="toggle-password-btn" title="Mostrar/ocultar contraseña">
+                <i class="fas fa-eye"></i>
+            </button>
         </div>
         <button type="submit"><i class="fas fa-sign-in-alt"></i> Entrar</button>
     </form>
@@ -44,9 +46,7 @@
   </div>
 </div>
 
-<!-- Cargar sistema de audio primero -->
 <script src="{% static 'JS/audio-system.js' %}"></script>
-<!-- Luego cargar el script de login -->
 <script src="{% static 'JS/login.js' %}"></script>
 </body>
 </html>

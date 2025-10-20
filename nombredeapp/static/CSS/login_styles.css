@@ -157,31 +157,60 @@ select:focus {
     background-color: #fff;
 }
 
-/* Campo de contraseña con ícono */
+/* ===== CAMPO DE CONTRASEÑA ===== */
 .password-field { 
     position: relative;
     z-index: 1;
 }
 
 .password-field input {
-    padding-right: 45px;
+    width: 100%;
+    padding: 14px 50px 14px 16px;
+    border: 2px solid #e0e0e0;
+    background: #ffffff;
+    border-radius: 10px;
+    outline: none;
+    font-size: 15px;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
 }
 
-.password-field img { 
+.password-field input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.toggle-password-btn {
     position: absolute;
-    right: 12px;
+    right: 5px;
     top: 50%;
     transform: translateY(-50%);
-    width: 24px;
-    height: 24px;
+    width: 38px;
+    height: 38px;
+    border: none;
+    background: transparent;
     cursor: pointer;
-    opacity: 0.6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    border-radius: 8px;
     transition: all 0.3s ease;
+    padding: 0;
 }
 
-.password-field img:hover {
-    opacity: 1;
-    transform: translateY(-50%) scale(1.1);
+.toggle-password-btn:hover {
+    color: #667eea;
+    background: rgba(102, 126, 234, 0.1);
+}
+
+.toggle-password-btn:active {
+    transform: translateY(-50%) scale(0.9);
+}
+
+.toggle-password-btn i {
+    font-size: 1.15em;
+    pointer-events: none;
 }
 
 /* ===== BOTONES ===== */
@@ -236,7 +265,7 @@ select:focus {
 .login-card button:hover,
 .recover-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
 }
 
 .login-card button:active,
@@ -352,31 +381,6 @@ select:focus {
     }
 }
 
-/* ===== BOTÓN TIPO LINK ===== */
-.link-btn { 
-    background: transparent !important;
-    color: #667eea !important;
-    text-decoration: underline;
-    font-weight: 600;
-    box-shadow: none !important;
-    margin-top: 10px;
-}
-
-.link-btn:hover {
-    color: #764ba2 !important;
-    transform: none !important;
-}
-
-/* ===== SELECT PERSONALIZADO ===== */
-select {
-    appearance: none;
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23667eea' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-    background-size: 20px;
-    padding-right: 40px;
-}
-
 /* ===== RESPONSIVE ===== */
 @media (max-width: 500px) {
     .login-card {
@@ -398,23 +402,6 @@ select {
         padding: 12px 16px;
         font-size: 14px;
     }
-}
-
-/* ===== ANIMACIÓN DE CARGA ===== */
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-.loading-spinner {
-    border: 3px solid rgba(255, 255, 255, 0.3);
-    border-radius: 50%;
-    border-top: 3px solid white;
-    width: 20px;
-    height: 20px;
-    animation: spin 1s linear infinite;
-    display: inline-block;
-    margin-right: 10px;
-    vertical-align: middle;
 }
 
 /* ===== SCROLLBAR PERSONALIZADA ===== */
