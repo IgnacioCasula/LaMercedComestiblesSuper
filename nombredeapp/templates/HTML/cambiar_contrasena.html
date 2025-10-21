@@ -2,59 +2,31 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cambiar Contraseña</title>
-    <link rel="stylesheet" href="{% static 'CSS/login_styles.css' %}">
+  <meta charset="UTF-8" />
+  <title>Cambiar contraseña</title>
+  <link rel="stylesheet" href="{% static 'CSS/login_styles.css' %}">
 </head>
 <body>
-    <div class="login-container">
-        {% if success %}
-        <div class="login-form">
-            <div class="success-message" style="margin-bottom: 20px;">
-                {{ message }}
-            </div>
-            <a href="{% url 'iniciar_sesion' %}" class="submit-btn" style="display: block; text-decoration: none; text-align: center; padding: 10px; color: #333;">
-                Ir al Login
-            </a>
-        </div>
-        {% else %}
-        <form class="login-form" method="post" action="{% url 'cambiar_contrasena' %}">
-            {% csrf_token %}
-            <p style="text-align: center; font-weight: bold; margin-bottom: 20px;">
-                Ingrese su nueva contraseña
-            </p>
-            
-            <div class="form-group password-wrapper">
-                <label for="new_password">Nueva Contraseña</label>
-                <input type="password" id="new_password" name="new_password" required minlength="5">
-                <img src="{% static 'iconos/eyeX.png' %}" 
-                     class="toggle-password" 
-                     data-target="new_password" 
-                     data-open-eye="{% static 'iconos/eye.png' %}"
-                     data-closed-eye="{% static 'iconos/eyeX.png' %}"
-                     alt="Mostrar/Ocultar">
-            </div>
-
-            <div class="form-group password-wrapper">
-                <label for="confirm_password">Confirmar Contraseña</label>
-                <input type="password" id="confirm_password" name="confirm_password" required minlength="5">
-                <img src="{% static 'iconos/eyeX.png' %}" 
-                     class="toggle-password" 
-                     data-target="confirm_password" 
-                     data-open-eye="{% static 'iconos/eye.png' %}"
-                     data-closed-eye="{% static 'iconos/eyeX.png' %}"
-                     alt="Mostrar/Ocultar">
-            </div>
-
-            {% if error %}
-            <div class="error-message">{{ error }}</div>
-            {% endif %}
-            
-            <button type="submit" class="submit-btn">Cambiar Contraseña</button>
-        </form>
-        {% endif %}
-    </div>
-    <script src="{% static 'JS/password_visibility.js' %}"></script>
+<div class="login-bg">
+  <div class="login-card">
+    <h2>Nueva contraseña</h2>
+    <p>La contraseña debe tener más de 5 dígitos. Puedes usar letras, números y signos.</p>
+    {% if messages %}<ul class="msgs">{% for m in messages %}<li class="{{ m.tags }}">{{ m }}</li>{% endfor %}</ul>{% endif %}
+    <form method="post" action="{% url 'cambiar_contrasena' %}">
+      {% csrf_token %}
+      <label>Nueva contraseña</label>
+      <input type="password" name="nueva" />
+      <label>Repite la contraseña</label>
+      <input type="password" name="repetir" />
+      <button type="submit">Guardar</button>
+    </form>
+  </div>
+</div>
 </body>
 </html>
+
+
+
+
+
+
