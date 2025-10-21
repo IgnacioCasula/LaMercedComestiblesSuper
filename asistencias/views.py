@@ -1,5 +1,4 @@
 from django.shortcuts import render, redirect
-from nombredeapp.decorators import permiso_requerido
 from caja.models import Empleados, Asistencias, Roles, Horario
 from django.utils import timezone
 from datetime import datetime, timedelta
@@ -14,15 +13,18 @@ def get_week_of_month(date):
     week_number = math.ceil(adjusted_day / 7)
     return min(week_number, 4)
 
-@permiso_requerido(roles_permitidos=['Supervisor de Caja', 'Recursos Humanos'])
+# ARREGLADO: Eliminamos el decorador de permisos - TODOS los empleados pueden ver sus asistencias
 def ver_asistencias(request):
     usuario_id = request.session.get('usuario_id')
     if not usuario_id:
-        return redirect('iniciar_sesion')
+        return redirect('login')
     
     try:
         empleado = Empleados.objects.select_related('idusuarios').get(idusuarios_id=usuario_id)
     except Empleados.DoesNotExist:
+        # Si el usuario no es empleado, mostrar mensaje y quedarse en inicio
+        from django.contrib import messages
+        messages.warning(request, 'No tienes un registro de empleado. Contacta con Recursos Humanos.')
         return redirect('inicio')
 
     context = {
