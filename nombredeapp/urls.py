@@ -29,17 +29,24 @@ urlpatterns = [
     # API Estado de Caja
     path('api/caja-status/', views.api_caja_status, name='api_caja_status'),
     
-    # APIs de áreas y puestos
+    # APIs de áreas y puestos (SIN las rutas de eliminar)
     path('api/areas-puestos/', views.api_areas_puestos, name='api_areas_puestos'),
     path('api/areas-puestos/crear-area/', views.api_crear_area, name='api_crear_area_nueva'),
     path('api/areas-puestos/editar-area/<str:area_nombre>/', views.api_editar_area, name='api_editar_area'),
-    path('api/areas-puestos/eliminar-area/<str:area_nombre>/', views.api_eliminar_area, name='api_eliminar_area'),
     path('api/areas-puestos/crear-puesto/', views.api_crear_puesto_nuevo, name='api_crear_puesto_nuevo'),
     path('api/areas-puestos/editar-puesto/<int:puesto_id>/', views.api_editar_puesto, name='api_editar_puesto'),
-    path('api/areas-puestos/eliminar-puesto/<int:puesto_id>/', views.api_eliminar_puesto, name='api_eliminar_puesto'),
     
     # APIs para crear empleado
     path('api/areas/', views.api_areas, name='api_areas'),
     path('api/puestos/<str:area_id>/', views.api_puestos_por_area_con_permisos, name='api_puestos_por_area'),
     path('api/registrar-empleado/', views.api_registrar_empleado_actualizado, name='api_registrar_empleado'),
+    
+    # APIs para lista de empleados
+    path('api/empleados/lista/', views.api_lista_empleados, name='api_lista_empleados'),
+    path('api/empleados/<int:empleado_id>/', views.api_detalle_empleado, name='api_detalle_empleado'),
+    path('api/empleados/<int:empleado_id>/editar/', views.api_editar_empleado, name='api_editar_empleado'),
+    
+    # APIs simples para selects
+    path('api/areas-simple/', views.api_areas_simple, name='api_areas_simple'),
+    path('api/puestos-simple/<str:area_nombre>/', views.api_puestos_por_area_simple, name='api_puestos_por_area_simple'),
 ]
