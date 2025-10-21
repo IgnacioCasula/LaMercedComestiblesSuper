@@ -11,8 +11,11 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from django.core.mail import send_mail
 from django.db import transaction
+from django.db.models import Q
 
-from caja.models import Usuarios, Roles, UsuxRoles, Empleados, Horario, Caja
+from caja.models import (
+    Usuarios, Roles, UsuxRoles, Empleados, Horario, Caja
+)
 
 
 MAX_INTENTOS = 3
@@ -49,6 +52,42 @@ def _verificar_autenticacion(request: HttpRequest) -> bool:
     usuario = Usuarios.objects.filter(idusuarios=usuario_id).first()
     return usuario is not None
 
+def _verificar_estado_empleado(request: HttpRequest) -> tuple[bool, str]:
+    """
+    Verifica si el empleado tiene un estado válido para acceder al sistema.
+    
+    Returns:
+        tuple: (es_valido, mensaje_error)
+        - es_valido: True si puede acceder, False si está suspendido/despedido
+        - mensaje_error: Mensaje descriptivo del problema (vacío si es_valido=True)
+    """
+    usuario_id = request.session.get('usuario_id')
+    if not usuario_id:
+        return False, 'No hay sesión activa.'
+    
+    try:
+        usuario = Usuarios.objects.filter(idusuarios=usuario_id).first()
+        if not usuario:
+            return False, 'Usuario no encontrado.'
+        
+        # Intentar obtener el registro de empleado
+        empleado = Empleados.objects.get(idusuarios=usuario)
+        
+        # Validar estado
+        if empleado.estado == 'Suspendido':
+            return False, 'Tu cuenta ha sido suspendida temporalmente. Contacta con Recursos Humanos.'
+        elif empleado.estado == 'Despedido':
+            return False, 'Tu cuenta ha sido desactivada. Contacta con Recursos Humanos.'
+        
+        # Estado válido (Trabajando u otro estado activo)
+        return True, ''
+        
+    except Empleados.DoesNotExist:
+        # Si no es empleado (ej: administrador del sistema), permitir acceso
+        return True, ''
+    except Exception as e:
+        print(f"Error verificando estado del empleado: {e}")
+        return True, ''  # En caso de error, permitir acceso para no bloquear el sistema
 
 def login_view(request: HttpRequest) -> HttpResponse:
     estado = _get_session_dict(request, 'login_estado', {
@@ -100,6 +139,25 @@ def login_view(request: HttpRequest) -> HttpResponse:
             messages.error(request, f'Credenciales inválidas. Intento {estado["intentos"]} de {MAX_INTENTOS}.')
             return redirect('login')
 
+        # NUEVA VALIDACIÓN: Verificar el estado del empleado
+        try:
+            empleado = Empleados.objects.get(idusuarios=usuario)
+            
+            # Si el empleado está suspendido o despedido, no permitir el acceso
+            if empleado.estado == 'Suspendido':
+                messages.error(request, 'Tu cuenta ha sido suspendida temporalmente. Contacta con Recursos Humanos.')
+                return redirect('login')
+            elif empleado.estado == 'Despedido':
+                messages.error(request, 'Tu cuenta ha sido desactivada. Contacta con Recursos Humanos.')
+                return redirect('login')
+            # Si el estado es "Trabajando" u otro estado activo, permitir el acceso
+            
+        except Empleados.DoesNotExist:
+            # Si no es un empleado (podría ser un administrador del sistema sin registro en Empleados)
+            # Permitir el acceso normalmente
+            pass
+
+        # Si llegamos aquí, el usuario está autenticado y tiene un estado válido
         estado['intentos'] = 0
         estado['bloqueado_hasta'] = None
         request.session['login_estado'] = estado
@@ -239,6 +297,25 @@ def inicio_view(request: HttpRequest) -> HttpResponse:
         messages.error(request, 'Acceso denegado. Por favor, inicia sesión.')
         return redirect('login')
     
+    # NUEVA VALIDACIÓN: Verificar estado del empleado en tiempo real
+    try:
+        empleado = Empleados.objects.get(idusuarios=usuario)
+        
+        if empleado.estado == 'Suspendido':
+            # Cerrar la sesión
+            request.session.flush()
+            messages.error(request, 'Tu cuenta ha sido suspendida. Contacta con Recursos Humanos.')
+            return redirect('login')
+        elif empleado.estado == 'Despedido':
+            # Cerrar la sesión
+            request.session.flush()
+            messages.error(request, 'Tu cuenta ha sido desactivada. Contacta con Recursos Humanos.')
+            return redirect('login')
+            
+    except Empleados.DoesNotExist:
+        # Si no es empleado, continuar normalmente (puede ser administrador del sistema)
+        pass
+    
     roles_usuario = list(
         Roles.objects.filter(usuxroles__idusuarios_id=usuario_id).values_list('nombrerol', flat=True)
     )
@@ -322,6 +399,13 @@ def crear_empleado_view(request: HttpRequest) -> HttpResponse:
         messages.error(request, 'Acceso denegado. Por favor, inicia sesión.')
         return redirect('login')
     
+    # NUEVA VALIDACIÓN: Verificar estado del empleado
+    es_valido, mensaje_error = _verificar_estado_empleado(request)
+    if not es_valido:
+        request.session.flush()  # Cerrar sesión
+        messages.error(request, mensaje_error)
+        return redirect('login')
+    
     usuario_id = request.session.get('usuario_id')
     usuario = Usuarios.objects.filter(idusuarios=usuario_id).first()
     
@@ -354,21 +438,29 @@ def api_areas(request):
     return JsonResponse(data, safe=False)
 
 
+# ===== REEMPLAZAR ESTAS FUNCIONES EN views.py =====
+
 def api_areas_puestos(request):
-    """Devuelve todas las áreas con sus puestos y permisos."""
+    """Devuelve todas las áreas con sus puestos, permisos y salarios."""
     try:
         areas = Roles.objects.values('nombrearea').distinct().order_by('nombrearea')
         
         resultado = []
         for area in areas:
             area_nombre = area['nombrearea']
-            puestos = Roles.objects.filter(nombrearea=area_nombre).order_by('nombrerol')
+            # Excluir roles placeholder
+            puestos = Roles.objects.filter(
+                nombrearea=area_nombre
+            ).exclude(
+                nombrerol__startswith='_placeholder_'
+            ).order_by('nombrerol')
             
             puestos_data = []
             for puesto in puestos:
                 permisos = []
                 nombre_rol = puesto.nombrerol.lower()
                 
+                # Extraer permisos
                 if 'vendedor' in nombre_rol or 'registrar venta' in nombre_rol:
                     permisos.extend(['registrar_venta', 'caja'])
                 elif 'caja' in nombre_rol or 'cajero' in nombre_rol:
@@ -381,10 +473,26 @@ def api_areas_puestos(request):
                 if 'supervisor' in nombre_rol:
                     permisos.append('asistencias')
                 
+                # Extraer salario de la descripción
+                salario = 0
+                if puesto.descripcionrol and 'Salario: $' in puesto.descripcionrol:
+                    try:
+                        salario_str = puesto.descripcionrol.split('Salario: $')[1]
+                        if '|' in salario_str:
+                            salario_str = salario_str.split('|')[0].strip()
+                        else:
+                            salario_str = salario_str.strip()
+                        salario_str = salario_str.replace(',', '').replace(' ', '')
+                        salario = float(salario_str)
+                    except (ValueError, IndexError, AttributeError) as e:
+                        print(f"Error extrayendo salario para {puesto.nombrerol}: {e}")
+                        salario = 0
+                
                 puestos_data.append({
                     'id': puesto.idroles,
                     'nombre': puesto.nombrerol,
-                    'permisos': list(set(permisos))
+                    'permisos': list(set(permisos)),
+                    'salario': salario
                 })
             
             resultado.append({
@@ -395,12 +503,13 @@ def api_areas_puestos(request):
         
         return JsonResponse(resultado, safe=False)
     except Exception as e:
+        print(f"Error en api_areas_puestos: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
 
 
 @transaction.atomic
 def api_crear_area(request):
-    """Crea una nueva área."""
+    """Crea una nueva área creando un rol placeholder."""
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -409,8 +518,16 @@ def api_crear_area(request):
             if not nombre_area:
                 return JsonResponse({'error': 'El nombre del área es obligatorio.'}, status=400)
             
+            # Verificar si ya existe un área con este nombre
             if Roles.objects.filter(nombrearea__iexact=nombre_area).exists():
                 return JsonResponse({'error': 'Ya existe un área con este nombre.'}, status=400)
+            
+            # Crear un rol placeholder para que el área exista en el sistema
+            rol_placeholder = Roles.objects.create(
+                nombrerol=f"_placeholder_{nombre_area}",
+                nombrearea=nombre_area,
+                descripcionrol=f"Rol placeholder para el área {nombre_area}. No asignar a usuarios."
+            )
             
             return JsonResponse({
                 'id': nombre_area,
@@ -419,6 +536,7 @@ def api_crear_area(request):
             }, status=201)
             
         except Exception as e:
+            print(f"Error en api_crear_area: {str(e)}")
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Método no permitido'}, status=405)
 
@@ -440,6 +558,7 @@ def api_editar_area(request, area_nombre):
             if nuevo_nombre != area_nombre and Roles.objects.filter(nombrearea__iexact=nuevo_nombre).exists():
                 return JsonResponse({'error': 'Ya existe un área con este nombre.'}, status=400)
             
+            # Actualizar todos los roles (puestos) que pertenecen a esta área
             Roles.objects.filter(nombrearea=area_nombre).update(nombrearea=nuevo_nombre)
             
             return JsonResponse({
@@ -449,45 +568,51 @@ def api_editar_area(request, area_nombre):
             })
             
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
-    return JsonResponse({'error': 'Método no permitido'}, status=405)
-
-
-@transaction.atomic
-def api_eliminar_area(request, area_nombre):
-    """Elimina un área (solo si no tiene puestos)."""
-    if request.method == 'DELETE':
-        try:
-            if Roles.objects.filter(nombrearea=area_nombre).exists():
-                return JsonResponse({
-                    'error': 'No puedes eliminar un área que tiene puestos. Elimina primero los puestos.'
-                }, status=400)
-            
-            return JsonResponse({'message': 'Área eliminada correctamente.'})
-            
-        except Exception as e:
+            print(f"Error en api_editar_area: {str(e)}")
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Método no permitido'}, status=405)
 
 
 @transaction.atomic
 def api_crear_puesto_nuevo(request):
-    """Crea un nuevo puesto con permisos."""
+    """Crea un nuevo puesto con permisos y salario."""
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             nombre_puesto = data.get('nombre', '').strip()
             area_id = data.get('area_id')
             permisos = data.get('permisos', [])
+            salario = data.get('salario', 0)
             
             if not all([nombre_puesto, area_id]):
                 return JsonResponse({'error': 'Faltan datos obligatorios.'}, status=400)
             
-            if Roles.objects.filter(nombrerol__iexact=nombre_puesto, nombrearea=area_id).exists():
+            # Validar salario
+            try:
+                salario = float(salario)
+                if salario < 0:
+                    return JsonResponse({'error': 'El salario no puede ser negativo.'}, status=400)
+            except (ValueError, TypeError):
+                return JsonResponse({'error': 'El salario debe ser un número válido.'}, status=400)
+            
+            # Verificar que no exista ya un puesto con el mismo nombre en el área
+            if Roles.objects.filter(
+                nombrerol__iexact=nombre_puesto, 
+                nombrearea=area_id
+            ).exclude(
+                nombrerol__startswith='_placeholder_'
+            ).exists():
                 return JsonResponse({'error': 'Ya existe un puesto con este nombre en esta área.'}, status=400)
             
+            # Eliminar el placeholder si existe
+            Roles.objects.filter(
+                nombrearea=area_id,
+                nombrerol__startswith='_placeholder_'
+            ).delete()
+            
+            # Crear descripción con permisos y salario
             permisos_desc = ', '.join([p.replace('_', ' ').title() for p in permisos]) if permisos else 'Sin permisos'
-            descripcion = f'Puesto de {nombre_puesto} con permisos: {permisos_desc}'
+            descripcion = f'Puesto de {nombre_puesto} con permisos: {permisos_desc} | Salario: ${salario}'
             
             nuevo_puesto = Roles.objects.create(
                 nombrerol=nombre_puesto,
@@ -499,10 +624,12 @@ def api_crear_puesto_nuevo(request):
                 'id': nuevo_puesto.idroles,
                 'nombre': nuevo_puesto.nombrerol,
                 'permisos': permisos,
+                'salario': salario,
                 'message': 'Puesto creado correctamente.'
             }, status=201)
             
         except Exception as e:
+            print(f"Error en api_crear_puesto_nuevo: {str(e)}")
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Método no permitido'}, status=405)
 
@@ -515,9 +642,18 @@ def api_editar_puesto(request, puesto_id):
             data = json.loads(request.body)
             nombre_puesto = data.get('nombre', '').strip()
             permisos = data.get('permisos', [])
+            salario = data.get('salario', 0)
             
             if not nombre_puesto:
                 return JsonResponse({'error': 'El nombre del puesto es obligatorio.'}, status=400)
+            
+            # Validar salario
+            try:
+                salario = float(salario)
+                if salario < 0:
+                    return JsonResponse({'error': 'El salario no puede ser negativo.'}, status=400)
+            except (ValueError, TypeError):
+                return JsonResponse({'error': 'El salario debe ser un número válido.'}, status=400)
             
             try:
                 puesto = Roles.objects.get(idroles=puesto_id)
@@ -530,52 +666,34 @@ def api_editar_puesto(request, puesto_id):
             ).exclude(idroles=puesto_id).exists():
                 return JsonResponse({'error': 'Ya existe un puesto con este nombre en esta área.'}, status=400)
             
+            # Actualizar puesto
             permisos_desc = ', '.join([p.replace('_', ' ').title() for p in permisos]) if permisos else 'Sin permisos'
             puesto.nombrerol = nombre_puesto
-            puesto.descripcionrol = f'Puesto de {nombre_puesto} con permisos: {permisos_desc}'
+            puesto.descripcionrol = f'Puesto de {nombre_puesto} con permisos: {permisos_desc} | Salario: ${salario}'
             puesto.save()
+            
+            # Actualizar salario de todos los empleados con este puesto
+            empleados_actualizados = Empleados.objects.filter(cargoempleado=puesto.nombrerol).update(
+                salarioempleado=salario
+            )
             
             return JsonResponse({
                 'id': puesto.idroles,
                 'nombre': puesto.nombrerol,
                 'permisos': permisos,
-                'message': 'Puesto actualizado correctamente.'
+                'salario': salario,
+                'empleados_actualizados': empleados_actualizados,
+                'message': f'Puesto actualizado correctamente. {empleados_actualizados} empleado(s) actualizado(s).'
             })
             
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
-    return JsonResponse({'error': 'Método no permitido'}, status=405)
-
-
-@transaction.atomic
-def api_eliminar_puesto(request, puesto_id):
-    """Elimina un puesto."""
-    if request.method == 'DELETE':
-        try:
-            try:
-                puesto = Roles.objects.get(idroles=puesto_id)
-            except Roles.DoesNotExist:
-                return JsonResponse({'error': 'El puesto no existe.'}, status=404)
-            
-            empleados_count = Empleados.objects.filter(cargoempleado=puesto.nombrerol).count()
-            usuarios_count = UsuxRoles.objects.filter(idroles=puesto).count()
-            
-            if empleados_count > 0 or usuarios_count > 0:
-                return JsonResponse({
-                    'error': f'No puedes eliminar este puesto. Hay {empleados_count + usuarios_count} empleado(s) asignado(s).'
-                }, status=400)
-            
-            puesto.delete()
-            
-            return JsonResponse({'message': 'Puesto eliminado correctamente.'})
-            
-        except Exception as e:
+            print(f"Error en api_editar_puesto: {str(e)}")
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Método no permitido'}, status=405)
 
 
 def api_puestos_por_area_con_permisos(request, area_id):
-    """Devuelve todos los puestos de un área con sus permisos."""
+    """Devuelve todos los puestos de un área con sus permisos y salario."""
     try:
         puestos = Roles.objects.filter(nombrearea=area_id).order_by('nombrerol')
         
@@ -584,6 +702,7 @@ def api_puestos_por_area_con_permisos(request, area_id):
             permisos = []
             nombre_rol = puesto.nombrerol.lower()
             
+            # Extraer permisos
             if 'vendedor' in nombre_rol or 'registrar venta' in nombre_rol:
                 permisos.extend(['registrar_venta', 'caja'])
             elif 'caja' in nombre_rol or 'cajero' in nombre_rol:
@@ -596,10 +715,20 @@ def api_puestos_por_area_con_permisos(request, area_id):
             if 'supervisor' in nombre_rol:
                 permisos.append('asistencias')
             
+            # Extraer salario de la descripción
+            salario = 0
+            if puesto.descripcionrol and 'Salario: $' in puesto.descripcionrol:
+                try:
+                    salario_str = puesto.descripcionrol.split('Salario: $')[1].split('|')[0].strip()
+                    salario = float(salario_str.replace(',', ''))
+                except:
+                    salario = 0
+            
             data.append({
                 'id': puesto.idroles,
                 'nombre': puesto.nombrerol,
-                'permisos': list(set(permisos))
+                'permisos': list(set(permisos)),
+                'salario': salario
             })
         
         return JsonResponse(data, safe=False)
@@ -657,20 +786,36 @@ def api_registrar_empleado_actualizado(request):
         )
 
         puesto_seleccionado = data.get('puesto', {}) or {}
+        puesto_id = puesto_seleccionado.get('id')
+        
+        # Obtener salario del puesto
+        salario_puesto = 0
+        if puesto_id:
+            try:
+                rol_puesto = Roles.objects.get(idroles=puesto_id)
+                # Extraer salario de la descripción
+                if rol_puesto.descripcionrol and 'Salario: $' in rol_puesto.descripcionrol:
+                    try:
+                        salario_str = rol_puesto.descripcionrol.split('Salario: $')[1].split('|')[0].strip()
+                        salario_puesto = float(salario_str.replace(',', ''))
+                    except:
+                        salario_puesto = 0
+            except Roles.DoesNotExist:
+                pass
         
         nuevo_empleado = Empleados.objects.create(
             idusuarios=nuevo_usuario,
             cargoempleado=puesto_seleccionado.get('nombre', 'Sin Puesto'),
-            salarioempleado=0,
+            salarioempleado=salario_puesto,  # Asignar salario del puesto
             fechacontratado=timezone.now().date(),
             estado='Trabajando'
         )
 
-        puesto_id = puesto_seleccionado.get('id')
         if puesto_id:
             rol_puesto = Roles.objects.get(idroles=puesto_id)
             UsuxRoles.objects.create(idusuarios=nuevo_usuario, idroles=rol_puesto)
             
+            # Crear horarios
             horario_data = data.get('horario', {})
             if horario_data:
                 dias_semana_map = {'Lu': 0, 'Ma': 1, 'Mi': 2, 'Ju': 3, 'Vi': 4, 'Sa': 5, 'Do': 6}
@@ -710,6 +855,7 @@ def api_registrar_empleado_actualizado(request):
                                     hora_fin=tramo['end']
                                 )
 
+        # Enviar email
         try:
             send_mail(
                 subject='¡Bienvenido! Tus credenciales de acceso',
@@ -723,7 +869,8 @@ def api_registrar_empleado_actualizado(request):
 
         return JsonResponse({
             'message': f'¡Empleado {nombre} {apellido} creado exitosamente!',
-            'username': username
+            'username': username,
+            'salario': salario_puesto
         }, status=201)
 
     except Exception as e:
@@ -731,20 +878,49 @@ def api_registrar_empleado_actualizado(request):
 
 
 def lista_empleados_view(request: HttpRequest) -> HttpResponse:
-    """Vista temporal para lista de empleados."""
+    """Vista para la lista de empleados."""
     if not _verificar_autenticacion(request):
         messages.error(request, 'Acceso denegado. Por favor, inicia sesión.')
         return redirect('login')
     
-    return render(request, 'HTML/lista_empleados.html', {
-        'mensaje': 'Lista de empleados - En desarrollo'
-    })
+    # NUEVA VALIDACIÓN: Verificar estado del empleado
+    es_valido, mensaje_error = _verificar_estado_empleado(request)
+    if not es_valido:
+        request.session.flush()  # Cerrar sesión
+        messages.error(request, mensaje_error)
+        return redirect('login')
+    
+    usuario_id = request.session.get('usuario_id')
+    usuario = Usuarios.objects.filter(idusuarios=usuario_id).first()
+    
+    if not usuario:
+        messages.error(request, 'Acceso denegado. Por favor, inicia sesión.')
+        return redirect('login')
+    
+    roles_usuario = list(
+        Roles.objects.filter(usuxroles__idusuarios_id=usuario_id).values_list('nombrerol', flat=True)
+    )
+    
+    is_admin = 'Administrador' in roles_usuario or 'Recursos Humanos' in roles_usuario
+    
+    if not is_admin:
+        messages.error(request, 'No tienes permisos para acceder a esta página.')
+        return redirect('inicio')
+    
+    return render(request, 'HTML/lista_empleados.html')
 
 
 def gestion_stock_view(request: HttpRequest) -> HttpResponse:
     """Vista para gestión de stock."""
     if not _verificar_autenticacion(request):
         messages.error(request, 'Acceso denegado. Por favor, inicia sesión.')
+        return redirect('login')
+    
+    # NUEVA VALIDACIÓN: Verificar estado del empleado
+    es_valido, mensaje_error = _verificar_estado_empleado(request)
+    if not es_valido:
+        request.session.flush()  # Cerrar sesión
+        messages.error(request, mensaje_error)
         return redirect('login')
     
     usuario_id = request.session.get('usuario_id')
@@ -782,6 +958,13 @@ def menu_caja_view(request: HttpRequest) -> HttpResponse:
         messages.error(request, 'Acceso denegado. Por favor, inicia sesión.')
         return redirect('login')
     
+    # NUEVA VALIDACIÓN: Verificar estado del empleado
+    es_valido, mensaje_error = _verificar_estado_empleado(request)
+    if not es_valido:
+        request.session.flush()  # Cerrar sesión
+        messages.error(request, mensaje_error)
+        return redirect('login')
+    
     usuario_id = request.session.get('usuario_id')
     usuario = Usuarios.objects.filter(idusuarios=usuario_id).first()
     
@@ -814,6 +997,13 @@ def gestion_areas_puestos_view(request: HttpRequest) -> HttpResponse:
     """Vista para gestionar áreas y puestos (solo administradores)."""
     if not _verificar_autenticacion(request):
         messages.error(request, 'Acceso denegado. Por favor, inicia sesión.')
+        return redirect('login')
+    
+    # NUEVA VALIDACIÓN: Verificar estado del empleado
+    es_valido, mensaje_error = _verificar_estado_empleado(request)
+    if not es_valido:
+        request.session.flush()  # Cerrar sesión
+        messages.error(request, mensaje_error)
         return redirect('login')
     
     usuario_id = request.session.get('usuario_id')
@@ -852,3 +1042,258 @@ def _generar_y_enviar_codigo(request: HttpRequest, destino: str) -> None:
         )
     except Exception as e:
         print(f"Error al enviar email: {e}")
+
+# ===== VISTA PRINCIPAL LISTA EMPLEADOS =====
+def lista_empleados_view(request: HttpRequest) -> HttpResponse:
+    """Vista para la lista de empleados."""
+    if not _verificar_autenticacion(request):
+        messages.error(request, 'Acceso denegado. Por favor, inicia sesión.')
+        return redirect('login')
+    
+    usuario_id = request.session.get('usuario_id')
+    usuario = Usuarios.objects.filter(idusuarios=usuario_id).first()
+    
+    if not usuario:
+        messages.error(request, 'Acceso denegado. Por favor, inicia sesión.')
+        return redirect('login')
+    
+    roles_usuario = list(
+        Roles.objects.filter(usuxroles__idusuarios_id=usuario_id).values_list('nombrerol', flat=True)
+    )
+    
+    is_admin = 'Administrador' in roles_usuario or 'Recursos Humanos' in roles_usuario
+    
+    if not is_admin:
+        messages.error(request, 'No tienes permisos para acceder a esta página.')
+        return redirect('inicio')
+    
+    return render(request, 'HTML/lista_empleados.html')
+
+
+# ===== API LISTA EMPLEADOS =====
+@require_http_methods(['GET'])
+def api_lista_empleados(request: HttpRequest) -> JsonResponse:
+    """API para obtener la lista de empleados (optimizada para grandes cantidades)."""
+    try:
+        # Solo traer los campos necesarios para la lista
+        empleados = Empleados.objects.select_related(
+            'idusuarios'
+        ).prefetch_related(
+            'idusuarios__roles'
+        ).values(
+            'idempleado',
+            'idusuarios__nombreusuario',
+            'idusuarios__apellidousuario',
+            'idusuarios__dniusuario',
+            'idusuarios__emailusuario',
+            'idusuarios__telefono',
+            'idusuarios__imagenusuario',
+            'cargoempleado',
+            'estado',
+            'fechacontratado'
+        ).order_by('-fechacontratado')
+        
+        # Obtener áreas de los roles
+        empleados_list = []
+        for emp in empleados:
+            # Buscar el área del empleado
+            usuario_id = Empleados.objects.get(idempleado=emp['idempleado']).idusuarios_id
+            roles = Roles.objects.filter(usuxroles__idusuarios_id=usuario_id).first()
+            
+            empleados_list.append({
+                'id': emp['idempleado'],
+                'nombre': emp['idusuarios__nombreusuario'],
+                'apellido': emp['idusuarios__apellidousuario'],
+                'dni': emp['idusuarios__dniusuario'],
+                'email': emp['idusuarios__emailusuario'],
+                'telefono': emp['idusuarios__telefono'] or '',
+                'imagen': emp['idusuarios__imagenusuario'],
+                'puesto': emp['cargoempleado'],
+                'area': roles.nombrearea if roles else 'Sin área',
+                'estado': emp['estado'],
+                'fecha_contratado': emp['fechacontratado'].isoformat() if emp['fechacontratado'] else None
+            })
+        
+        return JsonResponse({
+            'empleados': empleados_list
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+# ===== API DETALLE EMPLEADO =====
+@require_http_methods(['GET'])
+def api_detalle_empleado(request: HttpRequest, empleado_id: int) -> JsonResponse:
+    """API para obtener el detalle completo de un empleado."""
+    try:
+        empleado = Empleados.objects.select_related('idusuarios').get(idempleado=empleado_id)
+        usuario = empleado.idusuarios
+        
+        # Obtener rol y área
+        rol = Roles.objects.filter(usuxroles__idusuarios=usuario).first()
+        
+        # Obtener horarios
+        horarios = Horario.objects.filter(empleado=empleado).values(
+            'dia_semana',
+            'semana_del_mes',
+            'hora_inicio',
+            'hora_fin'
+        ).order_by('semana_del_mes', 'dia_semana')
+        
+        data = {
+            'id': empleado.idempleado,
+            'nombre': usuario.nombreusuario,
+            'apellido': usuario.apellidousuario,
+            'dni': usuario.dniusuario,
+            'email': usuario.emailusuario,
+            'telefono': usuario.telefono or '',
+            'imagen': usuario.imagenusuario,
+            'direccion': getattr(usuario, 'direccion', ''),
+            'fecha_nacimiento': getattr(usuario, 'fecha_nacimiento', ''),
+            'puesto': empleado.cargoempleado,
+            'area': rol.nombrearea if rol else 'Sin área',
+            'area_id': rol.idroles if rol else None,
+            'puesto_id': rol.idroles if rol else None,
+            'salario': float(empleado.salarioempleado),
+            'estado': empleado.estado,
+            'fecha_contratado': empleado.fechacontratado.isoformat() if empleado.fechacontratado else None,
+            'fecha_registro': usuario.fecharegistrousuario.isoformat() if usuario.fecharegistrousuario else None,
+            'usuario': usuario.nombreusuario,
+            'horarios': [
+                {
+                    'dia_semana': h['dia_semana'],
+                    'semana_del_mes': h['semana_del_mes'],
+                    'hora_inicio': h['hora_inicio'].strftime('%H:%M') if h['hora_inicio'] else '',
+                    'hora_fin': h['hora_fin'].strftime('%H:%M') if h['hora_fin'] else ''
+                }
+                for h in horarios
+            ]
+        }
+        
+        return JsonResponse(data)
+        
+    except Empleados.DoesNotExist:
+        return JsonResponse({'error': 'Empleado no encontrado'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+# ===== API EDITAR EMPLEADO =====
+@require_http_methods(['POST'])
+@transaction.atomic
+def api_editar_empleado(request: HttpRequest, empleado_id: int) -> JsonResponse:
+    """API para editar un empleado."""
+    try:
+        data = json.loads(request.body)
+        
+        # Validar datos obligatorios
+        nombre = data.get('nombre', '').strip()
+        apellido = data.get('apellido', '').strip()
+        dni = data.get('dni', '').strip()
+        email = data.get('email', '').strip()
+        
+        if not all([nombre, apellido, dni, email]):
+            return JsonResponse({'error': 'Faltan datos obligatorios'}, status=400)
+        
+        # Obtener empleado y usuario
+        empleado = Empleados.objects.select_related('idusuarios').get(idempleado=empleado_id)
+        usuario = empleado.idusuarios
+        
+        # Verificar si el email ya existe (excepto para este usuario)
+        if Usuarios.objects.filter(emailusuario=email).exclude(idusuarios=usuario.idusuarios).exists():
+            return JsonResponse({'error': 'El email ya está en uso por otro empleado'}, status=400)
+        
+        # Verificar si el DNI ya existe (excepto para este usuario)
+        if Usuarios.objects.filter(dniusuario=dni).exclude(idusuarios=usuario.idusuarios).exists():
+            return JsonResponse({'error': 'El DNI ya está registrado por otro empleado'}, status=400)
+        
+        # Actualizar datos del usuario
+        usuario.nombreusuario = nombre
+        usuario.apellidousuario = apellido
+        usuario.dniusuario = dni
+        usuario.emailusuario = email
+        usuario.telefono = data.get('telefono', '')
+        usuario.save()
+        
+        # Actualizar datos del empleado
+        empleado.salarioempleado = float(data.get('salario', 0))
+        empleado.estado = data.get('estado', 'Trabajando')
+        
+        # Actualizar puesto si se proporcionó
+        puesto_id = data.get('puesto_id')
+        if puesto_id:
+            try:
+                nuevo_rol = Roles.objects.get(idroles=puesto_id)
+                empleado.cargoempleado = nuevo_rol.nombrerol
+                
+                # Actualizar la relación UsuxRoles
+                # Eliminar roles anteriores
+                UsuxRoles.objects.filter(idusuarios=usuario).delete()
+                # Crear nuevo rol
+                UsuxRoles.objects.create(idusuarios=usuario, idroles=nuevo_rol)
+                
+            except Roles.DoesNotExist:
+                return JsonResponse({'error': 'El puesto seleccionado no existe'}, status=400)
+        
+        empleado.save()
+        
+        return JsonResponse({
+            'message': 'Empleado actualizado correctamente',
+            'empleado': {
+                'id': empleado.idempleado,
+                'nombre': usuario.nombreusuario,
+                'apellido': usuario.apellidousuario,
+                'email': usuario.emailusuario
+            }
+        })
+        
+    except Empleados.DoesNotExist:
+        return JsonResponse({'error': 'Empleado no encontrado'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': f'Error al actualizar: {str(e)}'}, status=500)
+
+
+# ===== API ÁREAS (simplificada) =====
+@require_http_methods(['GET'])
+def api_areas_simple(request: HttpRequest) -> JsonResponse:
+    """API para obtener lista simple de áreas."""
+    try:
+        areas = Roles.objects.values('nombrearea').distinct().order_by('nombrearea')
+        
+        # Crear lista con ID único basado en el nombre
+        areas_list = []
+        for idx, area in enumerate(areas, start=1):
+            # Buscar el primer rol de esa área para obtener su ID
+            primer_rol = Roles.objects.filter(nombrearea=area['nombrearea']).first()
+            areas_list.append({
+                'id': area['nombrearea'],  # Usar el nombre como ID para el filtro
+                'nombre': area['nombrearea']
+            })
+        
+        return JsonResponse(areas_list, safe=False)
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+# ===== API PUESTOS POR ÁREA (para edición) =====
+@require_http_methods(['GET'])
+def api_puestos_por_area_simple(request: HttpRequest, area_nombre: str) -> JsonResponse:
+    """API para obtener puestos de un área específica (para el select de edición)."""
+    try:
+        puestos = Roles.objects.filter(nombrearea=area_nombre).order_by('nombrerol')
+        
+        puestos_list = [
+            {
+                'id': puesto.idroles,
+                'nombre': puesto.nombrerol
+            }
+            for puesto in puestos
+        ]
+        
+        return JsonResponse(puestos_list, safe=False)
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+    
