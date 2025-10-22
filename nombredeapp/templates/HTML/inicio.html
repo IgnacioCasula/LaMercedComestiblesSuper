@@ -19,7 +19,6 @@
     </header>
 
     <div class="quick-actions">
-        <!-- CORREGIDO: Cambiada la URL de asistencias -->
         <a href="{% url 'asistencias:ver_asistencias' %}" class="action-btn asistencias">
             <i class="fas fa-clock"></i> Ver asistencias
         </a>
@@ -56,10 +55,18 @@
             <div class="panel-content">
                 <div class="tools-grid">
                     {% if has_caja %}
-                    <a href="{% url 'caja:apertura_caja' %}" class="tool-button caja-btn" id="btn-caja-status">
-                        <i class="fas fa-cash-register tool-icon"></i>
-                        <span id="caja-text">Abrir Caja</span>
-                    </a>
+                    <!-- BOTÓN DE CAJA DINÁMICO -->
+                    {% if caja_abierta %}
+                        <a href="{% url 'caja:cierre_caja' %}" class="tool-button caja-btn caja-abierta" id="btn-caja-status">
+                            <i class="fas fa-cash-register tool-icon"></i>
+                            <span id="caja-text">Cerrar Caja</span>
+                        </a>
+                    {% else %}
+                        <a href="{% url 'caja:apertura_caja' %}" class="tool-button caja-btn caja-cerrada" id="btn-caja-status">
+                            <i class="fas fa-cash-register tool-icon"></i>
+                            <span id="caja-text">Abrir Caja</span>
+                        </a>
+                    {% endif %}
                     {% endif %}
                     
                     {% if has_registrar_venta %}
@@ -123,6 +130,27 @@
         </div>
     </dialog>
 
+    <!-- MODAL: CAJA ABIERTA - NO PUEDE CERRAR SESIÓN -->
+    <dialog id="caja-abierta-modal" class="logout-modal">
+        <div class="logout-modal-content">
+            <div class="logout-modal-header">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h2>Caja Abierta</h2>
+            </div>
+            <p class="logout-modal-message">
+                No puedes cerrar sesión mientras tienes la caja abierta.
+            </p>
+            <p class="logout-modal-note">
+                <i class="fas fa-arrow-right"></i>
+                Primero debes cerrar la caja para poder finalizar tu sesión.
+            </p>
+            <div class="logout-modal-actions">
+                <button class="btn-modal cancel" id="caja-abierta-ok">Entendido</button>
+                <button class="btn-modal confirm" id="ir-a-cerrar-caja">Ir a Cerrar Caja</button>
+            </div>
+        </div>
+    </dialog>
+
     <script src="{% static 'JS/audio-system.js' %}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -141,7 +169,7 @@
                 isTicking: false,
                 isExpanded: true,
                 audioUnlocked: false,
-                cajaAbierta: false
+                cajaAbierta: {{ caja_abierta|yesno:"true,false" }}
             };
             const UNLOCK_THRESHOLD = 3;
 
@@ -235,13 +263,12 @@
                 button.addEventListener('mouseenter', () => {
                     if (window.audioSystem) window.audioSystem.play('hover');
                 });
-                // Agregar sonido de click para asistencias
                 button.addEventListener('click', () => {
                     if (window.audioSystem) window.audioSystem.play('select');
                 });
             });
 
-            // Lógica de Caja
+            // Actualización dinámica del estado de caja
             const btnCajaStatus = document.getElementById('btn-caja-status');
             const cajaText = document.getElementById('caja-text');
             
@@ -251,11 +278,13 @@
                     .then(data => {
                         state.cajaAbierta = data.abierta;
                         if (state.cajaAbierta) {
+                            btnCajaStatus.classList.remove('caja-cerrada');
                             btnCajaStatus.classList.add('caja-abierta');
                             cajaText.textContent = 'Cerrar Caja';
                             btnCajaStatus.href = '/caja/cierre/';
                         } else {
                             btnCajaStatus.classList.remove('caja-abierta');
+                            btnCajaStatus.classList.add('caja-cerrada');
                             cajaText.textContent = 'Abrir Caja';
                             btnCajaStatus.href = '/caja/apertura/';
                         }
@@ -266,7 +295,7 @@
             }
 
             if (btnCajaStatus) {
-                actualizarEstadoCaja();
+                // Actualizar cada 5 segundos
                 setInterval(actualizarEstadoCaja, 5000);
             }
 
@@ -292,6 +321,17 @@
                 document.getElementById('caja-no-abierta-modal').close();
             });
 
+            // Modal caja abierta (no puede cerrar sesión)
+            document.getElementById('caja-abierta-ok')?.addEventListener('click', () => {
+                if (window.audioSystem) window.audioSystem.play('select');
+                document.getElementById('caja-abierta-modal').close();
+            });
+
+            document.getElementById('ir-a-cerrar-caja')?.addEventListener('click', () => {
+                if (window.audioSystem) window.audioSystem.play('select');
+                window.location.href = '/caja/cierre/';
+            });
+
             // Logout
             const logoutBtn = document.getElementById('logout-btn');
             const logoutModal = document.getElementById('logout-modal');
@@ -302,7 +342,14 @@
                 logoutBtn.addEventListener('click', function(event) {
                     event.preventDefault();
                     if (window.audioSystem) window.audioSystem.play('select');
-                    logoutModal.showModal();
+                    
+                    // Verificar si la caja está abierta antes de permitir cerrar sesión
+                    if (state.cajaAbierta) {
+                        document.getElementById('caja-abierta-modal').showModal();
+                        if (window.audioSystem) window.audioSystem.play('negative');
+                    } else {
+                        logoutModal.showModal();
+                    }
                 });
             }
 

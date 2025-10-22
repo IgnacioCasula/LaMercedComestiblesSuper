@@ -339,60 +339,61 @@ body.is-loading .panel {
     z-index: 1;
 }
 
-/* ===== ESTADOS DE CAJA ===== */
-.caja-btn {
-    background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
-    border-color: #ef5350;
-    color: #c62828;
+/* ===== ESTADOS DE CAJA - CERRADA (VERDE) ===== */
+.caja-btn.caja-cerrada {
+    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%) !important;
+    border-color: #43a047 !important;
+    color: #2e7d32 !important;
 }
 
-.caja-btn .tool-icon {
-    background: linear-gradient(135deg, #ef5350 0%, #e53935 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+.caja-btn.caja-cerrada .tool-icon {
+    background: linear-gradient(135deg, #43a047 0%, #388e3c 100%) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
 }
 
-.caja-btn:hover {
-    box-shadow: 0 15px 35px rgba(239, 83, 80, 0.3);
-    border-color: #ef5350;
+.caja-btn.caja-cerrada:hover {
+    box-shadow: 0 15px 35px rgba(67, 160, 71, 0.3) !important;
+    border-color: #43a047 !important;
 }
 
+/* ===== ESTADOS DE CAJA - ABIERTA (ROJO) ===== */
 .caja-btn.caja-abierta {
-    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-    border-color: #43a047;
-    color: #2e7d32;
+    background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%) !important;
+    border-color: #ef5350 !important;
+    color: #c62828 !important;
 }
 
 .caja-btn.caja-abierta .tool-icon {
-    background: linear-gradient(135deg, #43a047 0%, #388e3c 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    background: linear-gradient(135deg, #ef5350 0%, #e53935 100%) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
 }
 
 .caja-btn.caja-abierta:hover {
-    box-shadow: 0 15px 35px rgba(67, 160, 71, 0.3);
-    border-color: #43a047;
+    box-shadow: 0 15px 35px rgba(239, 83, 80, 0.3) !important;
+    border-color: #ef5350 !important;
 }
 
 /* ===== BOTÓN REGISTRAR VENTA ===== */
 .registrar-venta-btn {
-    background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
-    border-color: #ab47bc;
-    color: #6a1b9a;
+    background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%) !important;
+    border-color: #ab47bc !important;
+    color: #6a1b9a !important;
 }
 
 .registrar-venta-btn .tool-icon {
-    background: linear-gradient(135deg, #ab47bc 0%, #8e24aa 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    background: linear-gradient(135deg, #ab47bc 0%, #8e24aa 100%) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
 }
 
 .registrar-venta-btn:hover {
-    box-shadow: 0 15px 35px rgba(171, 71, 188, 0.3);
-    border-color: #ab47bc;
+    box-shadow: 0 15px 35px rgba(171, 71, 188, 0.3) !important;
+    border-color: #ab47bc !important;
 }
 
 /* ===== MODALES ===== */
@@ -599,61 +600,6 @@ dialog::backdrop {
     z-index: 1;
 }
 
-/* ===== ESTADOS DE CAJA ===== */
-.caja-btn {
-    background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%) !important;
-    border-color: #ef5350 !important;
-    color: #c62828 !important;
-}
-
-.caja-btn .tool-icon {
-    background: linear-gradient(135deg, #ef5350 0%, #e53935 100%) !important;
-    -webkit-background-clip: text !important;
-    -webkit-text-fill-color: transparent !important;
-    background-clip: text !important;
-}
-
-.caja-btn:hover {
-    box-shadow: 0 15px 35px rgba(239, 83, 80, 0.3) !important;
-    border-color: #ef5350 !important;
-}
-
-.caja-btn.caja-abierta {
-    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%) !important;
-    border-color: #43a047 !important;
-    color: #2e7d32 !important;
-}
-
-.caja-btn.caja-abierta .tool-icon {
-    background: linear-gradient(135deg, #43a047 0%, #388e3c 100%) !important;
-    -webkit-background-clip: text !important;
-    -webkit-text-fill-color: transparent !important;
-    background-clip: text !important;
-}
-
-.caja-btn.caja-abierta:hover {
-    box-shadow: 0 15px 35px rgba(67, 160, 71, 0.3) !important;
-    border-color: #43a047 !important;
-}
-
-/* ===== BOTÓN REGISTRAR VENTA ===== */
-.registrar-venta-btn {
-    background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%) !important;
-    border-color: #ab47bc !important;
-    color: #6a1b9a !important;
-}
-
-.registrar-venta-btn .tool-icon {
-    background: linear-gradient(135deg, #ab47bc 0%, #8e24aa 100%) !important;
-    -webkit-background-clip: text !important;
-    -webkit-text-fill-color: transparent !important;
-    background-clip: text !important;
-}
-
-.registrar-venta-btn:hover {
-    box-shadow: 0 15px 35px rgba(171, 71, 188, 0.3) !important;
-    border-color: #ab47bc !important;
-}
 @media (max-width: 900px) { 
     .main-container { 
         flex-direction: column; 
