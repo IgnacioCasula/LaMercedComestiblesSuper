@@ -2,24 +2,25 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Recuperar Contraseña</title>
-    <link rel="stylesheet" href="{% static 'CSS/login_styles.css' %}">
+  <meta charset="UTF-8" />
+  <title>Recuperar acceso</title>
+  <link rel="stylesheet" href="{% static 'CSS/login_styles.css' %}">
 </head>
 <body>
-    <div class="login-container">
-        <form class="login-form" method="post" action="{% url 'solicitar_usuario' %}">
-            {% csrf_token %}
-            <p style="text-align: center; font-weight: bold;">Porfavor díganos tu nombre de usuario.</p>
-            <div class="form-group">
-                <label for="username">Usuario</label>
-                <input type="text" id="username" name="username" required>
-            </div>
-            {% if error %}
-            <div class="error-message">{{ error }}</div>
-            {% endif %}
-            <button type="submit" class="submit-btn">Enviar</button>
-        </form>
-    </div>
+<div class="login-bg">
+  <div class="login-card">
+    <h2>Recuperar acceso</h2>
+    {% if no_existe %}<p class="warn">No encontramos ese correo. Indica tu correo o teléfono.</p>{% endif %}
+    <form method="post" action="{% url 'enviar_codigo' %}">
+      {% csrf_token %}
+      <label>Correo o Teléfono</label>
+      <input type="text" name="usuario_email" value="{{ email_prefill|default:'' }}" />
+      <button type="submit">Enviar código</button>
+    </form>
+  </div>
+</div>
 </body>
 </html>
+
+
+

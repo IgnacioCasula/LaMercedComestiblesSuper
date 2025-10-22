@@ -1,112 +1,118 @@
-# ignaciocasula/lamercedcomestiblessuper/LaMercedComestiblesSuper-9e4cb265129870267e8e016db0b510984c444d8d/nombredeapp/management/commands/crear_usuarios.py
-# nombredeapp/management/commands/crear_usuarios.py
-
 from django.core.management.base import BaseCommand
-from datetime import date
-# Se añaden Herramienta y Permiso a los modelos importados
-from caja.models import Usuarios as Usuario, Empleados as Empleado, Roles as Rol, Usuariosxrol as UsuarioRol, Area, Herramienta, Permiso
+from django.utils import timezone
+from datetime import time
+
+from caja.models import Usuarios, Roles, UsuxRoles, Empleados, Horario
+
 
 class Command(BaseCommand):
-    help = 'Crea usuarios de prueba con sus areas, puestos y permisos.'
+    help = "Crea el usuario administrador por defecto (admin/admin123) si no existe"
 
-    def handle(self, *args, **kwargs):
-        self.stdout.write(self.style.SUCCESS("Iniciando la insercion de datos de prueba..."))
+    def add_arguments(self, parser):
+        parser.add_argument('--usuario', default='admin')
+        parser.add_argument('--apellido', default='admin')
+        parser.add_argument('--email', default='admin@local')
+        parser.add_argument('--password', default='admin123')
+        parser.add_argument('--dni', type=int, default=99999999)
+        parser.add_argument('--area', default='Administración')
+        parser.add_argument('--rol', default='Administrador')
+        parser.add_argument('--hora-inicio', default='09:00', help='Hora de inicio del horario (formato HH:MM)')
+        parser.add_argument('--hora-fin', default='18:00', help='Hora de fin del horario (formato HH:MM)')
+        parser.add_argument('--dias', default='0,1,2,3,4', help='Días de la semana (0=Lun, 6=Dom). Ej: 0,1,2,3,4 para Lun-Vie')
 
-        # --- 1. Crear Areas ---
-        area_caja, _ = Area.objects.get_or_create(nombrearea='Caja')
-        area_ventas, _ = Area.objects.get_or_create(nombrearea='Ventas')
-        area_admin, _ = Area.objects.get_or_create(nombrearea='Administracion')
-        self.stdout.write("Areas creadas/verificadas.")
+    def handle(self, *args, **options):
+        nombreusuario = options['usuario']
+        apellidousuario = options['apellido']
+        email = options['email']
+        password = options['password']
+        dni = options['dni']
+        area = options['area']
+        rol_nombre = options['rol']
 
-        # --- 2. Crear Puestos (Roles) y asignarlos a un Área ---
-        puesto_super_caja, _ = Rol.objects.get_or_create(nombrerol='Supervisor de Caja', defaults={'area': area_caja})
-        puesto_gerente, _ = Rol.objects.get_or_create(nombrerol='Gerente de Ventas', defaults={'area': area_ventas})
-        puesto_repositor, _ = Rol.objects.get_or_create(nombrerol='Repositor', defaults={'area': area_ventas})
-        puesto_admin, _ = Rol.objects.get_or_create(nombrerol='Contador', defaults={'area': area_admin})
-        # Nuevo Rol para Recursos Humanos
-        puesto_rrhh, _ = Rol.objects.get_or_create(nombrerol='Recursos Humanos', defaults={'area': area_admin})
-        self.stdout.write("Puestos (Roles) creados/verificados y asignados a sus áreas.")
-
-        # --- 3. Crear Herramientas y Permisos ---
-        self.stdout.write("Creando herramientas y permisos...")
-        # Se define la herramienta "Crear Empleado"
-        herramienta_crear_empleado, _ = Herramienta.objects.get_or_create(
-            nombre='Crear Empleado',
-            defaults={
-                'url_nombre': 'crear_empleado', # Debe coincidir con el 'name' de la URL
-                'icono': 'fa-solid fa-user-plus'  # Un ícono de FontAwesome
-            }
-        )
-        # Se asigna el permiso de la herramienta al rol de RRHH
-        Permiso.objects.get_or_create(rol=puesto_rrhh, herramienta=herramienta_crear_empleado)
-        self.stdout.write(self.style.SUCCESS("Permiso 'Crear Empleado' asignado al rol 'Recursos Humanos'."))
-
-
-        # --- 4. Crear Empleados y asignarles Puestos ---
-
-        # Empleado 1: Laura Gomez (sin cambios)
-        usuario_laura, created = Usuario.objects.get_or_create(
-            nombreusuario='lgomez',
-            defaults={
-                'apellidousuario': 'Gomez', 'emailusuario': 'laura.gomez@ejemplo.com',
-                'passwordusuario': 'clave123', 'dniusuario': 33111222, 'telefono': '3874111222',
-                'fecharegistrousuario': date.today()
-            }
-        )
-        Empleado.objects.get_or_create(
-            idusuarios=usuario_laura, 
-            defaults={
-                'cargoempleado': 'Cajera Principal', 'estado': 'Trabajando',
-                'salarioempleado': 50000.00, 'fechacontratado': date.today()
-            }
-        )
-        UsuarioRol.objects.get_or_create(idusuarios=usuario_laura, idroles=puesto_super_caja)
-        if created: self.stdout.write(self.style.SUCCESS("Usuario 1 (Laura Gomez) creado y asignado."))
-
-        # Empleado 2: Marcos Diaz (sin cambios)
-        usuario_marcos, created = Usuario.objects.get_or_create(
-            nombreusuario='mdiaz',
-            defaults={
-                'apellidousuario': 'Diaz', 'emailusuario': 'marcos.diaz@ejemplo.com',
-                'passwordusuario': 'clave456', 'dniusuario': 34333444, 'telefono': '3875333444',
-                'fecharegistrousuario': date.today()
-            }
-        )
-        Empleado.objects.get_or_create(
-            idusuarios=usuario_marcos, 
-            defaults={
-                'cargoempleado': 'Jefe de Salon', 'estado': 'Trabajando',
-                'salarioempleado': 75000.00, 'fechacontratado': date.today()
-            }
-        )
-        UsuarioRol.objects.get_or_create(idusuarios=usuario_marcos, idroles=puesto_gerente)
-        UsuarioRol.objects.get_or_create(idusuarios=usuario_marcos, idroles=puesto_repositor)
-        UsuarioRol.objects.get_or_create(idusuarios=usuario_marcos, idroles=puesto_admin)
-        if created: self.stdout.write(self.style.SUCCESS("Usuario 2 (Marcos Diaz) creado y asignado."))
-
-        # --- NUEVO USUARIO CON PERMISOS ---
-        # Empleado 3: Ana Robles
-        usuario_ana, created = Usuario.objects.get_or_create(
-            nombreusuario='arobles',
-            defaults={
-                'apellidousuario': 'Robles', 'emailusuario': 'ana.robles@ejemplo.com',
-                'passwordusuario': 'clave789', 'dniusuario': 35555666, 'telefono': '3876555666',
-                'fecharegistrousuario': date.today()
-            }
-        )
-        Empleado.objects.get_or_create(
-            idusuarios=usuario_ana,
-            defaults={
-                'cargoempleado': 'Analista de RRHH', 'estado': 'Trabajando',
-                'salarioempleado': 65000.00, 'fechacontratado': date.today()
-            }
-        )
-        # Se le asigna el rol de Recursos Humanos
-        UsuarioRol.objects.get_or_create(idusuarios=usuario_ana, idroles=puesto_rrhh)
-        if created:
-            self.stdout.write(self.style.SUCCESS("Usuario 3 (Ana Robles) creada y asignada al rol de RRHH."))
+        # Crear/obtener usuario
+        usuario = Usuarios.objects.filter(nombreusuario=nombreusuario).first()
+        if usuario:
+            self.stdout.write(self.style.WARNING('Usuario ya existe.'))
         else:
-            self.stdout.write(self.style.WARNING("Usuario 3 (Ana Robles) ya existia."))
+            # Asegurar DNI único
+            dni_candidato = dni
+            while Usuarios.objects.filter(dniusuario=dni_candidato).exists():
+                dni_candidato += 1
+            usuario = Usuarios(
+                nombreusuario=nombreusuario,
+                apellidousuario=apellidousuario,
+                emailusuario=email,
+                passwordusuario=password,
+                fecharegistrousuario=timezone.now().date(),
+                dniusuario=dni_candidato,
+            )
+            usuario.save()
+            self.stdout.write(self.style.SUCCESS(f'Usuario creado: {usuario.nombreusuario}'))
 
+        # Crear/obtener rol
+        rol, _ = Roles.objects.get_or_create(
+            nombrerol=rol_nombre, 
+            defaults={
+                'nombrearea': area,
+                'descripcionrol': f'Rol de {rol_nombre} con acceso completo al sistema'
+            }
+        )
 
-        self.stdout.write(self.style.SUCCESS("\n¡Proceso finalizado!"))
+        # Vincular rol al usuario (UsuxRoles)
+        if not UsuxRoles.objects.filter(idusuarios=usuario, idroles=rol).exists():
+            UsuxRoles.objects.create(idusuarios=usuario, idroles=rol)
+            self.stdout.write(self.style.SUCCESS(f'Rol "{rol_nombre}" asignado.'))
+        else:
+            self.stdout.write(self.style.WARNING('El usuario ya tiene ese rol.'))
+
+        # CREAR EL EMPLEADO (esto debe estar DENTRO del método handle)
+        empleado, created = Empleados.objects.get_or_create(
+            idusuarios=usuario,
+            defaults={
+                'cargoempleado': rol_nombre,
+                'salarioempleado': 0,
+                'fechacontratado': timezone.now().date(),
+                'estado': 'Trabajando'
+            }
+        )
+
+        if created:
+            self.stdout.write(self.style.SUCCESS(f'✅ Empleado creado exitosamente para {usuario.nombreusuario}'))
+        else:
+            self.stdout.write(self.style.WARNING('⚠️  El empleado ya existía'))
+
+        # CREAR HORARIOS PARA EL EMPLEADO
+        # Verificar si ya tiene horarios
+        horarios_existentes = Horario.objects.filter(empleado=empleado).count()
+        
+        if horarios_existentes == 0:
+            # Crear horario de Lunes a Viernes, 9:00 - 18:00
+            # Semana 1, 2, 3 y 4 del mes
+            horarios_creados = 0
+            
+            for semana in range(1, 5):  # Semanas 1, 2, 3, 4
+                for dia in range(0, 5):  # Lunes (0) a Viernes (4)
+                    Horario.objects.create(
+                        empleado=empleado,
+                        rol=rol,
+                        dia_semana=dia,
+                        semana_del_mes=semana,
+                        hora_inicio=time(9, 0),  # 9:00 AM
+                        hora_fin=time(18, 0)     # 6:00 PM
+                    )
+                    horarios_creados += 1
+            
+            self.stdout.write(self.style.SUCCESS(f'✅ {horarios_creados} horarios creados (Lun-Vie, 9:00-18:00, todas las semanas)'))
+        else:
+            self.stdout.write(self.style.WARNING(f'⚠️  El empleado ya tiene {horarios_existentes} horarios asignados'))
+
+        self.stdout.write(self.style.SUCCESS(''))
+        self.stdout.write(self.style.SUCCESS('=' * 50))
+        self.stdout.write(self.style.SUCCESS('✅ CONFIGURACIÓN COMPLETA'))
+        self.stdout.write(self.style.SUCCESS('=' * 50))
+        self.stdout.write(self.style.SUCCESS(f'Usuario: {nombreusuario}'))
+        self.stdout.write(self.style.SUCCESS(f'Contraseña: {password}'))
+        self.stdout.write(self.style.SUCCESS(f'Email: {email}'))
+        self.stdout.write(self.style.SUCCESS(f'Rol: {area} - {rol_nombre}'))
+        self.stdout.write(self.style.SUCCESS(f'Horario: Lunes a Viernes, 9:00 - 18:00'))
+        self.stdout.write(self.style.SUCCESS('=' * 50))

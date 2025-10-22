@@ -2,33 +2,33 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Ingresar Código</title>
-    <link rel="stylesheet" href="{% static 'CSS/login_styles.css' %}">
+  <meta charset="UTF-8" />
+  <title>Ingresar código</title>
+  <link rel="stylesheet" href="{% static 'CSS/login_styles.css' %}">
 </head>
 <body>
-    <div class="login-container">
-        <form class="login-form" method="post" action="{% url 'ingresar_codigo' %}">
-            {% csrf_token %}
-            <p style="text-align: center;">Se le envió un código a su teléfono, caducará en 5 minutos.</p>
-            <div class="code-inputs">
-                <input type="text" name="code1" maxlength="1" required pattern="[0-9]">
-                <input type="text" name="code2" maxlength="1" required pattern="[0-9]">
-                <input type="text" name="code3" maxlength="1" required pattern="[0-9]">
-                <input type="text" name="code4" maxlength="1" required pattern="[0-9]">
-                <input type="text" name="code5" maxlength="1" required pattern="[0-9]">
-            </div>
-            {% if error %}
-            <div class="error-message">{{ error }}</div>
-            {% endif %}
-            {% if message %}
-            <div class="success-message">{{ message }}</div>
-            {% endif %}
-            <button type="submit" class="submit-btn">Enviar</button>
-            <p style="font-size: 12px; text-align: center; margin-top: 10px;">Si el código es correcto, se le enviará un mensaje por correo.</p>
-            <a href="{% url 'reenviar_codigo' %}" class="resend-btn">Volver a enviar código</a>
-        </form>
-    </div>
-    <script src="{% static 'JS/code_input.js' %}"></script>
+<div class="login-bg">
+  <div class="login-card">
+    <h2>Verifica tu código</h2>
+    <p>Se envió un código de 5 dígitos a {{ destino }}. Caduca en 5 minutos.</p>
+    {% if messages %}<ul class="msgs">{% for m in messages %}<li class="{{ m.tags }}">{{ m }}</li>{% endfor %}</ul>{% endif %}
+    <form method="post" action="{% url 'ingresar_codigo' %}">
+      {% csrf_token %}
+      <label>Código</label>
+      <input type="text" name="codigo" maxlength="5" />
+      <button type="submit">Validar</button>
+    </form>
+    <form method="post" action="{% url 'reenviar_codigo' %}">
+      {% csrf_token %}
+      <button type="submit" class="link-btn">Reenviar código</button>
+    </form>
+  </div>
+</div>
 </body>
 </html>
+
+
+
+
+
+

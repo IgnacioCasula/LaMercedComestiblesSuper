@@ -2,40 +2,31 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Cambiar Contraseña</title>
-    <link rel="stylesheet" href="{% static 'CSS/login_styles.css' %}">
+  <meta charset="UTF-8" />
+  <title>Cambiar contraseña</title>
+  <link rel="stylesheet" href="{% static 'CSS/login_styles.css' %}">
 </head>
 <body>
-    <div class="login-container">
-        <form class="login-form" method="post" action="{% url 'cambiar_contrasena' %}">
-            {% csrf_token %}
-            <div class="form-group password-wrapper">
-                <label for="new_password1">Nueva Contraseña</label>
-                <input type="password" id="new_password1" name="new_password1" required>
-                <img src="{% static 'iconos/eyeX.png' %}" 
-                     class="toggle-password" 
-                     data-target="new_password1"
-                     data-open-eye="{% static 'iconos/eye.png' %}"
-                     data-closed-eye="{% static 'iconos/eyeX.png' %}"
-                     alt="Mostrar/Ocultar">
-            </div>
-            <div class="form-group password-wrapper">
-                <label for="new_password2">Repita la contraseña</label>
-                <input type="password" id="new_password2" name="new_password2" required>
-                <img src="{% static 'iconos/eyeX.png' %}" 
-                     class="toggle-password" 
-                     data-target="new_password2"
-                     data-open-eye="{% static 'iconos/eye.png' %}"
-                     data-closed-eye="{% static 'iconos/eyeX.png' %}"
-                     alt="Mostrar/Ocultar">
-            </div>
-            {% if error %}
-            <div class="error-message">{{ error }}</div>
-            {% endif %}
-            <button type="submit" class="submit-btn">Cambiar</button>
-        </form>
-    </div>
-    <script src="{% static 'JS/password_visibility.js' %}"></script>
+<div class="login-bg">
+  <div class="login-card">
+    <h2>Nueva contraseña</h2>
+    <p>La contraseña debe tener más de 5 dígitos. Puedes usar letras, números y signos.</p>
+    {% if messages %}<ul class="msgs">{% for m in messages %}<li class="{{ m.tags }}">{{ m }}</li>{% endfor %}</ul>{% endif %}
+    <form method="post" action="{% url 'cambiar_contrasena' %}">
+      {% csrf_token %}
+      <label>Nueva contraseña</label>
+      <input type="password" name="nueva" />
+      <label>Repite la contraseña</label>
+      <input type="password" name="repetir" />
+      <button type="submit">Guardar</button>
+    </form>
+  </div>
+</div>
 </body>
 </html>
+
+
+
+
+
+

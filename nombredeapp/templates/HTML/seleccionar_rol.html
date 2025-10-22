@@ -2,78 +2,31 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Seleccionar Puesto - Comestible La Merced</title>
-    <link rel="stylesheet" href="{% static 'CSS/login_styles.css' %}">
+  <meta charset="UTF-8" />
+  <title>Seleccionar área y puesto</title>
+  <link rel="stylesheet" href="{% static 'CSS/login_styles.css' %}">
 </head>
 <body>
-    <div class="login-container">
-        <form class="login-form" method="post" action="{% url 'seleccionar_rol' %}">
-            {% csrf_token %}
-            
-            <div class="form-group">
-                <label for="area">Área</label>
-                <select id="area" name="area_id" required>
-                    <option value="" disabled selected>Selecciona un área...</option>
-                    {% for area in areas %}
-                    <option value="{{ area.idarea }}">{{ area.nombrearea }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label for="rol">Puesto</label>
-                <select id="rol" name="rol_id" required disabled>
-                    <option value="" disabled selected>Selecciona un puesto...</option>
-                </select>
-            </div>
-
-            {% if error %}
-            <div class="error-message">
-                {{ error }}
-            </div>
-            {% endif %}
-
-            <button type="submit" class="submit-btn" id="submit-btn" disabled>Entrar</button>
-        </form>
-    </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const rolesPorArea = JSON.parse('{{ roles_por_area_json|escapejs }}');
-
-            const areaSelect = document.getElementById('area');
-            const rolSelect = document.getElementById('rol');
-            const submitBtn = document.getElementById('submit-btn');
-
-            areaSelect.addEventListener('change', function() {
-                rolSelect.innerHTML = '<option value="" disabled selected>Selecciona un puesto...</option>';
-                rolSelect.disabled = true;
-                submitBtn.disabled = true;
-
-                const selectedAreaId = this.value;
-                const rolesDeEstaArea = rolesPorArea[selectedAreaId];
-
-                if (Array.isArray(rolesDeEstaArea) && rolesDeEstaArea.length > 0) {
-                    rolesDeEstaArea.forEach(function(rol) {
-                        const option = document.createElement('option');
-                        option.value = rol.id;
-                        option.textContent = rol.nombre;
-                        rolSelect.appendChild(option);
-                    });
-                    rolSelect.disabled = false;
-                }
-            });
-            
-            rolSelect.addEventListener('change', function() {
-                if (this.value) {
-                    submitBtn.disabled = false;
-                } else {
-                    submitBtn.disabled = true;
-                }
-            });
-        });
-    </script>
+<div class="login-bg">
+  <div class="login-card">
+    <h2>Selecciona área y puesto</h2>
+    <form method="post">
+      {% csrf_token %}
+      <label>Área y Puesto</label>
+      <select name="rol_id">
+        {% for r in roles %}
+          <option value="{{ r.idroles }}">{{ r.nombrearea }} - {{ r.nombrerol }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">Entrar</button>
+    </form>
+  </div>
+</div>
 </body>
 </html>
+
+
+
+
+
+

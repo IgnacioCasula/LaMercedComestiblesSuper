@@ -1,7 +1,6 @@
 from pathlib import Path
 import os
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-y0*h--s7@_@*f49@_z9asrh65_&ks*lnc$k(%$!dg0g7e%ql$p'
@@ -17,7 +16,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'nombredeapp',
     'caja',
-    'GestionDeStock'
+    'asistencias',
+    'ventas',
+    'GestionDeStock',
 ]
 
 MIDDLEWARE = [
@@ -35,7 +36,11 @@ ROOT_URLCONF = 'ProyectoSuper.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')],
+        'DIRS': [
+            BASE_DIR / 'nombredeapp' / 'templates',
+            BASE_DIR / 'caja' / 'templates',
+            BASE_DIR / 'GestionDeStock' / 'templates',
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -72,7 +77,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = 'es-ar'
-TIME_ZONE = 'America/Argentina/Buenos_Aires'
+TIME_ZONE = 'America/Argentina/Salta'
 USE_I18N = True
 USE_TZ = True
 
@@ -83,3 +88,5 @@ STATICFILES_DIRS = [
 ]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

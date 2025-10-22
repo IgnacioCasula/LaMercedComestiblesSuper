@@ -5,449 +5,129 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Crear Nuevo Empleado</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="{% static 'CSS/crear_empleado_styles.css' %}">
 </head>
-<body>
+<body 
+    data-inicio-url="{% url 'inicio' %}"
+    data-add-icon-url="{% static 'iconos/add_circle.png' %}"
+    data-remove-icon-url="{% static 'iconos/remove_circle.png' %}"
+    data-api-areas-url="{% url 'api_areas' %}"
+    data-api-puestos-por-area-url="/api/puestos/"
+    data-api-registrar-empleado-url="{% url 'api_registrar_empleado' %}">
 
 <div class="form-container">
     <h1>Añadir Nuevo Empleado</h1>
 
+    <!-- SECCIÓN 1: DATOS PERSONALES -->
     <div class="section">
+        <h2 class="section-title">📋 Datos Personales</h2>
         <div class="personal-data-grid">
             <div class="photo-uploader" id="photo-uploader">
                 <input type="file" id="photo-input" accept="image/*" style="display: none;">
-                <button id="photo-button">Añadir Foto</button>
+                <button type="button" id="photo-button">Añadir Foto</button>
             </div>
             <div class="fields-grid">
-                <div class="form-group"><label for="nombre">Nombre:</label><input type="text" id="nombre"></div>
-                <div class="form-group"><label for="apellido">Apellido:</label><input type="text" id="apellido"></div>
-                <div class="form-group"><label for="dni">DNI:</label><input type="text" id="dni"></div>
-                <div class="form-group"><label for="telefono">Telefono:</label><input type="text" id="telefono"></div>
-                <div class="form-group"><label for="email">Email:</label><input type="email" id="email"></div>
-                <div class="form-group"><label for="cod_pais">Codigo pais:</label><input type="text" id="cod_pais"></div>
-                <div class="form-group"><label for="direccion">Direccion:</label><input type="text" id="direccion"></div>
-                <div class="form-group"><label for="fecha_nacimiento">Fecha nacimiento:</label><input type="text" id="fecha_nacimiento" placeholder="DD/MM/AAAA"></div>
+                <div class="form-group">
+                    <label for="nombre">Nombre: <span class="required">*</span></label>
+                    <input type="text" id="nombre" required>
+                </div>
+                <div class="form-group">
+                    <label for="apellido">Apellido: <span class="required">*</span></label>
+                    <input type="text" id="apellido" required>
+                </div>
+                <div class="form-group">
+                    <label for="dni">DNI: <span class="required">*</span></label>
+                    <input type="text" id="dni" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email: <span class="required">*</span></label>
+                    <input type="email" id="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="telefono">Teléfono:</label>
+                    <input type="text" id="telefono">
+                </div>
+                <div class="form-group">
+                    <label for="cod_pais">Código Telefónico:</label>
+                    <input type="text" id="cod_pais" value="+54">
+                </div>
+                <div class="form-group">
+                    <label for="direccion">Dirección:</label>
+                    <input type="text" id="direccion">
+                </div>
+                <div class="form-group">
+                    <label for="fecha_nacimiento">Fecha de Nacimiento:</label>
+                    <input type="text" id="fecha_nacimiento" placeholder="DD/MM/AAAA">
+                </div>
             </div>
         </div>
         <div class="form-actions-initial">
-            <button id="btn-add-laboral" class="btn btn-secondary">Añadir datos laborales</button>
-            <button class="btn btn-light">Predeterminado</button>
+            <button type="button" id="btn-add-laboral" class="btn btn-secondary">Añadir datos laborales</button>
         </div>
     </div>
 
+    <!-- SECCIÓN 2: DATOS LABORALES -->
     <div id="laboral-data" class="laboral-data">
         <div class="section">
+            <h2 class="section-title">💼 Datos Laborales</h2>
             <div class="area-puesto">
-                <div class="form-group" style="flex-grow: 1;"><label>Area:</label><button disabled>Selecciona</button></div>
-                <div class="form-group" style="flex-grow: 1;"><label>Puesto:</label><button disabled>Selecciona</button></div>
+                <div class="form-group" style="flex-grow: 1;">
+                    <label>Área: <span class="required">*</span></label>
+                    <button type="button" id="btn-area" class="selector-btn">Selecciona un área</button>
+                </div>
+                <div class="form-group" style="flex-grow: 1;">
+                    <label>Puesto: <span class="required">*</span></label>
+                    <button type="button" id="btn-puesto" class="selector-btn" disabled>Selecciona un puesto</button>
+                </div>
+            </div>
+            <div class="permisos-info" id="permisos-info" style="display: none;">
+                <h3>🔒 Permisos del Puesto</h3>
+                <div id="permisos-display" class="permisos-display"></div>
             </div>
         </div>
         
+        <!-- SECCIÓN 3: HORARIO -->
         <div class="section schedule-section">
-            <h3>Hora y dia laboral</h3>
+            <h2 class="section-title">🕐 Horario Semanal Recurrente</h2>
             <div class="color-palette-container">
-                <span>Mismo horario:</span>
+                <span>Mismo horario para:</span>
                 <div id="color-palette" class="color-palette"></div>
-                <button id="add-color" class="add-btn">
+                <button type="button" id="add-color" class="add-btn">
                     <img src="{% static 'iconos/add_circle.png' %}" alt="Añadir color">
                 </button>
             </div>
-            <div id="weeks-container"></div>
+            <div id="schedule-container"></div>
             <div class="daily-schedule-container" id="daily-schedule-container"></div>
-        </div>
-
-        <div class="section permissions-section">
-            <h3>Permisos: Personalizado</h3>
         </div>
     </div>
 
+    <!-- BOTONES FINALES -->
     <div class="main-form-actions">
-        <button id="btn-cancel" class="btn btn-danger">Cancelar</button>
-        <button class="btn btn-success">Listo</button>
+        <button type="button" id="btn-cancel" class="btn btn-danger">
+            <i class="fas fa-times"></i> Cancelar
+        </button>
+        <button type="button" class="btn btn-success" id="btn-listo">
+            <i class="fas fa-check"></i> Listo
+        </button>
     </div>
 </div>
 
+<!-- MODAL PARA SELECCIONAR ÁREA/PUESTO -->
+<div id="modal-seleccionar" class="modal-overlay">
+    <div class="modal-content">
+        <h2 id="seleccionar-titulo"></h2>
+        <input type="text" id="searchInput" placeholder="Buscar...">
+        <ul id="resultsList"></ul>
+        <div class="modal-actions">
+            <button type="button" class="btn btn-light" id="btn-seleccionar-volver">Cerrar</button>
+        </div>
+    </div>
+</div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    
-    const photoUploader = document.getElementById('photo-uploader');
-    const photoInput = document.getElementById('photo-input');
-    const photoButton = document.getElementById('photo-button');
-    photoUploader.addEventListener('click', () => photoInput.click());
-    photoInput.addEventListener('change', (event) => {
-        const file = event.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                photoUploader.style.backgroundImage = `url('${e.target.result}')`;
-                photoButton.textContent = 'Cambiar Foto';
-            };
-            reader.readAsDataURL(file);
-        }
-    });
-
-    const fechaNacimientoInput = document.getElementById('fecha_nacimiento');
-    fechaNacimientoInput.addEventListener('input', (e) => {
-        let value = e.target.value.replace(/\D/g, '');
-        let formattedValue = '';
-        if (value.length > 0) formattedValue = value.substring(0, 2);
-        if (value.length > 2) formattedValue += '/' + value.substring(2, 4);
-        if (value.length > 4) formattedValue += '/' + value.substring(4, 8);
-        e.target.value = formattedValue;
-    });
-
-    document.getElementById('btn-cancel').addEventListener('click', () => {
-        if (confirm('¿Está seguro de que desea cancelar? Se perderán todos los datos ingresados.')) {
-            window.location.href = "{% url 'inicio' %}";
-        }
-    });
-
-    // --- VALIDACIÓN Y FORMATEO DE INPUTS ---
-    const nombreInput = document.getElementById('nombre');
-    const apellidoInput = document.getElementById('apellido');
-    const dniInput = document.getElementById('dni');
-    const telefonoInput = document.getElementById('telefono');
-    const emailInput = document.getElementById('email');
-
-    function allowOnlyLetters(event) {
-        const inputValue = event.target.value;
-        event.target.value = inputValue.replace(/[^a-zA-Z\sñÑáéíóúÁÉÍÓÚ]/g, '');
-    }
-    nombreInput.addEventListener('input', allowOnlyLetters);
-    apellidoInput.addEventListener('input', allowOnlyLetters);
-
-    function allowOnlyNumbers(event) {
-        const inputValue = event.target.value;
-        event.target.value = inputValue.replace(/\D/g, '');
-    }
-    dniInput.addEventListener('input', allowOnlyNumbers);
-    telefonoInput.addEventListener('input', allowOnlyNumbers);
-
-    // --- NUEVO: LÓGICA DE AUTOCOMPLETADO EN TIEMPO REAL PARA EMAIL ---
-    emailInput.addEventListener('input', (event) => {
-        const input = event.target;
-        const value = input.value;
-        const domain = '@gmail.com';
-        const atIndex = value.lastIndexOf('@');
-
-        // Si el usuario ha escrito '@' y está empezando a escribir el dominio
-        if (atIndex !== -1) {
-            const typedDomain = value.substring(atIndex);
-            
-            // Verificar si lo que ha escrito coincide con el inicio de nuestro dominio
-            if (domain.startsWith(typedDomain)) {
-                const suggestion = domain.substring(typedDomain.length);
-                
-                if (suggestion) {
-                    // Guardar la posición actual del cursor
-                    const cursorPos = input.selectionStart;
-                    // Añadir la sugerencia
-                    const newValue = value + suggestion;
-                    input.value = newValue;
-                    
-                    // Seleccionar solo la parte autocompletada
-                    input.setSelectionRange(cursorPos, newValue.length);
-                }
-            }
-        }
-    });
-
-    // Lógica de autocompletado al perder el foco (se mantiene como respaldo)
-    emailInput.addEventListener('blur', (event) => {
-        let emailValue = event.target.value.trim();
-        if (emailValue && !emailValue.includes('@')) {
-            event.target.value = emailValue + '@gmail.com';
-        }
-    });
-
-    const btnAddLaboral = document.getElementById('btn-add-laboral');
-    const laboralDataSection = document.getElementById('laboral-data');
-    btnAddLaboral.addEventListener('click', () => {
-        laboralDataSection.style.display = 'block';
-        btnAddLaboral.style.display = 'none';
-    });
-
-    // --- LÓGICA DEL HORARIO (sin cambios) ---
-    const colorPaletteContainer = document.getElementById('color-palette');
-    const addColorBtn = document.getElementById('add-color');
-    const weeksContainer = document.getElementById('weeks-container');
-    const dailyScheduleContainer = document.getElementById('daily-schedule-container');
-
-    const daysOfWeek = ['Sa', 'Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi'];
-    
-    const availableColors = [
-        "#e6194B", "#3cb44b", "#ffe119", "#4363d8", "#f58231", "#911eb4", "#42d4f4", "#f032e6", 
-        "#bfef45", "#fabed4", "#469990", "#dcbeff", "#9A6324", "#fffac8", "#800000", "#aaffc3", 
-        "#808000", "#ffd8b1", "#000075", "#a9a9a9", "#ffffff", "#000000", "#fabebe", "#ffd8b1", 
-        "#fffac8", "#aaffc3", "#e6beff", "#42d4f4", "#FF69B4", "#7FFFD4", "#D2691E", "#C0C0C0"
-    ]; 
-    let activeColors = [availableColors[0]]; 
-    let selectedColor = activeColors[0];
-    let scheduleData = {};
-    let weeksCount = 1;
-
-    function getContrastColor(hexcolor){
-        if (hexcolor.startsWith('#')) {
-            hexcolor = hexcolor.slice(1);
-        }
-        const r = parseInt(hexcolor.substr(0,2),16);
-        const g = parseInt(hexcolor.substr(2,2),16);
-        const b = parseInt(hexcolor.substr(4,2),16);
-        const yiq = ((r*299)+(g*587)+(b*114))/1000;
-        return (yiq >= 149) ? 'text-dark' : 'text-light';
-    }
-
-    function renderPalette() {
-        colorPaletteContainer.innerHTML = '';
-        activeColors.forEach(color => {
-            const colorDiv = document.createElement('div');
-            colorDiv.className = 'color-box';
-            colorDiv.style.backgroundColor = color;
-            colorDiv.dataset.color = color;
-            if (color === '#ffffff' || color === '#C0C0C0') { colorDiv.style.border = '1px solid #ccc'; }
-
-            if (color === selectedColor) {
-                colorDiv.classList.add('selected');
-            }
-            colorDiv.addEventListener('click', () => {
-                selectedColor = color;
-                renderPalette();
-            });
-
-            const removeTrigger = document.createElement('div');
-            removeTrigger.className = 'remove-color-trigger';
-            removeTrigger.onclick = (e) => {
-                e.stopPropagation();
-                removeColor(color);
-            };
-            colorDiv.appendChild(removeTrigger);
-
-            if (activeColors.length <= 1) {
-                colorDiv.classList.add('is-last');
-            }
-            colorPaletteContainer.appendChild(colorDiv);
-        });
-        
-        addColorBtn.style.display = activeColors.length >= availableColors.length ? 'none' : 'flex';
-    }
-
-    addColorBtn.addEventListener('click', () => {
-        const nextColor = availableColors.find(c => !activeColors.includes(c));
-        if (nextColor) {
-            activeColors.push(nextColor);
-            renderPalette();
-        }
-    });
-
-    function removeColor(colorToRemove) {
-        if (activeColors.length <= 1) return;
-        document.querySelectorAll(`.day-btn[data-color="${colorToRemove}"]`).forEach(btn => {
-            btn.style.backgroundColor = '';
-            btn.classList.remove('text-light', 'text-dark');
-            delete btn.dataset.color;
-            const dayKey = `w${btn.dataset.week}-d${btn.dataset.day}`;
-            delete scheduleData[dayKey];
-        });
-        activeColors = activeColors.filter(c => c !== colorToRemove);
-        if (selectedColor === colorToRemove) {
-            selectedColor = activeColors[0];
-        }
-        renderPalette();
-        renderDailySchedules();
-    }
-
-    function addWeek() {
-        if (weeksCount >= 4) return;
-        weeksCount++;
-        const weekDiv = document.createElement('div');
-        weekDiv.className = 'schedule-week';
-        weekDiv.id = `week-${weeksCount}`;
-
-        daysOfWeek.forEach(day => {
-            const dayBtn = document.createElement('button');
-            dayBtn.className = 'day-btn';
-            dayBtn.textContent = day;
-            dayBtn.dataset.day = day;
-            dayBtn.dataset.week = weeksCount; 
-            dayBtn.addEventListener('click', () => toggleDayColor(dayBtn));
-            weekDiv.appendChild(dayBtn);
-        });
-
-        const removeWeekBtn = document.createElement('button');
-        removeWeekBtn.className = 'remove-btn';
-        removeWeekBtn.innerHTML = `<img src="{% static "iconos/remove_circle.png" %}" alt="Eliminar semana">`;
-        removeWeekBtn.addEventListener('click', () => {
-            weekDiv.querySelectorAll('.day-btn').forEach(btn => {
-                const dayKey = `w${btn.dataset.week}-d${btn.dataset.day}`;
-                delete scheduleData[dayKey];
-            });
-            weekDiv.remove();
-            weeksCount--;
-            updateWeekNumbers();
-        });
-        weekDiv.appendChild(removeWeekBtn);
-        weeksContainer.appendChild(weekDiv);
-        updateWeekNumbers();
-    }
-    
-    function updateWeekNumbers() {
-        document.querySelectorAll('.schedule-week').forEach((weekDiv, index) => {
-            const newWeekNumber = index + 1;
-            weekDiv.id = `week-${newWeekNumber}`;
-            weekDiv.querySelectorAll('.day-btn').forEach(btn => {
-                btn.dataset.week = newWeekNumber;
-            });
-        });
-        renderDailySchedules();
-    }
-    
-    function toggleDayColor(dayBtn) {
-        const dayKey = `w${dayBtn.dataset.week}-d${dayBtn.dataset.day}`;
-        if (dayBtn.dataset.color === selectedColor) {
-            dayBtn.style.backgroundColor = '';
-            dayBtn.classList.remove('text-light', 'text-dark');
-            delete dayBtn.dataset.color;
-            delete scheduleData[dayKey];
-        } else {
-            dayBtn.style.backgroundColor = selectedColor;
-            dayBtn.dataset.color = selectedColor;
-            dayBtn.classList.remove('text-light', 'text-dark');
-            dayBtn.classList.add(getContrastColor(selectedColor));
-
-            if (!scheduleData[dayKey]) {
-                scheduleData[dayKey] = [{ start: '', end: '' }];
-            }
-        }
-        renderDailySchedules();
-    }
-
-    function renderDailySchedules() {
-        dailyScheduleContainer.innerHTML = '';
-        const groupedDaysByColor = {};
-        document.querySelectorAll('.day-btn[data-color]').forEach(btn => {
-            const color = btn.dataset.color;
-            if (!groupedDaysByColor[color]) groupedDaysByColor[color] = [];
-            groupedDaysByColor[color].push({ week: btn.dataset.week, day: btn.dataset.day });
-        });
-
-        for (const color in groupedDaysByColor) {
-            const scheduleRow = document.createElement('div');
-            scheduleRow.className = 'schedule-day-row';
-            scheduleRow.style.backgroundColor = color;
-
-            const contrastClass = getContrastColor(color);
-            scheduleRow.classList.add(contrastClass);
-            
-            const daysInGroup = groupedDaysByColor[color];
-            const title = document.createElement('h4');
-            const titleParts = daysInGroup.map(d => `Semana ${d.week}: ${d.day}`);
-            title.textContent = titleParts.join('; ');
-            scheduleRow.appendChild(title);
-            
-            const daySchedulesContainer = document.createElement('div');
-            daySchedulesContainer.className = 'day-schedule';
-            
-            daysInGroup.forEach(dayInfo => {
-                const dayKey = `w${dayInfo.week}-d${dayInfo.day}`;
-                if (!scheduleData[dayKey] || scheduleData[dayKey].length === 0) {
-                    scheduleData[dayKey] = [{ start: '', end: '' }];
-                }
-
-                scheduleData[dayKey].forEach((slot, index) => {
-                    const timeSlotDiv = document.createElement('div');
-                    timeSlotDiv.className = 'time-slot';
-                    
-                    const dayLabel = document.createElement('span');
-                    dayLabel.textContent = `${dayInfo.day} (S${dayInfo.week}):`;
-                    
-                    const startTimeInput = document.createElement('input');
-                    startTimeInput.type = 'time';
-                    startTimeInput.value = slot.start;
-                    startTimeInput.onchange = (e) => scheduleData[dayKey][index].start = e.target.value;
-
-                    const endTimeInput = document.createElement('input');
-                    endTimeInput.type = 'time';
-                    endTimeInput.value = slot.end;
-                    endTimeInput.onchange = (e) => scheduleData[dayKey][index].end = e.target.value;
-                    
-                    const addTimeSlotBtn = document.createElement('button');
-                    addTimeSlotBtn.className = 'add-btn';
-                    if (contrastClass === 'text-light') {
-                        addTimeSlotBtn.innerHTML = `<img src="{% static 'iconos/Add_circle_claro.png' %}" alt="Añadir horario">`;
-                    } else {
-                        addTimeSlotBtn.innerHTML = `<img src="{% static 'iconos/add_circle.png' %}" alt="Añadir horario">`;
-                    }
-                    addTimeSlotBtn.onclick = () => {
-                        scheduleData[dayKey].splice(index + 1, 0, { start: '', end: '' });
-                        renderDailySchedules();
-                    };
-
-                    const removeTimeSlotBtn = document.createElement('button');
-                    removeTimeSlotBtn.className = 'remove-btn';
-                    removeTimeSlotBtn.innerHTML = `<img src="{% static 'iconos/remove_circle.png' %}" alt="Eliminar horario">`;
-                    removeTimeSlotBtn.onclick = () => {
-                        if (scheduleData[dayKey].length > 1) {
-                            scheduleData[dayKey].splice(index, 1);
-                        } else {
-                            scheduleData[dayKey][index] = { start: '', end: '' };
-                        }
-                        renderDailySchedules();
-                    };
-
-                    if (index === 0) {
-                        timeSlotDiv.appendChild(dayLabel);
-                    } else {
-                        const spacer = document.createElement('span');
-                        spacer.style.width = '100px';
-                        timeSlotDiv.appendChild(spacer);
-                    }
-
-                    timeSlotDiv.appendChild(startTimeInput);
-                    timeSlotDiv.appendChild(document.createElement('span')).textContent = 'a';
-                    timeSlotDiv.appendChild(endTimeInput);
-                    timeSlotDiv.appendChild(addTimeSlotBtn);
-                    
-                    if (scheduleData[dayKey].length > 1 || slot.start || slot.end) {
-                        timeSlotDiv.appendChild(removeTimeSlotBtn);
-                    }
-
-                    daySchedulesContainer.appendChild(timeSlotDiv);
-                });
-            });
-
-            scheduleRow.appendChild(daySchedulesContainer);
-            dailyScheduleContainer.appendChild(scheduleRow);
-        }
-    }
-
-    function createFirstWeek() {
-        const weekDiv = document.createElement('div');
-        weekDiv.className = 'schedule-week';
-        weekDiv.id = 'week-1';
-
-        daysOfWeek.forEach(day => {
-            const dayBtn = document.createElement('button');
-            dayBtn.className = 'day-btn';
-            dayBtn.textContent = day;
-            dayBtn.dataset.day = day;
-            dayBtn.dataset.week = 1;
-            dayBtn.addEventListener('click', () => toggleDayColor(dayBtn));
-            weekDiv.appendChild(dayBtn);
-        });
-        
-        const addWeekBtnWeek = document.createElement('button');
-        addWeekBtnWeek.className = 'add-btn';
-        addWeekBtnWeek.innerHTML = '<img src="{% static "iconos/add_circle.png" %}" alt="Añadir semana">';
-        addWeekBtnWeek.addEventListener('click', addWeek);
-        weekDiv.appendChild(addWeekBtnWeek);
-        weeksContainer.appendChild(weekDiv);
-    }
-    
-    renderPalette();
-    createFirstWeek();
-});
-</script>
-
+<!-- CARGAR SISTEMA DE AUDIO PRIMERO -->
+<script src="{% static 'JS/audio-system.js' %}"></script>
+<!-- LUEGO CARGAR EL SCRIPT PRINCIPAL - CORREGIDO EL NOMBRE -->
+<script src="{% static 'JS/crear_empleado.js' %}"></script>
 </body>
 </html>

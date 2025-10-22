@@ -1,0 +1,215 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Empleados</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'CSS/lista_empleados_styles.css' %}">
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <header class="page-header">
+            <a href="{% url 'inicio' %}" class="back-btn">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+            <h1><i class="fas fa-users"></i> Lista de Empleados</h1>
+            <div class="header-stats">
+                <span class="stat-badge">
+                    <i class="fas fa-user-check"></i>
+                    Total: <strong id="total-empleados">0</strong>
+                </span>
+            </div>
+        </header>
+
+        <!-- FILTROS Y BÚSQUEDA -->
+        <div class="filters-section">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="search-input" placeholder="Buscar por nombre, DNI, email o puesto...">
+                <button class="clear-search" id="clear-search" style="display: none;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="filters-row">
+                <div class="filter-group">
+                    <label><i class="fas fa-filter"></i> Estado:</label>
+                    <select id="filter-estado" class="filter-select">
+                        <option value="all">Todos</option>
+                        <option value="Trabajando" selected>Trabajando</option>
+                        <option value="Suspendido">Suspendido</option>
+                        <option value="Despedido">Despedido</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label><i class="fas fa-briefcase"></i> Área:</label>
+                    <select id="filter-area" class="filter-select">
+                        <option value="all">Todas las áreas</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label><i class="fas fa-sort"></i> Ordenar:</label>
+                    <select id="sort-select" class="filter-select">
+                        <option value="nombre_asc">Nombre (A-Z)</option>
+                        <option value="nombre_desc">Nombre (Z-A)</option>
+                        <option value="fecha_asc">Más antiguos</option>
+                        <option value="fecha_desc" selected>Más recientes</option>
+                    </select>
+                </div>
+
+                <button class="btn-reset-filters" id="reset-filters">
+                    <i class="fas fa-redo"></i> Limpiar filtros
+                </button>
+            </div>
+        </div>
+
+        <!-- LISTA DE EMPLEADOS -->
+        <div id="empleados-container" class="empleados-container">
+            <div class="loading-spinner">
+                <i class="fas fa-spinner fa-spin"></i> Cargando empleados...
+            </div>
+        </div>
+
+        <!-- PAGINACIÓN -->
+        <div class="pagination-container" id="pagination-container" style="display: none;">
+            <button class="pagination-btn" id="prev-page" disabled>
+                <i class="fas fa-chevron-left"></i> Anterior
+            </button>
+            <div class="pagination-info">
+                Página <span id="current-page">1</span> de <span id="total-pages">1</span>
+            </div>
+            <button class="pagination-btn" id="next-page">
+                Siguiente <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL: VER DETALLES -->
+    <div id="modal-detalles" class="modal-overlay">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2><i class="fas fa-id-card"></i> Información del Empleado</h2>
+                <button class="modal-close" id="close-detalles">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="detalles-content">
+                <!-- Contenido dinámico -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: EDITAR EMPLEADO -->
+    <div id="modal-editar" class="modal-overlay">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2><i class="fas fa-user-edit"></i> Editar Empleado</h2>
+                <button class="modal-close" id="close-editar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="form-editar-empleado">
+                    <div class="form-section">
+                        <h3><i class="fas fa-user"></i> Datos Personales</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Nombre: <span class="required">*</span></label>
+                                <input type="text" id="edit-nombre" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Apellido: <span class="required">*</span></label>
+                                <input type="text" id="edit-apellido" required>
+                            </div>
+                            <div class="form-group">
+                                <label>DNI: <span class="required">*</span></label>
+                                <input type="text" id="edit-dni" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Email: <span class="required">*</span></label>
+                                <input type="email" id="edit-email" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Teléfono:</label>
+                                <input type="text" id="edit-telefono">
+                            </div>
+                            <div class="form-group">
+                                <label>Fecha de Nacimiento:</label>
+                                <input type="date" id="edit-fecha-nacimiento">
+                            </div>
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label>Dirección:</label>
+                                <input type="text" id="edit-direccion" placeholder="Calle, número, ciudad">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3><i class="fas fa-briefcase"></i> Datos Laborales</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Área:</label>
+                                <select id="edit-area" required>
+                                    <option value="">Seleccionar área</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Puesto:</label>
+                                <select id="edit-puesto" required>
+                                    <option value="">Seleccionar puesto</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Salario:</label>
+                                <input type="number" id="edit-salario" min="0" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label>Estado:</label>
+                                <select id="edit-estado" required>
+                                    <option value="Trabajando">Trabajando</option>
+                                    <option value="Suspendido">Suspendido</option>
+                                    <option value="Despedido">Despedido</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3><i class="fas fa-calendar-week"></i> Horarios</h3>
+                        <div class="horario-edit-container" id="horario-edit-container">
+                            <p class="info-text">
+                                <i class="fas fa-info-circle"></i>
+                                Los horarios se gestionan por semanas recurrentes. Puedes agregar múltiples turnos por día.
+                            </p>
+                            <div id="semanas-edit-container"></div>
+                            <button type="button" class="btn btn-light" id="btn-add-semana">
+                                <i class="fas fa-plus"></i> Agregar Semana
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="error-msg" id="edit-error-msg"></div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-light" id="cancel-editar">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-success" id="save-editar">
+                            <i class="fas fa-save"></i> Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="{% static 'JS/audio-system.js' %}"></script>
+    <script src="{% static 'JS/lista_empleados.js' %}"></script>
+</body>
+</html>
