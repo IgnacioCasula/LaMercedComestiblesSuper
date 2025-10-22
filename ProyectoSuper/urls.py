@@ -9,7 +9,7 @@ urlpatterns = [
     path('asistencias/', include('asistencias.urls')),
     path('', include('nombredeapp.urls')),
     path('ventas/', include('ventas.urls')),
-    #path('GestionDeStock/', include('GestionDeStock.urls')),
+    path('GestionDeStock/', include('GestionDeStock.urls')),
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
