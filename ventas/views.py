@@ -9,7 +9,6 @@ from caja.models import Caja, Productos, Ventas, DetalleDeVentas, Inventarios, O
 from nombredeapp.decorators import permiso_requerido
 from .forms import VentaForm, RecargoForm
 
-@permiso_requerido(roles_permitidos=['Supervisor de Caja'])
 def registrar_venta(request):
     """Vista para registrar una nueva venta"""
     
@@ -63,7 +62,6 @@ def registrar_venta(request):
         'usuario_nombre': request.session.get('nombre_usuario', 'Usuario')
     })
 
-@permiso_requerido(roles_permitidos=['Supervisor de Caja'])
 def buscar_producto(request):
     """API para buscar productos"""
     if request.method == 'GET' and 'q' in request.GET:
@@ -108,7 +106,6 @@ def buscar_producto(request):
     return JsonResponse([], safe=False)
 
 @csrf_exempt
-@permiso_requerido(roles_permitidos=['Supervisor de Caja'])
 def procesar_venta(request):
     """API para procesar venta via AJAX"""
     if request.method == 'POST':

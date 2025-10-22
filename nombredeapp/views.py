@@ -34,12 +34,14 @@ def _get_session_dict(request: HttpRequest, key: str, default: dict) -> dict:
 def _get_caja_abierta(usuario_id):
     """Verifica si hay una caja abierta para el usuario actual"""
     try:
+        from datetime import time
         caja_abierta = Caja.objects.filter(
             idusuarios_id=usuario_id,
-            fechacierrecaja__isnull=True
+            horacierrecaja=time(0, 0, 0)  # Caja abierta (indicador de no cerrada)
         ).exists()
         return caja_abierta
-    except Exception:
+    except Exception as e:
+        print(f"Error verificando caja: {e}")
         return False
 
 
