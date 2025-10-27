@@ -1,4 +1,3 @@
-# Ruta: LaMercedComestiblesSuper/venta/forms.py
 from django import forms
 
 class VentaForm(forms.Form):
