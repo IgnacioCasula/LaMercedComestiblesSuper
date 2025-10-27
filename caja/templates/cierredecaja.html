@@ -52,29 +52,66 @@
         <h2>🔒 Cierre de Caja</h2>
       </div>
     </div>
-
+    <!-- RESUMEN DE VENTAS - AGREGAR ESTO -->
+    <div class="resumen-ventas">
+        <h3>📊 Resumen de Ventas del Día</h3>
+        <div class="ventas-grid">
+            <div class="venta-item">
+                <span class="venta-label">Ventas en Efectivo:</span>
+                <span class="venta-monto">${{ ventas_efectivo|floatformat:2 }}</span>
+            </div>
+            <div class="venta-item">
+                <span class="venta-label">Ventas con Tarjeta:</span>
+                <span class="venta-monto">${{ ventas_tarjeta|floatformat:2 }}</span>
+            </div>
+            <div class="venta-item">
+                <span class="venta-label">Ventas por Transferencia:</span>
+                <span class="venta-monto">${{ ventas_transferencia|floatformat:2 }}</span>
+            </div>
+            <div class="venta-item total">
+                <span class="venta-label">Total Ventas Sistema:</span>
+                <span class="venta-monto">${{ total_sistema|floatformat:2 }}</span>
+            </div>
+        </div>
+    </div>
     <!-- FORM -->
     <form method="post">
       {% csrf_token %}
       <div class="AperturaPanelCuerpo">
         {% if caja %}
+        <!-- EFECTIVO ESPERADO - NUEVO CAMPO -->
         <div class="FormularioMontoIni">
-          <label>💵 Monto Final en Caja</label>
+          <label>💰 Efectivo Esperado en Caja</label>
+          <div class="monto-esperado">
+            <span class="divisa">$</span>
+            <input type="text" class="form-control" readonly 
+                  value="{{ total_efectivo_esperado|floatformat:2 }}">
+            
+          </div>
+          <small class="text-muted">Fondo inicial (${{ caja.montoinicialcaja|floatformat:2 }}) + Ventas efectivo</small>
+        </div>
+
+        <!-- CAMPO ORIGINAL MODIFICADO -->
+        <div class="FormularioMontoIni">
+          <label>💵 Efectivo Físico Contado</label>
           <div class="FormularioInputMontoIni">
             <span class="divisa">$</span>
-            <input type="number" name="monto_final" class="form-control" step="0.01" min="0" required 
-                   value="{{ caja.montofinalcaja }}" placeholder="0.00">
+            <input type="number" name="monto_final_efectivo" class="form-control" 
+                  step="0.01" min="0" required value="{{ caja.montofinalcaja }}" placeholder="0.00">
           </div>
+          <small class="text-muted">Ingrese el monto real contado en efectivo</small>
         </div>
 
         <div class="FormularioMontoIni">
           <label>📝 Observaciones de cierre:</label>
           <textarea name="observacion_cierre" class="form-control" rows="3" 
-                    placeholder="Notas sobre el cierre..."></textarea>
+                    placeholder="Notas sobre diferencias, incidencias..."></textarea>
         </div>
 
-        <div class="boton1">
-          <button type="submit" id="boton-cierre" class="boton boton-primario">🔒 Cerrar Caja</button>
+        <!-- BOTONES - AGREGAR CANCELAR -->
+        <div class="boton1" style="display: flex; gap: 10px;">
+          <a href="{% url 'inicio' %}" class="boton boton-secundario"> Cancelar</a>
+          <button type="submit" id="boton-cierre" class="boton boton-primario"> Cerrar Caja</button>
         </div>
         {% else %}
         <div class="alert alert-warning">
