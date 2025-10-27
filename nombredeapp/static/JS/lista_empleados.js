@@ -120,6 +120,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         formEditarEmpleado.addEventListener('submit', guardarEdicionEmpleado);
 
+        // Botón agregar semana en horarios
+        document.getElementById('btn-add-semana').addEventListener('click', () => {
+            agregarSemanaEdit();
+            if (window.audioSystem) window.audioSystem.play('select');
+        });
+
         // Cerrar modal al hacer click fuera
         [modalDetalles, modalEditar].forEach(modal => {
             modal.addEventListener('click', (e) => {
@@ -330,14 +336,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <span class="info-label">Teléfono</span>
                                 <span class="info-value">${empleado.telefono || 'N/A'}</span>
                             </div>
-                            <div class="info-row">
-                                <span class="info-label">Fecha de Nacimiento</span>
-                                <span class="info-value">${empleado.fecha_nacimiento || 'N/A'}</span>
-                            </div>
-                            <div class="info-row">
-                                <span class="info-label">Dirección</span>
-                                <span class="info-value">${empleado.direccion || 'N/A'}</span>
-                            </div>
                         </div>
                     </div>
 
@@ -443,6 +441,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             };
             
+            // Cargar horarios
+            horariosEdit = empleado.horarios || [];
+            renderHorariosEdit();
+            
             abrirModal(modalEditar);
         } catch (error) {
             console.error('Error:', error);
@@ -487,6 +489,229 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // ===== GESTIÓN DE HORARIOS EN EDICIÓN =====
+    function renderHorariosEdit() {
+        const container = document.getElementById('semanas-edit-container');
+        
+        // Organizar horarios por semana
+        const semanas = {};
+        horariosEdit.forEach(h => {
+            if (!semanas[h.semana_del_mes]) {
+                semanas[h.semana_del_mes] = [];
+            }
+            semanas[h.semana_del_mes].push(h);
+        });
+
+        container.innerHTML = '';
+        
+        const numSemanas = Object.keys(semanas).length;
+        if (numSemanas === 0) {
+            container.innerHTML = '<p class="no-horarios-edit">No hay horarios asignados. Agrega una semana para comenzar.</p>';
+            return;
+        }
+
+        for (let semana in semanas) {
+            const semanaDiv = crearSemanaEditHTML(parseInt(semana), semanas[semana]);
+            container.insertAdjacentHTML('beforeend', semanaDiv);
+        }
+
+        // Agregar eventos a los botones
+        container.querySelectorAll('.btn-eliminar-semana').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const semana = parseInt(this.dataset.semana);
+                eliminarSemanaEdit(semana);
+            });
+        });
+
+        container.querySelectorAll('.btn-toggle-dia').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const semana = parseInt(this.dataset.semana);
+                const dia = parseInt(this.dataset.dia);
+                toggleDiaEdit(semana, dia);
+            });
+        });
+
+        container.querySelectorAll('.btn-add-turno-small').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const semana = parseInt(this.dataset.semana);
+                const dia = parseInt(this.dataset.dia);
+                agregarTurnoEdit(semana, dia);
+            });
+        });
+
+        container.querySelectorAll('.btn-eliminar-turno').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const index = parseInt(this.dataset.index);
+                eliminarTurnoEdit(index);
+            });
+        });
+
+        container.querySelectorAll('.turno-input').forEach(input => {
+            input.addEventListener('change', function() {
+                const index = parseInt(this.dataset.index);
+                const field = this.dataset.field;
+                if (horariosEdit[index]) {
+                    if (field === 'inicio') {
+                        horariosEdit[index].hora_inicio = this.value;
+                    } else {
+                        horariosEdit[index].hora_fin = this.value;
+                    }
+                }
+            });
+        });
+    }
+
+    function crearSemanaEditHTML(numSemana, horariosSemanales) {
+        const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+        
+        // Organizar horarios por día
+        const horariosPorDia = {};
+        horariosSemanales.forEach((h, idx) => {
+            if (!horariosPorDia[h.dia_semana]) {
+                horariosPorDia[h.dia_semana] = [];
+            }
+            const globalIndex = horariosEdit.findIndex(he => 
+                he.semana_del_mes === numSemana && 
+                he.dia_semana === h.dia_semana && 
+                he.hora_inicio === h.hora_inicio &&
+                he.hora_fin === h.hora_fin
+            );
+            horariosPorDia[h.dia_semana].push({...h, index: globalIndex});
+        });
+
+        let html = `
+            <div class="semana-edit-card">
+                <div class="semana-edit-header">
+                    <h4><i class="fas fa-calendar-alt"></i> Semana ${numSemana}</h4>
+                    <button type="button" class="btn-icon btn-eliminar-semana" data-semana="${numSemana}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+                <div class="dias-edit-grid">
+        `;
+
+        for (let dia = 0; dia < 7; dia++) {
+            const turnos = horariosPorDia[dia] || [];
+            const activo = turnos.length > 0;
+            
+            html += `
+                <div class="dia-edit-card ${activo ? 'activo' : ''}">
+                    <div class="dia-edit-header">
+                        <span>${dias[dia]}</span>
+                        <button type="button" class="btn-toggle-dia" data-semana="${numSemana}" data-dia="${dia}">
+                            <i class="fas fa-${activo ? 'toggle-on' : 'toggle-off'}"></i>
+                        </button>
+                    </div>
+                    ${activo ? `
+                        <div class="turnos-edit-list">
+                            ${turnos.map(t => `
+                                <div class="turno-edit-item">
+                                    <input type="time" class="turno-input" 
+                                           value="${t.hora_inicio}" 
+                                           data-index="${t.index}" 
+                                           data-field="inicio">
+                                    <span>-</span>
+                                    <input type="time" class="turno-input" 
+                                           value="${t.hora_fin}" 
+                                           data-index="${t.index}" 
+                                           data-field="fin">
+                                    <button type="button" class="btn-icon-small btn-eliminar-turno" data-index="${t.index}">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            `).join('')}
+                            <button type="button" class="btn-add-turno-small" data-semana="${numSemana}" data-dia="${dia}">
+                                <i class="fas fa-plus"></i> Agregar turno
+                            </button>
+                        </div>
+                    ` : `
+                        <p class="dia-libre">Día libre</p>
+                    `}
+                </div>
+            `;
+        }
+
+        html += `
+                </div>
+            </div>
+        `;
+
+        return html;
+    }
+
+    function agregarSemanaEdit() {
+        const semanas = [...new Set(horariosEdit.map(h => h.semana_del_mes))];
+        const nuevaSemana = semanas.length > 0 ? Math.max(...semanas) + 1 : 1;
+        
+        if (nuevaSemana > 4) {
+            alert('Solo se pueden tener hasta 4 semanas recurrentes');
+            if (window.audioSystem) window.audioSystem.play('error');
+            return;
+        }
+
+        // Agregar un día por defecto (Lunes) con un turno vacío
+        horariosEdit.push({
+            semana_del_mes: nuevaSemana,
+            dia_semana: 0,
+            hora_inicio: '09:00',
+            hora_fin: '18:00'
+        });
+
+        renderHorariosEdit();
+        if (window.audioSystem) window.audioSystem.play('positive');
+    }
+
+    function eliminarSemanaEdit(semana) {
+        if (confirm(`¿Eliminar todos los horarios de la Semana ${semana}?`)) {
+            horariosEdit = horariosEdit.filter(h => h.semana_del_mes !== semana);
+            renderHorariosEdit();
+            if (window.audioSystem) window.audioSystem.play('negative');
+        }
+    }
+
+    function toggleDiaEdit(semana, dia) {
+        const turnosDelDia = horariosEdit.filter(h => 
+            h.semana_del_mes === semana && h.dia_semana === dia
+        );
+
+        if (turnosDelDia.length > 0) {
+            // Eliminar todos los turnos del día
+            horariosEdit = horariosEdit.filter(h => 
+                !(h.semana_del_mes === semana && h.dia_semana === dia)
+            );
+        } else {
+            // Agregar un turno por defecto
+            horariosEdit.push({
+                semana_del_mes: semana,
+                dia_semana: dia,
+                hora_inicio: '09:00',
+                hora_fin: '18:00'
+            });
+        }
+
+        renderHorariosEdit();
+        if (window.audioSystem) window.audioSystem.play('select');
+    }
+
+    function agregarTurnoEdit(semana, dia) {
+        horariosEdit.push({
+            semana_del_mes: semana,
+            dia_semana: dia,
+            hora_inicio: '09:00',
+            hora_fin: '18:00'
+        });
+        renderHorariosEdit();
+        if (window.audioSystem) window.audioSystem.play('positive');
+    }
+
+    function eliminarTurnoEdit(index) {
+        if (index >= 0 && index < horariosEdit.length) {
+            horariosEdit.splice(index, 1);
+            renderHorariosEdit();
+            if (window.audioSystem) window.audioSystem.play('negative');
+        }
+    }
+
     async function guardarEdicionEmpleado(e) {
         e.preventDefault();
         if (window.audioSystem) window.audioSystem.play('select');
@@ -507,148 +732,149 @@ document.addEventListener('DOMContentLoaded', function() {
             area_id: document.getElementById('edit-area').value,
             puesto_id: document.getElementById('edit-puesto').value,
             salario: parseFloat(document.getElementById('edit-salario').value) || 0,
-            estado: document.getElementById('edit-estado').value
+            estado: document.getElementById('edit-estado').value,
+            horarios: horariosEdit
         };
-        
-        try {
-            const response = await fetch(`/api/empleados/${currentEditId}/editar/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify(data)
-            });
-            
-            const result = await response.json();
-            
-            if (response.ok) {
-                if (window.audioSystem) window.audioSystem.play('positive');
-                cerrarModal(modalEditar);
-                await cargarEmpleados();
-            } else {
-                errorMsg.textContent = result.error || 'Error al guardar los cambios';
-                errorMsg.classList.add('show');
-                if (window.audioSystem) window.audioSystem.play('error');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            errorMsg.textContent = 'Error de red. Inténtalo de nuevo.';
-            errorMsg.classList.add('show');
-            if (window.audioSystem) window.audioSystem.play('error');
-        } finally {
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = '<i class="fas fa-save"></i> Guardar Cambios';
-        }
-    }
 
-    // ===== UTILIDADES =====
-    function abrirModal(modal) {
-        modal.classList.add('show');
+try {
+    const response = await fetch(`/api/empleados/${currentEditId}/editar/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(data)
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok) {
         if (window.audioSystem) window.audioSystem.play('positive');
+        cerrarModal(modalEditar);
+        await cargarEmpleados();
+    } else {
+        errorMsg.textContent = result.error || 'Error al guardar los cambios';
+        errorMsg.classList.add('show');
+        if (window.audioSystem) window.audioSystem.play('error');
     }
+} catch (error) {
+    console.error('Error:', error);
+    errorMsg.textContent = 'Error de red. Inténtalo de nuevo.';
+    errorMsg.classList.add('show');
+    if (window.audioSystem) window.audioSystem.play('error');
+} finally {
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = '<i class="fas fa-save"></i> Guardar Cambios';
+}
+}
 
-    function cerrarModal(modal) {
-        modal.classList.remove('show');
-        if (window.audioSystem) window.audioSystem.play('select');
+// ===== UTILIDADES =====
+function abrirModal(modal) {
+modal.classList.add('show');
+if (window.audioSystem) window.audioSystem.play('positive');
+}
+
+function cerrarModal(modal) {
+modal.classList.remove('show');
+if (window.audioSystem) window.audioSystem.play('select');
+}
+
+function getInitials(nombre, apellido) {
+return (nombre.charAt(0) + apellido.charAt(0)).toUpperCase();
+}
+
+function formatDate(dateString) {
+if (!dateString) return 'N/A';
+const date = new Date(dateString);
+return date.toLocaleDateString('es-AR');
+}
+
+function getDiaNombre(dia) {
+const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+return dias[dia] || 'N/A';
+}
+
+function generarVistaHorarios(horarios) {
+// Organizar horarios por semana
+const semanas = {};
+horarios.forEach(h => {
+    if (!semanas[h.semana_del_mes]) {
+        semanas[h.semana_del_mes] = {};
     }
-
-    function getInitials(nombre, apellido) {
-        return (nombre.charAt(0) + apellido.charAt(0)).toUpperCase();
+    if (!semanas[h.semana_del_mes][h.dia_semana]) {
+        semanas[h.semana_del_mes][h.dia_semana] = [];
     }
+    semanas[h.semana_del_mes][h.dia_semana].push({
+        inicio: h.hora_inicio,
+        fin: h.hora_fin
+    });
+});
 
-    function formatDate(dateString) {
-        if (!dateString) return 'N/A';
-        const date = new Date(dateString);
-        return date.toLocaleDateString('es-AR');
-    }
+let html = '';
+const numSemanas = Object.keys(semanas).length;
 
-    function getDiaNombre(dia) {
-        const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-        return dias[dia] || 'N/A';
-    }
-
-    function generarVistaHorarios(horarios) {
-        // Organizar horarios por semana
-        const semanas = {};
-        horarios.forEach(h => {
-            if (!semanas[h.semana_del_mes]) {
-                semanas[h.semana_del_mes] = {};
-            }
-            if (!semanas[h.semana_del_mes][h.dia_semana]) {
-                semanas[h.semana_del_mes][h.dia_semana] = [];
-            }
-            semanas[h.semana_del_mes][h.dia_semana].push({
-                inicio: h.hora_inicio,
-                fin: h.hora_fin
-            });
-        });
-
-        let html = '';
-        const numSemanas = Object.keys(semanas).length;
+for (let semana in semanas) {
+    html += `
+        <div class="semana-horario">
+            <div class="semana-header">Semana ${semana}</div>
+            <div class="dias-horario">
+    `;
+    
+    for (let dia = 0; dia < 7; dia++) {
+        const nombreDia = getDiaNombre(dia);
+        const turnosDia = semanas[semana][dia] || [];
         
-        for (let semana in semanas) {
-            html += `
-                <div class="semana-horario">
-                    <div class="semana-header">Semana ${semana}</div>
-                    <div class="dias-horario">
-            `;
-            
-            for (let dia = 0; dia < 7; dia++) {
-                const nombreDia = getDiaNombre(dia);
-                const turnosDia = semanas[semana][dia] || [];
-                
-                html += `
-                    <div class="dia-horario ${turnosDia.length > 0 ? 'tiene-turno' : 'sin-turno'}">
-                        <div class="dia-nombre">${nombreDia.substring(0, 3)}</div>
-                        <div class="dia-turnos">
-                            ${turnosDia.length > 0 
-                                ? turnosDia.map(t => `
-                                    <div class="turno">
-                                        <i class="fas fa-clock"></i>
-                                        <span>${t.inicio.substring(0,5)} - ${t.fin.substring(0,5)}</span>
-                                    </div>
-                                `).join('')
-                                : '<span class="sin-turno-text">Libre</span>'
-                            }
-                        </div>
-                    </div>
-                `;
-            }
-            
-            html += `
-                    </div>
+        html += `
+            <div class="dia-horario ${turnosDia.length > 0 ? 'tiene-turno' : 'sin-turno'}">
+                <div class="dia-nombre">${nombreDia.substring(0, 3)}</div>
+                <div class="dia-turnos">
+                    ${turnosDia.length > 0 
+                        ? turnosDia.map(t => `
+                            <div class="turno">
+                                <i class="fas fa-clock"></i>
+                                <span>${t.inicio.substring(0,5)} - ${t.fin.substring(0,5)}</span>
+                            </div>
+                        `).join('')
+                        : '<span class="sin-turno-text">Libre</span>'
+                    }
                 </div>
-            `;
-        }
-        
-        return html || '<p class="no-horarios">No hay horarios asignados</p>';
+            </div>
+        `;
     }
+    
+    html += `
+            </div>
+        </div>
+    `;
+}
 
-    function debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    }
+return html || '<p class="no-horarios">No hay horarios asignados</p>';
+}
 
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
+function debounce(func, wait) {
+let timeout;
+return function executedFunction(...args) {
+    const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+};
+}
+
+function getCookie(name) {
+let cookieValue = null;
+if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
         }
-        return cookieValue;
     }
+}
+return cookieValue;
+}
 });
