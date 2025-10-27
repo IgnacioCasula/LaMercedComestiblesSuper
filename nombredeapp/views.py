@@ -885,13 +885,6 @@ def lista_empleados_view(request: HttpRequest) -> HttpResponse:
         messages.error(request, 'Acceso denegado. Por favor, inicia sesión.')
         return redirect('login')
     
-    # NUEVA VALIDACIÓN: Verificar estado del empleado
-    es_valido, mensaje_error = _verificar_estado_empleado(request)
-    if not es_valido:
-        request.session.flush()  # Cerrar sesión
-        messages.error(request, mensaje_error)
-        return redirect('login')
-    
     usuario_id = request.session.get('usuario_id')
     usuario = Usuarios.objects.filter(idusuarios=usuario_id).first()
     
@@ -1151,11 +1144,11 @@ def api_detalle_empleado(request: HttpRequest, empleado_id: int) -> JsonResponse
             'email': usuario.emailusuario,
             'telefono': usuario.telefono or '',
             'imagen': usuario.imagenusuario,
-            'direccion': getattr(usuario, 'direccion', ''),
-            'fecha_nacimiento': getattr(usuario, 'fecha_nacimiento', ''),
+            'direccion': getattr(usuario, 'direccion', '') or '',
+            'fecha_nacimiento': str(getattr(usuario, 'fecha_nacimiento', '')) if getattr(usuario, 'fecha_nacimiento', None) else '',
             'puesto': empleado.cargoempleado,
             'area': rol.nombrearea if rol else 'Sin área',
-            'area_id': rol.idroles if rol else None,
+            'area_id': rol.nombrearea if rol else None,  # Usar nombre de área como ID
             'puesto_id': rol.idroles if rol else None,
             'salario': float(empleado.salarioempleado),
             'estado': empleado.estado,
@@ -1220,7 +1213,11 @@ def api_editar_empleado(request: HttpRequest, empleado_id: int) -> JsonResponse:
         
         # Actualizar datos del empleado
         empleado.salarioempleado = float(data.get('salario', 0))
+        estado_anterior = empleado.estado
         empleado.estado = data.get('estado', 'Trabajando')
+        
+        # IMPORTANTE: Si el estado cambió a Suspendido o Despedido, el usuario no podrá acceder
+        # Esto se maneja en el login verificando el estado del empleado
         
         # Actualizar puesto si se proporcionó
         puesto_id = data.get('puesto_id')
@@ -1240,13 +1237,33 @@ def api_editar_empleado(request: HttpRequest, empleado_id: int) -> JsonResponse:
         
         empleado.save()
         
+        # Actualizar horarios
+        horarios_data = data.get('horarios', [])
+        if horarios_data is not None:  # Permitir array vacío para eliminar todos los horarios
+            # Eliminar horarios anteriores
+            Horario.objects.filter(empleado=empleado).delete()
+            
+            # Crear nuevos horarios
+            if horarios_data:
+                rol_actual = Roles.objects.filter(usuxroles__idusuarios=usuario).first()
+                for horario in horarios_data:
+                    Horario.objects.create(
+                        empleado=empleado,
+                        rol=rol_actual,
+                        dia_semana=horario.get('dia_semana'),
+                        semana_del_mes=horario.get('semana_del_mes'),
+                        hora_inicio=horario.get('hora_inicio'),
+                        hora_fin=horario.get('hora_fin')
+                    )
+        
         return JsonResponse({
             'message': 'Empleado actualizado correctamente',
             'empleado': {
                 'id': empleado.idempleado,
                 'nombre': usuario.nombreusuario,
                 'apellido': usuario.apellidousuario,
-                'email': usuario.emailusuario
+                'email': usuario.emailusuario,
+                'estado': empleado.estado
             }
         })
         
