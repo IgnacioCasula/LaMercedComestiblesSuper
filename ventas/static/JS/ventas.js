@@ -2,37 +2,42 @@ class GestorVenta {
     constructor() {
         this.catalogo = productosData;
         this.initEventListeners();
+        console.log('✅ GestorVenta creado con', Object.keys(this.catalogo).length, 'productos');
     }
 
     initEventListeners() {
+        console.log('🔧 Configurando event listeners...');
+       
         document.getElementById('btnAgregarProducto').addEventListener('click', () => this.agregarProducto());
-        
+       
         document.getElementById('productoInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.agregarProducto();
         });
-        
+       
         document.getElementById('productoInput').addEventListener('input', () => this.buscarProductos());
-        
+       
         document.getElementById('btnEmitirTicket').addEventListener('click', () => this.emitirTicket());
         document.getElementById('btnActivarEliminar').addEventListener('click', () => this.activarEliminar());
-        document.getElementById('btnProcesarVenta').addEventListener('click', () => this.procesarVenta());
+        // ELIMINADO: btnProcesarVenta
         document.getElementById('btnCancelarTodo').addEventListener('click', () => this.cancelarTodo());
-        
+       
         document.getElementById('recargo').addEventListener('input', () => this.calcularTotales());
+       
+        console.log('✅ Event listeners configurados');
     }
 
     buscarProductos() {
         const query = document.getElementById('productoInput').value.toLowerCase();
         const datalist = document.getElementById('productosLista');
         datalist.innerHTML = '';
-        
+       
         if (query.length < 2) return;
-        
-        const resultados = Object.entries(this.catalogo).filter(([id, producto]) => 
+       
+        const resultados = Object.entries(this.catalogo).filter(([id, producto]) =>
             producto.nombre.toLowerCase().includes(query) ||
             (producto.codigo_barras && producto.codigo_barras.toString().includes(query))
         ).slice(0, 10);
-        
+       
         resultados.forEach(([id, producto]) => {
             const option = document.createElement('option');
             option.value = producto.nombre;
@@ -45,7 +50,7 @@ class GestorVenta {
         const nombre = document.getElementById("productoInput").value.trim();
         if (!nombre) return;
 
-        const productoEntry = Object.entries(this.catalogo).find(([id, producto]) => 
+        const productoEntry = Object.entries(this.catalogo).find(([id, producto]) =>
             producto.nombre.toLowerCase() === nombre.toLowerCase()
         );
 
@@ -57,7 +62,7 @@ class GestorVenta {
         const [productoId, producto] = productoEntry;
         const tablaBody = document.getElementById("tablaBody");
 
-        let filaExistente = Array.from(tablaBody.querySelectorAll("tr")).find(r => 
+        let filaExistente = Array.from(tablaBody.querySelectorAll("tr")).find(r =>
             r.getAttribute('data-producto-id') === productoId
         );
 
@@ -74,12 +79,12 @@ class GestorVenta {
     incrementarCantidad(fila, producto) {
         let qtyCell = fila.querySelector(".qty-value");
         let qty = Number(qtyCell.textContent);
-        
+       
         if (qty >= producto.stock) {
             alert("❌ No hay suficiente stock disponible.");
             return;
         }
-        
+       
         qty++;
         qtyCell.textContent = qty;
     }
@@ -99,11 +104,11 @@ class GestorVenta {
             <td class="price">$${producto.precio.toFixed(2)}</td>
             <td class="line-total">$${producto.precio.toFixed(2)}</td>
         `;
-        
+       
         const botones = nuevaFila.querySelectorAll('.qty-btn');
         botones[0].addEventListener('click', () => this.modificarCantidad(nuevaFila, -1));
         botones[1].addEventListener('click', () => this.modificarCantidad(nuevaFila, 1));
-        
+       
         tablaBody.appendChild(nuevaFila);
     }
 
@@ -112,9 +117,9 @@ class GestorVenta {
         const producto = this.catalogo[productoId];
         const qtyElement = fila.querySelector('.qty-value');
         let cantidad = parseInt(qtyElement.textContent);
-        
+       
         cantidad += cambio;
-        
+       
         if (cantidad < 1) {
             fila.remove();
         } else {
@@ -124,14 +129,14 @@ class GestorVenta {
             }
             qtyElement.textContent = cantidad;
         }
-        
+       
         this.calcularTotales();
     }
 
     calcularTotales() {
         const rows = document.querySelectorAll('#tablaBody tr');
         let subtotal = 0;
-        
+       
         rows.forEach(r => {
             const productoId = r.getAttribute('data-producto-id');
             const producto = this.catalogo[productoId];
@@ -141,10 +146,10 @@ class GestorVenta {
             subtotal += line;
             r.querySelector('.line-total').textContent = "$" + line.toFixed(2);
         });
-        
+       
         const recargo = Number(document.getElementById('recargo').value) || 0;
         const total = subtotal + recargo;
-        
+       
         document.getElementById('subtotal').value = "$" + subtotal.toFixed(2);
         document.getElementById('total').value = "$" + total.toFixed(2);
     }
@@ -161,9 +166,9 @@ class GestorVenta {
                 const btnX = document.createElement("button");
                 btnX.textContent = "❌";
                 btnX.className = "btn-x btn btn-sm btn-danger ms-2";
-                btnX.onclick = () => { 
-                    fila.remove(); 
-                    this.calcularTotales(); 
+                btnX.onclick = () => {
+                    fila.remove();
+                    this.calcularTotales();
                 };
                 fila.querySelector(".nombre").appendChild(btnX);
             }
@@ -171,13 +176,14 @@ class GestorVenta {
     }
 
     async procesarVenta() {
+        console.log('💾 Procesando venta...');
         const filas = document.querySelectorAll('#tablaBody tr');
-        
+       
         if (filas.length === 0) {
             alert("❌ No hay productos en la venta.");
             return;
         }
-        
+       
         const items = Array.from(filas).map(fila => {
             const productoId = fila.getAttribute('data-producto-id');
             const cantidad = parseInt(fila.querySelector('.qty-value').textContent);
@@ -186,10 +192,10 @@ class GestorVenta {
                 cantidad: cantidad
             };
         });
-        
+       
         const recargo = Number(document.getElementById('recargo').value) || 0;
         const metodo_pago = document.getElementById('metodoPago').value;
-        
+       
         try {
             const response = await fetch(procesarVentaUrl, {
                 method: 'POST',
@@ -203,9 +209,9 @@ class GestorVenta {
                     metodo_pago: metodo_pago
                 })
             });
-            
+           
             const result = await response.json();
-            
+           
             if (result.success) {
                 alert(`✅ Venta registrada exitosamente\nN° Venta: ${result.venta_id}\nTotal: $${result.total.toFixed(2)}`);
                 this.cancelarTodo();
@@ -229,6 +235,9 @@ class GestorVenta {
     }
 }
 
+// Inicializar GestorVenta globalmente
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Inicializando GestorVenta...');
     window.gestorVenta = new GestorVenta();
+    console.log('✅ GestorVenta inicializado globalmente');
 });

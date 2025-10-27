@@ -61,7 +61,7 @@
           <option value="TARJETA CREDITO">TARJETA CRÉDITO</option>
           <option value="TRANSFERENCIA">TRANSFERENCIA</option>
         </select>
-
+       
         <div class="label mt-3"><span class="pill">Fecha</span></div>
         <input type="date" class="inpt" id="fechaVenta" value="{{ today|date:'Y-m-d' }}">
 
@@ -75,8 +75,7 @@
         <div class="actions mt-3">
           <button class="btn-green" id="btnEmitirTicket">Emitir Ticket</button>
           <button class="btn-orange" id="btnActivarEliminar">Eliminar</button>
-          <button class="btn-green" id="btnProcesarVenta">Cargar Venta</button>
-          <button class="btn-red" id="btnCancelarTodo">Cancelar</button>
+          <button class="btn-red" id="btnCancelarTodo">Limpiar Lista de Productos</button>
         </div>
 
         <!-- BOTÓN VOLVER -->
@@ -91,38 +90,38 @@
 <!-- Modal para el ticket -->
 <div id="ticketModal" class="modal-overlay" style="display: none;">
   <div class="modal-content">
-    <span class="close-modal" id="btnCerrarTicket">×</span>
+   
     <div class="receipt-header">
       <h3>COMESTIBLES LA MERCED</h3>
       <p>{{ sucursal.nombresucursal|upper }}</p>
       <p>VENTA #<span id="numeroVenta">0000</span></p>
       <p id="fechaTicket">{{ today|date:"l, F d, Y"|upper }}</p>
     </div>
-    
+   
     <div class="receipt-divider"></div>
-    
+   
     <div class="receipt-line">
       <span>CANT</span>
       <span>PRODUCTO</span>
       <span>TOTAL</span>
     </div>
-    
+   
     <div id="ticketItems">
       <!-- Los productos se insertarán aquí -->
     </div>
-    
+   
     <div class="receipt-divider"></div>
-    
+   
     <div class="receipt-line">
       <span>SUBTOTAL:</span>
       <span id="subtotalTicket">$0</span>
     </div>
-    
+   
     <div class="receipt-line">
       <span>RECARGO:</span>
       <span id="recargoTicket">$0</span>
     </div>
-    
+   
     <div class="receipt-line">
       <span>TOTAL:</span>
       <span id="totalTicket">$0</span>
@@ -132,11 +131,26 @@
       <span>MÉTODO PAGO:</span>
       <span id="metodoPagoTicket">EFECTIVO</span>
     </div>
-    
+   
     <div class="receipt-divider"></div>
-    
+   
     <p style="text-align: center;">¡GRACIAS POR SU COMPRA!</p>
     <p style="text-align: center;">Comestibles la Merced</p>
+    <div class="ticket-actions" style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+      <button class="btn-green" onclick="confirmarImpresion()">🖨️ Imprimir</button>
+      <button class="btn-red" onclick="cerrarTicket()">❌ Cancelar</button>
+    </div>
+  </div>
+</div>
+<!-- Modal de confirmación NUEVO -->
+<div id="confirmModal" class="modal-overlay" style="display: none;">
+  <div class="modal-content">
+    <h3>Confirmación de venta</h3>
+    <p>¿Estás seguro?</p>
+    <div class="modal-actions" style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+      <button class="btn-red" onclick="cerrarConfirmacion()">Cancelar</button>
+      <button class="btn-green" onclick="procesarVentaDesdeTicket()">Aceptar</button>
+    </div>
   </div>
 </div>
 
@@ -148,8 +162,8 @@
   const procesarVentaUrl = '{% url "ventas:procesar_venta" %}';
 </script>
 
-<script src="{% static 'JS/venta/registrar_venta.js' %}"></script>
-<script src="{% static 'JS/venta/ticket.js' %}"></script>
+<script src="{% static 'JS/ticket.js' %}"></script>
+<script src="{% static 'JS/ventas.js' %}"></script>
 
 </body>
 </html>
