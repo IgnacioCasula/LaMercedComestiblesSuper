@@ -35,8 +35,28 @@
         </div>
       </div>
       <div class="EstadoDetalles">
-        <p id="EstadoMensaje">(Texto con info de faltante o sobrante)</p>
-        <div class="UltimaOperacion" id="UltimaOperacion">🕒 Ultimo cierre: (99:99) - (NombreUsuario)</div>
+        {% if ultimo_cierre %}
+          {% if ultimo_cierre.diferencia == '0.00' %}
+            <p id="EstadoMensaje" class="estado-ok">✅ Último cierre: Sin diferencias</p>
+          {% elif ultimo_cierre.diferencia|floatformat:2 > '0' %}
+            <p id="EstadoMensaje" class="estado-sobrante">⚠ Último cierre: SOBRANTE ${{ ultimo_cierre.diferencia }}</p>
+          {% else %}
+            <p id="EstadoMensaje" class="estado-faltante">⚠ Último cierre: FALTANTE ${{ ultimo_cierre.diferencia|cut:"-" }}</p>
+          {% endif %}
+        {% else %}
+          <p id="EstadoMensaje" class="estado-neutral">Listo para apertura - No hay cajas abiertas</p>
+        {% endif %}
+        
+        <div class="UltimaOperacion" id="UltimaOperacion">
+          {% if ultimo_cierre %}
+            🕒 Último cierre: {{ ultimo_cierre.fecha }} {{ ultimo_cierre.hora }} - {{ ultimo_cierre.usuario }}
+            {% if ultimo_cierre.monto_final %}
+              <br>💰 Monto final: ${{ ultimo_cierre.monto_final|floatformat:2 }}
+            {% endif %}
+          {% else %}
+            🕒 No hay registros de cierres recientes
+          {% endif %}
+        </div>
       </div>
     </div>
 
@@ -63,8 +83,9 @@
           {{ form.observacionapertura }}
         </div>
 
-        <div class="boton1">
-          <button type="submit" id="boton-apertura" class="boton boton-primario">🚀 Registrar Apertura</button>
+        <div class="boton1" style="display: flex; gap: 10px;">
+            <a href="{% url 'inicio' %}" class="boton boton-secundario"> Cancelar</a>
+            <button type="submit" id="boton-apertura" class="boton boton-primario"> Registrar Apertura</button>
         </div>
       </div>
     </form>
