@@ -11,11 +11,13 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--usuario', default='admin')
         parser.add_argument('--apellido', default='admin')
-        parser.add_argument('--email', default='admin@local')
+        parser.add_argument('--email', default='admin@gmail.com')
         parser.add_argument('--password', default='admin123')
         parser.add_argument('--dni', type=int, default=99999999)
+        parser.add_argument('--telefono', default='3875551234', help='Número de teléfono del usuario')
         parser.add_argument('--area', default='Administración')
         parser.add_argument('--rol', default='Administrador')
+        parser.add_argument('--sueldo', type=float, default=None, help='Sueldo del empleado (si no se especifica, se extrae del rol)')
         parser.add_argument('--hora-inicio', default='09:00', help='Hora de inicio del horario (formato HH:MM)')
         parser.add_argument('--hora-fin', default='18:00', help='Hora de fin del horario (formato HH:MM)')
         parser.add_argument('--dias', default='0,1,2,3,4', help='Días de la semana (0=Lun, 6=Dom). Ej: 0,1,2,3,4 para Lun-Vie')
@@ -26,8 +28,10 @@ class Command(BaseCommand):
         email = options['email']
         password = options['password']
         dni = options['dni']
+        telefono = options['telefono']
         area = options['area']
         rol_nombre = options['rol']
+        sueldo_manual = options['sueldo']
 
         # Crear/obtener usuario
         usuario = Usuarios.objects.filter(nombreusuario=nombreusuario).first()
@@ -45,6 +49,7 @@ class Command(BaseCommand):
                 passwordusuario=password,
                 fecharegistrousuario=timezone.now().date(),
                 dniusuario=dni_candidato,
+                telefono=telefono,
             )
             usuario.save()
             self.stdout.write(self.style.SUCCESS(f'Usuario creado: {usuario.nombreusuario}'))
@@ -65,12 +70,38 @@ class Command(BaseCommand):
         else:
             self.stdout.write(self.style.WARNING('El usuario ya tiene ese rol.'))
 
-        # CREAR EL EMPLEADO (esto debe estar DENTRO del método handle)
+        # EXTRAER SALARIO DEL PUESTO O USAR EL MANUAL
+        salario_empleado = 0
+        
+        if sueldo_manual is not None:
+            # Si se especificó un sueldo manual, usar ese
+            salario_empleado = sueldo_manual
+            self.stdout.write(self.style.SUCCESS(f'💰 Usando sueldo manual: ${salario_empleado:,.2f}'))
+        else:
+            # Intentar extraer el salario de la descripción del rol
+            if rol.descripcionrol and 'Salario: $' in rol.descripcionrol:
+                try:
+                    salario_str = rol.descripcionrol.split('Salario: $')[1]
+                    if '|' in salario_str:
+                        salario_str = salario_str.split('|')[0].strip()
+                    else:
+                        salario_str = salario_str.strip()
+                    salario_str = salario_str.replace(',', '').replace(' ', '')
+                    salario_empleado = float(salario_str)
+                    self.stdout.write(self.style.SUCCESS(f'💰 Sueldo extraído del rol: ${salario_empleado:,.2f}'))
+                except (ValueError, IndexError, AttributeError) as e:
+                    self.stdout.write(self.style.WARNING(f'⚠️  No se pudo extraer el salario del rol: {e}'))
+                    salario_empleado = 0
+            else:
+                self.stdout.write(self.style.WARNING('⚠️  El rol no tiene salario definido en su descripción'))
+                salario_empleado = 0
+
+        # CREAR EL EMPLEADO con el salario correcto
         empleado, created = Empleados.objects.get_or_create(
             idusuarios=usuario,
             defaults={
                 'cargoempleado': rol_nombre,
-                'salarioempleado': 0,
+                'salarioempleado': salario_empleado,
                 'fechacontratado': timezone.now().date(),
                 'estado': 'Trabajando'
             }
@@ -78,11 +109,17 @@ class Command(BaseCommand):
 
         if created:
             self.stdout.write(self.style.SUCCESS(f'✅ Empleado creado exitosamente para {usuario.nombreusuario}'))
+            self.stdout.write(self.style.SUCCESS(f'   Salario asignado: ${salario_empleado:,.2f}'))
         else:
-            self.stdout.write(self.style.WARNING('⚠️  El empleado ya existía'))
+            # Si ya existía, actualizar el salario si es diferente
+            if empleado.salarioempleado != salario_empleado and salario_empleado > 0:
+                empleado.salarioempleado = salario_empleado
+                empleado.save()
+                self.stdout.write(self.style.SUCCESS(f'✅ Salario actualizado a: ${salario_empleado:,.2f}'))
+            else:
+                self.stdout.write(self.style.WARNING('⚠️  El empleado ya existía'))
 
         # CREAR HORARIOS PARA EL EMPLEADO
-        # Verificar si ya tiene horarios
         horarios_existentes = Horario.objects.filter(empleado=empleado).count()
         
         if horarios_existentes == 0:
@@ -113,6 +150,8 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f'Usuario: {nombreusuario}'))
         self.stdout.write(self.style.SUCCESS(f'Contraseña: {password}'))
         self.stdout.write(self.style.SUCCESS(f'Email: {email}'))
+        self.stdout.write(self.style.SUCCESS(f'Teléfono: {telefono}'))
         self.stdout.write(self.style.SUCCESS(f'Rol: {area} - {rol_nombre}'))
+        self.stdout.write(self.style.SUCCESS(f'Salario: ${salario_empleado:,.2f}'))
         self.stdout.write(self.style.SUCCESS(f'Horario: Lunes a Viernes, 9:00 - 18:00'))
         self.stdout.write(self.style.SUCCESS('=' * 50))
