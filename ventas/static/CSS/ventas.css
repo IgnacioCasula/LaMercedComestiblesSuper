@@ -1,18 +1,22 @@
-:root{
-    --bg:#2a2a2a;        
+:root{       
     --panel:#1b1b1b;    
     --panel-2:#202020;  
     --ink:#e6e6e6;      
     --line:#3a3a3a;      
     --pill:#3b3b3b;      
-    --pill-hi:#4a4a4a;  
+    --pill-hi:#4a4a4a; 
 }
 
-body{
-    background:#2f2f2f;
-    color:var(--ink);
-    font-family:system-ui, Arial, sans-serif;
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
 }
+
+
 
 .frame{
     background:var(--panel);
@@ -34,7 +38,7 @@ body{
 }
 
 .btn-purple{
-    background:#6f42c1;
+    background:#565656;
     color:#fff;
     border:none;
     border-radius:10px;
@@ -44,7 +48,7 @@ body{
     padding: 8px 16px;
 }
 .btn-purple:hover{
-    background:#5b35a1;
+    background:#919191;
     color:#fff;
 }
 
@@ -150,7 +154,7 @@ table.sheet tbody tr:hover td{ background:#1e1e1e; }
 }
 
 .btn-green{
-    background:#36d46f;
+    background:#3ac46d;
     border:none;
     border-radius:999px;
     padding:8px 18px;
