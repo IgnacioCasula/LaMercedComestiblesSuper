@@ -5,7 +5,7 @@ from django.db import transaction
 from django.utils import timezone
 from django.contrib import messages
 import json
-from caja.models import Caja, Productos, Ventas, DetalleDeVentas, Inventarios, Ofertas
+from caja.models import Caja, Productos, Ventas, Movimientosdecaja, DetalleDeVentas, Inventarios, Ofertas
 from .forms import VentaForm, RecargoForm
 
 def registrar_venta(request):
@@ -203,6 +203,34 @@ def procesar_venta(request):
                 venta.totalventa = total_venta
                 venta.save()
                
+
+                # ✅ NUEVO: REGISTRAR MOVIMIENTO DE CAJA
+                try:
+                    # Obtener el último saldo de la caja
+                    ultimo_movimiento = Movimientosdecaja.objects.filter(
+                        idcaja=caja_activa
+                    ).order_by('-idmovcaja').first()
+                    
+                    saldo_actual = ultimo_movimiento.saldomovcaja if ultimo_movimiento else caja_activa.montoinicialcaja
+                    nuevo_saldo = saldo_actual + total_venta
+
+                    Movimientosdecaja.objects.create(
+                        nombreusuariomovcaja=request.session.get('nombre_usuario', 'Usuario'),
+                        fechamovcaja=timezone.now().date(),
+                        horamovcaja=timezone.now().time(),
+                        nombrecajamovcaja=caja_activa.nombrecaja,
+                        tipomovcaja='VENTA',
+                        conceptomovcaja=f'Venta #{venta.idventa} - {data.get("metodo_pago", "EFECTIVO")}',
+                        valormovcaja=total_venta,
+                        saldomovcaja=nuevo_saldo,
+                        idusuarios_id=request.session.get('usuario_id'),
+                        idcaja=caja_activa
+                    )
+                except Exception as e:
+                    print(f"Error registrando movimiento de caja: {e}")
+                    # No interrumpir la venta por error en el movimiento
+
+
                 return JsonResponse({
                     'success': True,
                     'venta_id': venta.idventa,
