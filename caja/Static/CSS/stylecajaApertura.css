@@ -310,3 +310,22 @@ textarea {
     animation: pulse 2s infinite;
 }
 
+
+
+.movimientos-caja {
+    background: white;
+    border-radius: 0px;
+    padding: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.movimientos-caja h3 {
+    
+    margin-bottom: 15px;
+    font-size: calc(1.3rem + .6vw);
+}
+
+.table-responsive {
+    max-height: 300px;
+    overflow-y: auto;
+}

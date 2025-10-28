@@ -74,6 +74,48 @@
             </div>
         </div>
     </div>
+
+    <!-- ✅ NUEVO: MOVIMIENTOS DE CAJA -->
+    <div class="movimientos-caja">
+      
+
+        <h3>📋 Movimientos de Caja del Día</h3>
+       
+          <div class="table-responsive">
+              <table class="table table-sm table-striped">
+                  <thead>
+                      <tr>
+                          <th>Hora</th>
+                          <th>Tipo</th>
+                          <th>Concepto</th>
+                          <th>Valor</th>
+                          <th>Saldo</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      {% for mov in movimientos_caja %}
+                      <tr>
+                          <td>{{ mov.horamovcaja|time:"H:i" }}</td>
+                          <td>
+                              <span class="badge {% if mov.tipomovcaja == 'VENTA' %}bg-success{% else %}bg-info{% endif %}">
+                                  {{ mov.tipomovcaja }}
+                              </span>
+                          </td>
+                          <td>{{ mov.conceptomovcaja }}</td>
+                          <td>${{ mov.valormovcaja|floatformat:2 }}</td>
+                          <td>${{ mov.saldomovcaja|floatformat:2 }}</td>
+                      </tr>
+                      {% empty %}
+                      <tr>
+                          <td colspan="5" class="text-center">No hay movimientos registrados</td>
+                      </tr>
+                      {% endfor %}
+                  </tbody>
+              </table>
+          </div>
+    </div>
+
+
     <!-- FORM -->
     <form method="post">
       {% csrf_token %}
