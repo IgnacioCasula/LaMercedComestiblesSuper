@@ -39,12 +39,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // ===== VALIDACIONES DE CAMPOS =====
     setupFieldValidations();
     
-    // ===== BOTONES DE ACCIÓN =====
+    // ===== BOTONES DE ACCIÃ“N =====
     const btnCancel = document.getElementById('btn-cancel');
     if (btnCancel) {
         btnCancel.addEventListener('click', () => {
             window.audioSystem.play('select');
-            if (confirm('¿Está seguro de que desea cancelar? Se perderán todos los datos ingresados.')) {
+            if (confirm('Â¿EstÃ¡ seguro de que desea cancelar? Se perderÃ¡n todos los datos ingresados.')) {
                 window.audioSystem.play('negative');
                 window.location.href = document.body.dataset.inicioUrl;
             }
@@ -62,13 +62,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // ===== LÓGICA DE ÁREA Y PUESTO =====
+    // ===== LÃ“GICA DE ÃREA Y PUESTO =====
     setupAreaPuestoLogic();
     
-    // ===== LÓGICA DEL HORARIO =====
+    // ===== LÃ“GICA DEL HORARIO =====
     setupScheduleLogic();
     
-    // ===== ENVÍO FINAL =====
+    // ===== ENVÃO FINAL =====
     setupFinalSubmit();
 
     // ========== FUNCIONES AUXILIARES ==========
@@ -81,16 +81,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const emailInput = document.getElementById('email');
         const codPaisInput = document.getElementById('cod_pais');
         const fechaNacimientoInput = document.getElementById('fecha_nacimiento');
-
+    
         function allowOnlyLetters(event) {
             const oldValue = event.target.value;
-            event.target.value = event.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
+            event.target.value = event.target.value.replace(/[^a-zA-ZÃ¡Ã©Ã­Ã³ÃºÃÃ‰ÃÃ“ÃšÃ±Ã‘\s]/g, '');
             if (oldValue !== event.target.value) window.audioSystem.play('negative');
         }
         
         if (nombreInput) nombreInput.addEventListener('input', allowOnlyLetters);
         if (apellidoInput) apellidoInput.addEventListener('input', allowOnlyLetters);
-
+    
         function allowOnlyNumbers(event) {
             const oldValue = event.target.value;
             event.target.value = event.target.value.replace(/\D/g, '');
@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (dniInput) dniInput.addEventListener('input', allowOnlyNumbers);
         if (telefonoInput) telefonoInput.addEventListener('input', allowOnlyNumbers);
-
+    
         if (codPaisInput) {
             codPaisInput.addEventListener('input', (event) => {
                 let value = event.target.value;
@@ -146,14 +146,49 @@ document.addEventListener('DOMContentLoaded', function() {
                     const date = new Date(year, month - 1, day);
                     if (date.getDate() !== day || date.getMonth() !== month - 1 || date.getFullYear() !== year) {
                         window.audioSystem.play('error');
-                        alert('Fecha inválida. Por favor ingrese una fecha válida.');
+                        alert('Fecha invÃ¡lida. Por favor ingrese una fecha vÃ¡lida.');
                         e.target.value = '';
                     }
                 }
             });
         }
-
+    
+        // ===== AUTOCOMPLETADO DE @GMAIL.COM =====
         if (emailInput) {
+            emailInput.addEventListener('keydown', (event) => {
+                const value = event.target.value;
+                
+                // Si presiona @ y no hay otro @ en el email
+                if (event.key === '@' && !value.includes('@')) {
+                    event.preventDefault();
+                    event.target.value = value + '@gmail.com';
+                    // Posicionar el cursor antes de @gmail.com
+                    const cursorPos = value.length;
+                    event.target.setSelectionRange(cursorPos, cursorPos);
+                    window.audioSystem.play('positive');
+                }
+            });
+            
+            emailInput.addEventListener('input', (event) => {
+                let value = event.target.value;
+                
+                // Si el usuario escribe @ y no hay nada despuÃ©s o estÃ¡ incompleto
+                if (value.includes('@') && !value.includes('@gmail.com')) {
+                    const atIndex = value.indexOf('@');
+                    const beforeAt = value.substring(0, atIndex);
+                    const afterAt = value.substring(atIndex + 1);
+                    
+                    // Si despuÃ©s del @ no hay nada o es el inicio de "gmail.com"
+                    if (afterAt === '' || 'gmail.com'.startsWith(afterAt.toLowerCase())) {
+                        event.target.value = beforeAt + '@gmail.com';
+                        // Posicionar el cursor antes de @gmail.com
+                        event.target.setSelectionRange(beforeAt.length, beforeAt.length);
+                        window.audioSystem.play('positive');
+                    }
+                }
+            });
+    
+            // TambiÃ©n mantener la funcionalidad original en el blur
             emailInput.addEventListener('blur', (event) => {
                 let emailValue = event.target.value.trim();
                 if (emailValue && !emailValue.includes('@')) {
@@ -163,7 +198,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     }
-
+    
     function setupAreaPuestoLogic() {
         const btnArea = document.getElementById('btn-area');
         const btnPuesto = document.getElementById('btn-puesto');
@@ -179,7 +214,7 @@ document.addEventListener('DOMContentLoaded', function() {
         btnArea.addEventListener('click', () => {
             window.audioSystem.play('select');
             currentMode = 'area';
-            seleccionarTitulo.textContent = 'Seleccionar Área';
+            seleccionarTitulo.textContent = 'Seleccionar Ãrea';
             searchInput.value = '';
             cargarAreas();
             modalSeleccionar.style.display = 'flex';
@@ -188,7 +223,7 @@ document.addEventListener('DOMContentLoaded', function() {
         btnPuesto.addEventListener('click', () => {
             if (!selectedArea) {
                 window.audioSystem.play('error');
-                alert('Primero debes seleccionar un área');
+                alert('Primero debes seleccionar un Ã¡rea');
                 return;
             }
             window.audioSystem.play('select');
@@ -248,7 +283,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     resultsList.appendChild(li);
                 });
             } catch (error) {
-                console.error("Error al cargar áreas:", error);
+                console.error("Error al cargar Ã¡reas:", error);
                 window.audioSystem.play('error');
                 resultsList.innerHTML = '<li>Error al cargar datos</li>';
             }
@@ -264,7 +299,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 resultsList.innerHTML = '';
                 if (filtered.length === 0) {
-                    resultsList.innerHTML = '<li>No hay puestos en esta área</li>';
+                    resultsList.innerHTML = '<li>No hay puestos en esta Ã¡rea</li>';
                     return;
                 }
                 
@@ -482,7 +517,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const addBtn = document.createElement('button');
             addBtn.type = 'button';
             addBtn.className = 'add-btn';
-            addBtn.innerHTML = `<img src="${document.body.dataset.addIconUrl}" alt="Añadir Semana">`;
+            addBtn.innerHTML = `<img src="${document.body.dataset.addIconUrl}" alt="AÃ±adir Semana">`;
             addBtn.addEventListener('mouseenter', () => window.audioSystem.play('hover'));
             addBtn.addEventListener('click', addWeek);
             actionsDiv.appendChild(addBtn);
@@ -592,7 +627,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const addTimeSlotBtn = document.createElement('button');
                     addTimeSlotBtn.type = 'button';
                     addTimeSlotBtn.className = 'add-btn';
-                    addTimeSlotBtn.innerHTML = `<img src="${document.body.dataset.addIconUrl}" alt="Añadir horario">`;
+                    addTimeSlotBtn.innerHTML = `<img src="${document.body.dataset.addIconUrl}" alt="AÃ±adir horario">`;
                     addTimeSlotBtn.addEventListener('mouseenter', () => window.audioSystem.play('hover'));
                     addTimeSlotBtn.onclick = () => { 
                         window.audioSystem.play('positive');
@@ -634,14 +669,14 @@ document.addEventListener('DOMContentLoaded', function() {
     function setupFinalSubmit() {
         const btnListo = document.getElementById('btn-listo');
         if (!btnListo) return;
-
+    
         const toBase64 = file => new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onload = () => resolve(reader.result);
             reader.onerror = error => reject(error);
         });
-
+    
         btnListo.addEventListener('click', async () => {
             window.audioSystem.play('select');
             
@@ -654,7 +689,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.error('Error al procesar foto:', error);
                 }
             }
-
+    
             const data = {
                 personal: {
                     nombre: document.getElementById('nombre')?.value.trim() || '',
@@ -671,7 +706,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 puesto: selectedPuesto,
                 horario: { scheduleData: scheduleData, dayColorMap: dayColorMap }
             };
-
+    
+            // Validaciones bÃ¡sicas
             if (!data.personal.nombre || !data.personal.apellido || !data.personal.email || !data.personal.dni) {
                 window.audioSystem.play('error');
                 alert('Por favor, completa los campos obligatorios: Nombre, Apellido, DNI y Email.');
@@ -679,13 +715,46 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             if (!data.area || !data.puesto) {
                 window.audioSystem.play('error');
-                alert('Por favor, selecciona un Área y un Puesto para el empleado.');
+                alert('Por favor, selecciona un Ãrea y un Puesto para el empleado.');
+                return;
+            }
+            
+            // ===== VALIDACIÃ“N DE HORARIO =====
+            if (Object.keys(dayColorMap).length === 0) {
+                window.audioSystem.play('error');
+                alert('Por favor, asigna al menos un dÃ­a de trabajo para el empleado.');
+                return;
+            }
+            
+            let horarioIncompleto = false;
+            for (const color in scheduleData) {
+                const tramos = scheduleData[color];
+                for (const tramo of tramos) {
+                    if (!tramo.start || !tramo.end) {
+                        horarioIncompleto = true;
+                        break;
+                    }
+                }
+                if (horarioIncompleto) break;
+            }
+            
+            if (horarioIncompleto) {
+                window.audioSystem.play('error');
+                alert('Por favor, completa todos los horarios de entrada y salida para los dÃ­as asignados.');
+                return;
+            }
+            
+            // ===== MODAL DE CONFIRMACIÃ“N =====
+            const confirmar = await mostrarModalConfirmacion(data);
+            
+            if (!confirmar) {
+                window.audioSystem.play('select');
                 return;
             }
             
             btnListo.disabled = true;
             btnListo.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
-
+    
             try {
                 const response = await fetch(document.body.dataset.apiRegistrarEmpleadoUrl, {
                     method: 'POST',
@@ -709,13 +778,118 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (error) {
                 console.error('Error al enviar el formulario:', error);
                 window.audioSystem.play('error');
-                alert('Ocurrió un error de red. Inténtalo de nuevo.');
+                alert('OcurriÃ³ un error de red. IntÃ©ntalo de nuevo.');
                 btnListo.disabled = false;
                 btnListo.innerHTML = '<i class="fas fa-check"></i> Listo';
             }
         });
     }
-
+    
+    function mostrarModalConfirmacion(data) {
+        return new Promise((resolve) => {
+            const totalDias = Object.keys(dayColorMap).length;
+            
+            const modalHTML = `
+                <div id="modal-confirmacion-empleado" class="modal-confirmacion-overlay">
+                    <div class="modal-confirmacion-content">
+                        <div class="modal-confirmacion-header">
+                            <i class="fas fa-user-check"></i>
+                            <h2>Confirmar CreaciÃ³n de Empleado</h2>
+                        </div>
+                        <div class="modal-confirmacion-body">
+                            <p class="modal-confirmacion-pregunta">
+                                Â¿EstÃ¡s seguro de que deseas crear este empleado con los siguientes datos?
+                            </p>
+                            <div class="modal-confirmacion-datos">
+                                <div class="dato-item">
+                                    <i class="fas fa-user"></i>
+                                    <span><strong>Nombre:</strong> ${data.personal.nombre} ${data.personal.apellido}</span>
+                                </div>
+                                <div class="dato-item">
+                                    <i class="fas fa-id-card"></i>
+                                    <span><strong>DNI:</strong> ${data.personal.dni}</span>
+                                </div>
+                                <div class="dato-item">
+                                    <i class="fas fa-envelope"></i>
+                                    <span><strong>Email:</strong> ${data.personal.email}</span>
+                                </div>
+                                <div class="dato-item">
+                                    <i class="fas fa-briefcase"></i>
+                                    <span><strong>Ãrea:</strong> ${data.area?.nombre || 'N/A'}</span>
+                                </div>
+                                <div class="dato-item">
+                                    <i class="fas fa-user-tag"></i>
+                                    <span><strong>Puesto:</strong> ${data.puesto?.nombre || 'N/A'}</span>
+                                </div>
+                                <div class="dato-item">
+                                    <i class="fas fa-calendar-check"></i>
+                                    <span><strong>DÃ­as laborales:</strong> ${totalDias} dÃ­a(s) asignado(s)</span>
+                                </div>
+                            </div>
+                            <p class="modal-confirmacion-nota">
+                                <i class="fas fa-info-circle"></i>
+                                Se enviarÃ¡ un correo con las credenciales de acceso al email proporcionado.
+                            </p>
+                        </div>
+                        <div class="modal-confirmacion-actions">
+                            <button class="btn-modal-confirmacion btn-cancelar" id="btn-confirmar-cancelar">
+                                <i class="fas fa-times"></i> Cancelar
+                            </button>
+                            <button class="btn-modal-confirmacion btn-confirmar" id="btn-confirmar-si">
+                                <i class="fas fa-check"></i> SÃ­, estoy seguro
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            
+            const modal = document.getElementById('modal-confirmacion-empleado');
+            const btnCancelar = document.getElementById('btn-confirmar-cancelar');
+            const btnConfirmar = document.getElementById('btn-confirmar-si');
+            
+            if (window.audioSystem) window.audioSystem.play('positive');
+            
+            setTimeout(() => {
+                modal.classList.add('show');
+            }, 10);
+            
+            btnCancelar.addEventListener('mouseenter', () => {
+                if (window.audioSystem) window.audioSystem.play('hover');
+            });
+            
+            btnConfirmar.addEventListener('mouseenter', () => {
+                if (window.audioSystem) window.audioSystem.play('hover');
+            });
+            
+            btnCancelar.addEventListener('click', () => {
+                if (window.audioSystem) window.audioSystem.play('negative');
+                cerrarModal(modal, false, resolve);
+            });
+            
+            btnConfirmar.addEventListener('click', () => {
+                if (window.audioSystem) window.audioSystem.play('positive');
+                cerrarModal(modal, true, resolve);
+            });
+            
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    if (window.audioSystem) window.audioSystem.play('select');
+                    cerrarModal(modal, false, resolve);
+                }
+            });
+        });
+    }
+    
+    function cerrarModal(modal, resultado, resolve) {
+        modal.classList.remove('show');
+        setTimeout(() => {
+            modal.remove();
+            resolve(resultado);
+        }, 300);
+    }
+    
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {

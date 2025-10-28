@@ -299,54 +299,91 @@ def inicio_view(request: HttpRequest) -> HttpResponse:
         messages.error(request, 'Acceso denegado. Por favor, inicia sesión.')
         return redirect('login')
     
-    # NUEVA VALIDACIÓN: Verificar estado del empleado en tiempo real
+    # VALIDACIÓN: Verificar estado del empleado en tiempo real
     try:
         empleado = Empleados.objects.get(idusuarios=usuario)
         
         if empleado.estado == 'Suspendido':
-            # Cerrar la sesión
             request.session.flush()
             messages.error(request, 'Tu cuenta ha sido suspendida. Contacta con Recursos Humanos.')
             return redirect('login')
         elif empleado.estado == 'Despedido':
-            # Cerrar la sesión
             request.session.flush()
             messages.error(request, 'Tu cuenta ha sido desactivada. Contacta con Recursos Humanos.')
             return redirect('login')
             
     except Empleados.DoesNotExist:
-        # Si no es empleado, continuar normalmente (puede ser administrador del sistema)
         pass
     
-    roles_usuario = list(
-        Roles.objects.filter(usuxroles__idusuarios_id=usuario_id).values_list('nombrerol', flat=True)
-    )
+    # Obtener todos los roles del usuario
+    roles_usuario = Roles.objects.filter(usuxroles__idusuarios_id=usuario_id)
     
+    # Determinar si es administrador
+    is_admin = any(
+        'administrador' in rol.nombrerol.lower() or 
+        'recursos humanos' in rol.nombrerol.lower() or
+        'rrhh' in rol.nombrerol.lower()
+        for rol in roles_usuario
+    ) or roles_usuario.count() > 2
+    
+    # Extraer permisos de todos los roles del usuario
+    permisos_usuario = set()
+    
+    for rol in roles_usuario:
+        nombre_rol_lower = rol.nombrerol.lower()
+        descripcion_rol_lower = (rol.descripcionrol or '').lower()
+        
+        # Permisos basados en el nombre del rol
+        if 'vendedor' in nombre_rol_lower or 'registrar venta' in nombre_rol_lower:
+            permisos_usuario.add('registrar_venta')
+            permisos_usuario.add('caja')
+        
+        if 'caja' in nombre_rol_lower or 'cajero' in nombre_rol_lower:
+            permisos_usuario.add('caja')
+        
+        if 'stock' in nombre_rol_lower or 'inventario' in nombre_rol_lower:
+            permisos_usuario.add('stock')
+        
+        if 'supervisor' in nombre_rol_lower:
+            permisos_usuario.add('asistencias')
+        
+        # Permisos basados en la descripción del rol (donde se guardan desde gestion_areas_puestos)
+        if 'caja' in descripcion_rol_lower:
+            permisos_usuario.add('caja')
+        
+        if 'stock' in descripcion_rol_lower:
+            permisos_usuario.add('stock')
+        
+        if 'crear_empleado' in descripcion_rol_lower or 'crear empleado' in descripcion_rol_lower:
+            permisos_usuario.add('crear_empleado')
+        
+        if 'asistencias' in descripcion_rol_lower:
+            permisos_usuario.add('asistencias')
+        
+        if 'registrar_venta' in descripcion_rol_lower or 'registrar venta' in descripcion_rol_lower:
+            permisos_usuario.add('registrar_venta')
+            permisos_usuario.add('caja')
+    
+    # Si es admin, tiene todos los permisos
+    if is_admin:
+        has_caja = True
+        has_registrar_venta = True
+        has_gestion_stock = True
+    else:
+        has_caja = 'caja' in permisos_usuario
+        has_registrar_venta = 'registrar_venta' in permisos_usuario or 'caja' in permisos_usuario
+        has_gestion_stock = 'stock' in permisos_usuario
+    
+    # Verificar estado de la caja
+    caja_abierta = _get_caja_abierta(usuario_id)
+    
+    # Obtener nombre del rol actual
     rol_actual = None
     if rol_id:
         rol_obj = Roles.objects.filter(idroles=rol_id).first()
         if rol_obj:
             rol_actual = rol_obj.nombrerol
     
-    # Determinar permisos
-    is_admin = 'Administrador' in roles_usuario or 'Recursos Humanos' in roles_usuario or len(roles_usuario) > 2
-    
-    # Permisos
-    has_caja = False
-    has_registrar_venta = False
-    has_gestion_stock = False
-    
-    if is_admin:
-        has_caja = True
-        has_registrar_venta = True
-        has_gestion_stock = True
-    else:
-        has_registrar_venta = 'Vendedor' in roles_usuario or 'Registrar Venta' in roles_usuario
-        has_caja = has_registrar_venta or 'Supervisor de Caja' in roles_usuario or 'Caja' in roles_usuario
-        has_gestion_stock = 'Gestor de Inventario' in roles_usuario or 'Gestión de Stock' in roles_usuario or 'Stock' in roles_usuario
-
-    caja_abierta = _get_caja_abierta(usuario_id)
-
     context = {
         'nombre_usuario': nombre_usuario,
         'rol_nombre': rol_actual,
@@ -355,7 +392,8 @@ def inicio_view(request: HttpRequest) -> HttpResponse:
         'has_registrar_venta': has_registrar_venta,
         'has_gestion_stock': has_gestion_stock,
         'caja_abierta': caja_abierta,
-        'debug_roles': roles_usuario,
+        'debug_roles': list(roles_usuario.values_list('nombrerol', flat=True)),
+        'debug_permisos': list(permisos_usuario),  # Para debugging
     }
     return render(request, 'HTML/inicio.html', context)
 
