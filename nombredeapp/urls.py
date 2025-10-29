@@ -12,6 +12,11 @@ urlpatterns = [
     path('seleccionar-rol/', views.seleccionar_rol_view, name='seleccionar_rol'),
     path('logout/', views.logout_view, name='logout'),
     
+    # Rutas para registro de asistencias
+    path('api/registrar-entrada/', views.registrar_entrada, name='registrar_entrada'),
+    path('api/registrar-salida/', views.registrar_salida, name='registrar_salida'),
+    path('api/estado-asistencia-hoy/', views.estado_asistencia_hoy, name='estado_asistencia_hoy'),
+
     # Rutas principales
     path('inicio/', views.inicio_view, name='inicio'),
     
