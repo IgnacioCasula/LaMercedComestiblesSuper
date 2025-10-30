@@ -1,50 +1,62 @@
+# GestionDeStock/forms.py
 from django import forms
-from .models import Product, Category, Supplier, Movement
+# Usamos los modelos de la app 'caja' para evitar duplicados de tablas
+from caja.models import Proveedores as Proveedor, Categorias as Categoria, Productos as Producto
 
-class ProductForm(forms.ModelForm):
+class ProveedorForm(forms.ModelForm):
     class Meta:
-        model = Product
+        model = Proveedor
+        fields = ["nombreproveedor", "telefonoproveedor", "emailprov", "cuitproveedor"]
+        labels = {
+            "nombreproveedor": "Nombre",
+            "telefonoproveedor": "Teléfono",
+            "emailprov": "Email",
+            "cuitproveedor": "CUIT",
+        }
+        widgets = {
+            "nombreproveedor": forms.TextInput(attrs={"class": "form-control"}),
+            "telefonoproveedor": forms.TextInput(attrs={"class": "form-control"}),
+            "emailprov": forms.EmailInput(attrs={"class": "form-control"}),
+            "cuitproveedor": forms.TextInput(attrs={"class": "form-control"}),
+        }
+
+class CategoriaForm(forms.ModelForm):
+    class Meta:
+        model = Categoria
+        fields = ["nombrecategoria", "descripcioncategoria"]
+        labels = {
+            "nombrecategoria": "Nombre",
+            "descripcioncategoria": "Descripción",
+        }
+        widgets = {
+            "nombrecategoria": forms.TextInput(attrs={"class": "form-control"}),
+            "descripcioncategoria": forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
+        }
+
+class ProductoForm(forms.ModelForm):
+    class Meta:
+        model = Producto
         fields = [
-            'code', 'name', 'description', 'category', 'supplier', 
-            'price', 'cost', 'stock', 'min_stock', 'unit', 
-            'location', 'expiration_date', 'active'
+            "nombreproductos",
+            "precioproducto",
+            "marcaproducto",
+            "codigobarraproducto",
+            "imagenproducto",
+            "idcategoria",
         ]
-        widgets = {
-            'description': forms.Textarea(attrs={'rows': 3}),
-            'expiration_date': forms.DateInput(attrs={'type': 'date'}),
+        labels = {
+            "nombreproductos": "Nombre",
+            "precioproducto": "Precio",
+            "marcaproducto": "Marca",
+            "codigobarraproducto": "Código de barras",
+            "imagenproducto": "Imagen",
+            "idcategoria": "Categoría",
         }
-    
-    def clean_code(self):
-        code = self.cleaned_data['code']
-        # Verificar si el código ya existe (excepto para esta instancia)
-        if self.instance and self.instance.pk:
-            if Product.objects.filter(code=code).exclude(pk=self.instance.pk).exists():
-                raise forms.ValidationError("Este código ya existe")
-        else:
-            if Product.objects.filter(code=code).exists():
-                raise forms.ValidationError("Este código ya existe")
-        return code
-
-class CategoryForm(forms.ModelForm):
-    class Meta:
-        model = Category
-        fields = ['name', 'description']
         widgets = {
-            'description': forms.Textarea(attrs={'rows': 3}),
-        }
-
-class SupplierForm(forms.ModelForm):
-    class Meta:
-        model = Supplier
-        fields = ['name', 'contact_person', 'phone', 'email', 'address', 'active']
-        widgets = {
-            'address': forms.Textarea(attrs={'rows': 3}),
-        }
-
-class MovementForm(forms.ModelForm):
-    class Meta:
-        model = Movement
-        fields = ['product', 'quantity', 'notes']
-        widgets = {
-            'notes': forms.Textarea(attrs={'rows': 3}),
+            "nombreproductos": forms.TextInput(attrs={"class": "form-control"}),
+            "precioproducto": forms.NumberInput(attrs={"step": "0.01", "class": "form-control"}),
+            "marcaproducto": forms.TextInput(attrs={"class": "form-control"}),
+            "codigobarraproducto": forms.TextInput(attrs={"class": "form-control"}),
+            "imagenproducto": forms.ClearableFileInput(attrs={"class": "form-control"}),
+            "idcategoria": forms.Select(attrs={"class": "form-control"}),
         }

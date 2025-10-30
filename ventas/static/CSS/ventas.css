@@ -1,19 +1,22 @@
-/* Ruta: LaMercedComestiblesSuper/static/CSS/ventas.css */
-:root{
-    --bg:#2a2a2a;        
+:root{       
     --panel:#1b1b1b;    
     --panel-2:#202020;  
     --ink:#e6e6e6;      
     --line:#3a3a3a;      
     --pill:#3b3b3b;      
-    --pill-hi:#4a4a4a;  
+    --pill-hi:#4a4a4a; 
 }
 
-body{ 
-    background:#2f2f2f; 
-    color:var(--ink); 
-    font-family:system-ui, Arial, sans-serif; 
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
 }
+
+
 
 .frame{
     background:var(--panel);
@@ -34,19 +37,19 @@ body{
     color:#eaeaea;
 }
 
-.btn-purple{ 
-    background:#6f42c1; 
-    color:#fff; 
-    border:none; 
-    border-radius:10px; 
+.btn-purple{
+    background:#565656;
+    color:#fff;
+    border:none;
+    border-radius:10px;
     text-decoration: none;
     display: inline-block;
     text-align: center;
     padding: 8px 16px;
 }
-.btn-purple:hover{ 
-    background:#5b35a1; 
-    color:#fff; 
+.btn-purple:hover{
+    background:#919191;
+    color:#fff;
 }
 
 #ventas .workarea{
@@ -113,68 +116,68 @@ table.sheet tbody tr:hover td{ background:#1e1e1e; }
 }
 
 .inpt{
-    width:100%; 
-    background:#2a2a2a; 
+    width:100%;
+    background:#2a2a2a;
     border:1px solid var(--pill-hi);
-    color:#fff; 
-    border-radius:10px; 
-    padding:8px 10px; 
+    color:#fff;
+    border-radius:10px;
+    padding:8px 10px;
     outline:none;
 }
 
 .inpt:focus{ border-color:#6f42c1; }
 
 .preview{
-    background:#0f0f0f; 
+    background:#0f0f0f;
     border:1px solid var(--line);
-    border-radius:10px; 
-    display:flex; 
-    align-items:center; 
-    justify-content:center; 
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
     height:190px;
     overflow:hidden;
 }
 
-.totbox{ 
-    display:grid; 
-    grid-template-columns: 1fr 140px; 
-    gap:8px; 
-    align-items:center; 
+.totbox{
+    display:grid;
+    grid-template-columns: 1fr 140px;
+    gap:8px;
+    align-items:center;
     margin-bottom: 8px;
 }
 
-.actions{ 
-    display:flex; 
-    gap:10px; 
-    justify-content:flex-end; 
-    flex-wrap:wrap; 
+.actions{
+    display:flex;
+    gap:10px;
+    justify-content:flex-end;
+    flex-wrap:wrap;
 }
 
-.btn-green{ 
-    background:#36d46f; 
-    border:none; 
-    border-radius:999px; 
-    padding:8px 18px; 
-    font-weight:600; 
+.btn-green{
+    background:#3ac46d;
+    border:none;
+    border-radius:999px;
+    padding:8px 18px;
+    font-weight:600;
     color: #000;
 }
 
-.btn-red{ 
-    background:#e34b4b; 
-    border:none; 
-    border-radius:999px; 
-    padding:8px 18px; 
-    font-weight:600; 
+.btn-red{
+    background:#e34b4b;
+    border:none;
+    border-radius:999px;
+    padding:8px 18px;
+    font-weight:600;
     color: #fff;
 }
 
-.btn-orange{ 
-    background:#f39c12; 
-    border:none; 
-    border-radius:999px; 
-    padding:8px 18px; 
-    font-weight:600; 
-    color:#fff; 
+.btn-orange{
+    background:#f39c12;
+    border:none;
+    border-radius:999px;
+    padding:8px 18px;
+    font-weight:600;
+    color:#fff;
 }
 
 /* Estilos para los botones de cantidad */
@@ -263,11 +266,11 @@ table.sheet tbody tr:hover td{ background:#1e1e1e; }
     #ventas .workarea {
         grid-template-columns: 1fr;
     }
-    
+   
     .gridhead {
         grid-template-columns: 80px 1fr 80px 80px;
     }
-    
+   
     .actions {
         justify-content: center;
     }

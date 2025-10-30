@@ -36,7 +36,7 @@
 
       <div class="CierreBoton">
         {% if open_caja %}
-          <button id="boton-cierre" class="botoncierre" data-allowed="true" data-impl="not-implemented">Cierre de Caja</button>
+          <a href="{% url 'caja:cierre_caja' %}" id="boton-cierre" class="botoncierre" data-allowed="true">Cierre de Caja</a>
         {% else %}
           <button id="boton-cierre" class="botoncierre" data-allowed="false" data-message="Debe abrir la caja antes de poder cerrarla.">Cierre de Caja</button>
         {% endif %}
@@ -44,7 +44,7 @@
 
       <div class="VentaBoton">
         {% if open_caja %}
-          <a href="{% url 'ventas:registrar_venta' %}" id="boton-venta" class="botonventa">Registrar Venta</a>
+          <a href="#" id="boton-venta" class="botonventa">Registrar Venta</a>
         {% else %}
           <button id="boton-venta" class="botonventa disabled" onclick="alert('Debe abrir la caja antes de registrar ventas.')">Registrar Venta</button>
         {% endif %}
@@ -53,34 +53,25 @@
 
     <div class="Final">
       <div class="BotonCerrarSesion">
-        <a href="{% url 'cerrar_sesion' %}" id="botoncerrar" class="botoncerrar">Cerrar Sesion</a>
+        <a href="{% url 'logout' %}" id="botoncerrar" class="botoncerrar">Cerrar Sesion</a>
       </div>
     </div>
   </div>
 
   <div id="menu-notification" style="position:fixed; right:20px; bottom:20px; z-index:9999; display:none;"></div>
 
+  {% if messages %}
+    <div id="messages-container" style="position:fixed; top:20px; right:20px; z-index:9999;">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
   <script src="{% static 'JS/menu_caja.js' %}"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <!-- Al final de menucaja.html -->
-<script>
-console.log("=== DEBUG MENU CAJA ===");
-console.log("Open caja:", "{{ open_caja }}");
-console.log("Caja ID:", "{{ open_caja.idcaja }}");
-console.log("Caja Nombre:", "{{ open_caja.nombrecaja }}");
-
-// Verificar el botón de venta
-document.addEventListener('DOMContentLoaded', function() {
-    const botonVenta = document.getElementById('boton-venta');
-    console.log("Botón venta encontrado:", botonVenta);
-    
-    if (botonVenta && botonVenta.tagName === 'A') {
-        console.log("Botón es un enlace activo");
-        console.log("URL:", botonVenta.href);
-    } else if (botonVenta) {
-        console.log("Botón está deshabilitado");
-    }
-});
-</script>
 </body>
 </html>

@@ -18,47 +18,69 @@
         <h1>Hola, {{ nombre_usuario }}</h1>
     </header>
 
+    <div class="quick-actions">
+        <a href="{% url 'asistencias:ver_asistencias' %}" class="action-btn asistencias">
+            <i class="fas fa-clock"></i> Ver asistencias
+        </a>
+        <a href="#" id="logout-btn" class="action-btn logout">
+            <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+        </a>
+    </div>
+
     <main class="main-container">
-        <section class="panel preview-panel">
-            <h2>Vista Previa</h2>
+        {% if is_admin %}
+        <section class="panel admin-panel">
+            <h2>Administración</h2>
             <div class="panel-content">
-                 {% if tiene_permiso_vista_previa %}
-                    <div class="preview-placeholder">
-                        <img src="{% static 'iconos/Trending_up.png' %}" alt="Icono de vista previa" class="preview-icon">
-                        <p>Vista previa</p>
-                        <button class="select-button" disabled>Seleccionar</button>
-                    </div>
-                {% else %}
-                    <div class="preview-placeholder">
-                        <img src="{% static 'iconos/Dangero_us.png' %}" alt="Icono de peligro" class="preview-icon no-permission-icon">
-                        <p>No tienes permiso.</p>
-                    </div>
-                {% endif %}
+                <div class="tools-grid">
+                    <a href="{% url 'crear_empleado' %}" class="tool-button">
+                        <i class="fas fa-user-plus tool-icon"></i>
+                        <span>Crear empleado</span>
+                    </a>
+                    <a href="{% url 'gestion_areas_puestos' %}" class="tool-button">
+                        <i class="fas fa-sitemap tool-icon"></i>
+                        <span>Áreas y Puestos</span>
+                    </a>
+                    <a href="{% url 'lista_empleados' %}" class="tool-button">
+                        <i class="fas fa-list tool-icon"></i>
+                        <span>Lista de empleados</span>
+                    </a>
+                </div>
             </div>
         </section>
+        {% endif %}
 
-        <section class="panel tools-panel">
+        <section class="panel herramientas-panel">
             <h2>Herramientas</h2>
             <div class="panel-content">
-                <div class="tools-actions">
-                    <h3>{{ request.session.rol_nombre|default:"RRHH" }}</h3>
-                    <div class="buttons-wrapper">
-                        <a href="{% url 'cerrar_sesion' %}" id="logout-btn" class="action-btn logout">Cerrar Sesión</a>
-                        <a href="#" class="action-btn profile">Perfil</a>
-                    </div>
-                </div>
                 <div class="tools-grid">
-                    {% if herramientas %}
-                        {% for herramienta in herramientas %}
-                            <a href="{% url herramienta.url_nombre %}" class="tool-button">
-                                {% if herramienta.icono %}
-                                    <i class="{{ herramienta.icono }} tool-icon"></i>
-                                {% endif %}
-                                <span>{{ herramienta.nombre }}</span>
-                            </a>
-                        {% endfor %}
+                    {% if has_caja %}
+                    <!-- BOTÓN DE CAJA DINÁMICO -->
+                    {% if caja_abierta %}
+                        <a href="{% url 'caja:cierre_caja' %}" class="tool-button caja-btn caja-abierta" id="btn-caja-status">
+                            <i class="fas fa-cash-register tool-icon"></i>
+                            <span id="caja-text">Cerrar Caja</span>
+                        </a>
                     {% else %}
-                        <p class="no-tools-message">No tienes herramientas asignadas.</p>
+                        <a href="{% url 'caja:apertura_caja' %}" class="tool-button caja-btn caja-cerrada" id="btn-caja-status">
+                            <i class="fas fa-cash-register tool-icon"></i>
+                            <span id="caja-text">Abrir Caja</span>
+                        </a>
+                    {% endif %}
+                    {% endif %}
+                    
+                    {% if has_registrar_venta %}
+                    <a href="#" class="tool-button registrar-venta-btn" id="btn-registrar-venta">
+                        <i class="fas fa-receipt tool-icon"></i>
+                        <span>Registrar Venta</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if has_gestion_stock %}
+                    <a href="{% url 'gestion_stock' %}" class="tool-button">
+                        <i class="fas fa-boxes tool-icon"></i>
+                        <span>Ir a Stock</span>
+                    </a>
                     {% endif %}
                 </div>
             </div>
@@ -67,9 +89,71 @@
         <div style="height: 1000px;"></div>
     </main>
 
+    <!-- MODAL: LOGOUT -->
+    <dialog id="logout-modal" class="logout-modal">
+        <div class="logout-modal-content">
+            <div class="logout-modal-header">
+                <i class="fas fa-exclamation-circle"></i>
+                <h2>Confirmar Cierre de Sesión</h2>
+            </div>
+            <p class="logout-modal-message">
+                ¿Estás seguro de que deseas cerrar sesión? Si lo haces, se registrará como el fin de tu jornada laboral.
+            </p>
+            <p class="logout-modal-note">
+                <i class="fas fa-info-circle"></i>
+                Tendrás 2 minutos para volver a iniciar sesión y continuar tu trabajo sin que se registre la salida.
+            </p>
+            <div class="logout-modal-actions">
+                <button class="btn-modal cancel" id="logout-cancel">Cancelar</button>
+                <button class="btn-modal confirm" id="logout-confirm">Sí, cerrar sesión</button>
+            </div>
+        </div>
+    </dialog>
+
+    <!-- MODAL: CAJA NO ABIERTA -->
+    <dialog id="caja-no-abierta-modal" class="logout-modal">
+        <div class="logout-modal-content">
+            <div class="logout-modal-header">
+                <i class="fas fa-lock"></i>
+                <h2>Caja Cerrada</h2>
+            </div>
+            <p class="logout-modal-message">
+                Para registrar ventas, primero debes abrir la caja.
+            </p>
+            <p class="logout-modal-note">
+                <i class="fas fa-arrow-right"></i>
+                Haz clic en el botón "Abrir Caja" para comenzar tu jornada.
+            </p>
+            <div class="logout-modal-actions">
+                <button class="btn-modal cancel" id="caja-no-abierta-ok">Entendido</button>
+            </div>
+        </div>
+    </dialog>
+
+    <!-- MODAL: CAJA ABIERTA - NO PUEDE CERRAR SESIÓN -->
+    <dialog id="caja-abierta-modal" class="logout-modal">
+        <div class="logout-modal-content">
+            <div class="logout-modal-header">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h2>Caja Abierta</h2>
+            </div>
+            <p class="logout-modal-message">
+                No puedes cerrar sesión mientras tienes la caja abierta.
+            </p>
+            <p class="logout-modal-note">
+                <i class="fas fa-arrow-right"></i>
+                Primero debes cerrar la caja para poder finalizar tu sesión.
+            </p>
+            <div class="logout-modal-actions">
+                <button class="btn-modal cancel" id="caja-abierta-ok">Entendido</button>
+                <button class="btn-modal confirm" id="ir-a-cerrar-caja">Ir a Cerrar Caja</button>
+            </div>
+        </div>
+    </dialog>
+
+    <script src="{% static 'JS/audio-system.js' %}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // --- CONFIGURACIÓN Y ELEMENTOS DEL DOM ---
             const header = document.querySelector('.main-header');
             const body = document.body;
             const soundExpand = document.getElementById('sound-expand');
@@ -80,39 +164,34 @@
             }
             window.scrollTo(0, 0);
 
-            // --- ESTADO Y PARÁMETROS ---
             const state = {
                 unlockCounter: 0,
                 isTicking: false,
                 isExpanded: true,
-                audioUnlocked: false
+                audioUnlocked: false,
+                cajaAbierta: {{ caja_abierta|yesno:"true,false" }}
             };
             const UNLOCK_THRESHOLD = 3;
 
-            // --- CORRECCIÓN 1: FUNCIÓN PARA HABILITAR EL AUDIO ---
             function unlockAudio() {
                 if (!state.audioUnlocked) {
                     soundExpand.play().then(() => soundExpand.pause()).catch(() => {});
                     soundShrink.play().then(() => soundShrink.pause()).catch(() => {});
                     state.audioUnlocked = true;
-                    // Se remueven los listeners una vez que el audio está habilitado
                     window.removeEventListener('click', unlockAudio);
                     window.removeEventListener('scroll', unlockAudio);
                     window.removeEventListener('wheel', unlockAudio);
                 }
             }
-            // Se añade el listener a múltiples eventos para asegurar la activación
             window.addEventListener('click', unlockAudio);
             window.addEventListener('scroll', unlockAudio);
             window.addEventListener('wheel', unlockAudio);
 
-            // --- CORRECCIÓN 2: SONIDO AL CARGAR LA PÁGINA ---
             setTimeout(() => {
                 soundExpand.currentTime = 0;
                 soundExpand.play().catch(() => {});
             }, 200);
 
-            // --- LISTENER DE SCROLL ---
             function handleScroll() {
                 if (window.scrollY > 0) {
                     if (state.isExpanded) {
@@ -122,13 +201,12 @@
                         soundShrink.currentTime = 0;
                         soundShrink.play().catch(() => {});
 
-                        // --- CORRECCIÓN 3: EFECTO DE TEMBLOR AL FINALIZAR ---
                         setTimeout(() => {
                             header.classList.add('effect-shake');
                             setTimeout(() => {
                                 header.classList.remove('effect-shake');
-                            }, 300); // Duración de la animación de temblor
-                        }, 400); // Retraso para que coincida con el fin de la transición
+                            }, 300);
+                        }, 400);
                     }
                 }
                 state.isTicking = false;
@@ -141,7 +219,6 @@
                 }
             });
 
-            // --- LISTENER DE WHEEL ---
             window.addEventListener('wheel', (event) => {
                 const isScrollingUp = event.deltaY < 0;
                 const isAtTop = window.scrollY === 0;
@@ -167,17 +244,137 @@
 
             }, { passive: false });
 
-
-            // --- LÓGICA DE CIERRE DE SESIÓN ---
-            document.getElementById('logout-btn').addEventListener('click', function(event) {
-                event.preventDefault(); 
-                const confirmLogout = confirm('¿Está seguro de que desea cerrar sesión? Si lo hace, se registrará como el fin de su jornada laboral.\n\nTendrá 10 minutos para volver a iniciar sesión y continuar su trabajo sin que se registre la salida.');
-                if (confirmLogout) {
-                    window.location.href = "{% url 'cerrar_sesion' %}";
-                }
+            // Botones de herramientas
+            const toolButtons = document.querySelectorAll('.tool-button');
+            toolButtons.forEach(button => {
+                button.addEventListener('mouseenter', () => {
+                    if (window.audioSystem) window.audioSystem.play('hover');
+                });
+                button.addEventListener('click', (e) => {
+                    if (button.id !== 'btn-registrar-venta') {
+                        if (window.audioSystem) window.audioSystem.play('select');
+                    }
+                });
             });
 
-            // Quitar la clase de carga para activar las animaciones
+            // Botones de acción rápida
+            const actionButtons = document.querySelectorAll('.action-btn');
+            actionButtons.forEach(button => {
+                button.addEventListener('mouseenter', () => {
+                    if (window.audioSystem) window.audioSystem.play('hover');
+                });
+                button.addEventListener('click', () => {
+                    if (window.audioSystem) window.audioSystem.play('select');
+                });
+            });
+
+            // Actualización dinámica del estado de caja
+            const btnCajaStatus = document.getElementById('btn-caja-status');
+            const cajaText = document.getElementById('caja-text');
+            
+            function actualizarEstadoCaja() {
+                fetch('/api/caja-status/', { method: 'GET' })
+                    .then(r => r.json())
+                    .then(data => {
+                        state.cajaAbierta = data.abierta;
+                        if (state.cajaAbierta) {
+                            btnCajaStatus.classList.remove('caja-cerrada');
+                            btnCajaStatus.classList.add('caja-abierta');
+                            cajaText.textContent = 'Cerrar Caja';
+                            btnCajaStatus.href = '/caja/cierre/';
+                        } else {
+                            btnCajaStatus.classList.remove('caja-abierta');
+                            btnCajaStatus.classList.add('caja-cerrada');
+                            cajaText.textContent = 'Abrir Caja';
+                            btnCajaStatus.href = '/caja/apertura/';
+                        }
+                    })
+                    .catch(() => {
+                        console.log('No se pudo obtener el estado de caja');
+                    });
+            }
+
+            if (btnCajaStatus) {
+                // Actualizar cada 5 segundos
+                setInterval(actualizarEstadoCaja, 5000);
+            }
+
+            // Botón registrar venta
+            const btnRegistrarVenta = document.getElementById('btn-registrar-venta');
+            if (btnRegistrarVenta) {
+                btnRegistrarVenta.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (window.audioSystem) window.audioSystem.play('select');
+                    
+                    if (!state.cajaAbierta) {
+                        document.getElementById('caja-no-abierta-modal').showModal();
+                        if (window.audioSystem) window.audioSystem.play('negative');
+                    } else {
+                        window.location.href = '/ventas/registrar/';
+                    }
+                });
+            }
+
+            // Modal caja no abierta
+            document.getElementById('caja-no-abierta-ok')?.addEventListener('click', () => {
+                if (window.audioSystem) window.audioSystem.play('select');
+                document.getElementById('caja-no-abierta-modal').close();
+            });
+
+            // Modal caja abierta (no puede cerrar sesión)
+            document.getElementById('caja-abierta-ok')?.addEventListener('click', () => {
+                if (window.audioSystem) window.audioSystem.play('select');
+                document.getElementById('caja-abierta-modal').close();
+            });
+
+            document.getElementById('ir-a-cerrar-caja')?.addEventListener('click', () => {
+                if (window.audioSystem) window.audioSystem.play('select');
+                window.location.href = '/caja/cierre/';
+            });
+
+            // Logout
+            const logoutBtn = document.getElementById('logout-btn');
+            const logoutModal = document.getElementById('logout-modal');
+            const logoutConfirm = document.getElementById('logout-confirm');
+            const logoutCancel = document.getElementById('logout-cancel');
+
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    if (window.audioSystem) window.audioSystem.play('select');
+                    
+                    // Verificar si la caja está abierta antes de permitir cerrar sesión
+                    if (state.cajaAbierta) {
+                        document.getElementById('caja-abierta-modal').showModal();
+                        if (window.audioSystem) window.audioSystem.play('negative');
+                    } else {
+                        logoutModal.showModal();
+                    }
+                });
+            }
+
+            if (logoutConfirm) {
+                logoutConfirm.addEventListener('mouseenter', () => {
+                    if (window.audioSystem) window.audioSystem.play('hover');
+                });
+                logoutConfirm.addEventListener('click', function() { 
+                    if (window.audioSystem) window.audioSystem.play('negative');
+                    fetch('/logout/', { method:'POST', headers:{ 'X-Requested-With':'fetch' } })
+                        .then(() => window.location.href = '/login/')
+                        .catch(() => window.location.href = '/login/');
+                });
+            }
+
+            if (logoutCancel) {
+                logoutCancel.addEventListener('mouseenter', () => {
+                    if (window.audioSystem) window.audioSystem.play('hover');
+                });
+                logoutCancel.addEventListener('click', () => {
+                    if (window.audioSystem) window.audioSystem.play('select');
+                    logoutModal.close();
+                });
+            }
+
             setTimeout(() => {
                 body.classList.remove('is-loading');
             }, 150);

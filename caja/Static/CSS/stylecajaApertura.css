@@ -6,10 +6,10 @@ body{
 }
 
 .MargenesCaja {
-    max-width: 1000px;
+    
     margin: 0 auto;
     padding: 20px;
-    background-color: #333;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .EncabezadoCajaApertura {
@@ -26,14 +26,14 @@ body{
 
 .TituloEncabezadoCajaAper h2 {
     color: var(--primary-color);
-    font-size: 28px;
+    font-size: 30px;
     font-weight: 700;
     margin-left: 10px;
 }
 
 .SubtituloSuper {
     color: var(--text-light);
-    font-size: 20px;
+    font-size: 30px;
     margin-left: 10px;
 }
 
@@ -46,27 +46,39 @@ body{
     align-items: center;
     gap: 8px;
     margin-bottom: 5px;
-    font-size: 20px;
+    font-size: 30px;
     margin-right: 10px;
 }
 
 .IconoUsu {
-    font-size: 18px;
+    font-size: 30px;
 }
 
 .UsuarioFecha {
-    font-size: 20px;
+    font-size: 30px;
     color: var(--text-light);
     margin-right: 10px;
 }
 
-.EstadoCaja, .AperturaPanel {
+.EstadoCaja {
     background-color: white;
     border-radius: 10px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     margin-bottom: 25px;
     overflow: hidden;
 }
+
+.AperturaPanel {
+    background-color: white;
+    border-radius: 10px;
+    border-bottom-left-radius: 0px;
+    border-bottom-right-radius: 0px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    margin-bottom: 25px;
+    overflow: hidden;
+}
+
+
 #AperturaPanelID {
     margin-bottom: 0px;
 }
@@ -78,7 +90,7 @@ body{
 }
 
 .PanelAperEncabezado h2 {
-    font-size: 18px;
+    font-size: 30px;
     font-weight: 500;
 }
 
@@ -86,7 +98,9 @@ body{
     padding: 20px;
     background-color: white;
     border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-top-left-radius: 0px;
+    border-top-right-radius: 0px;
+    
 }
 
 .EstadoCajaEncabezado {
@@ -122,7 +136,7 @@ body{
 .EstadoTexto {
     font-weight: 500;
     color: var(--danger-color);
-    font-size: 20px;
+    font-size: 25px;
 }
 
 .EstadoDetalles {
@@ -162,7 +176,7 @@ body{
 
 .FormularioInputMontoIni .divisa {
     padding: 0 12px;
-    background-color: #f8f9fa;
+    
     color: var(--text-light);
     font-weight: 500;
 }
@@ -207,7 +221,7 @@ textarea {
 }
 
 .boton-primario {
-    background-color: rgb(32, 178, 44);
+    background-color: #41D431;
     color: black;
 }
 
@@ -220,6 +234,98 @@ textarea {
     background-color: #f0f2f5;
 }
 
+.boton-secundario {
+    background-color:#D95353 ;
+    color: black;
+    text-decoration: none;
+}
+
+.boton-secundario:hover {
+    background-color: red;
+    text-decoration: none;
+}
+
+.resumen-ventas {
+    background-color: white;
+    padding: 20px;
+    
+}
+
+.monto-esperado{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+.text-muted {
+    display: flex;
+}
+
+.monto-esperado .divisa {
+    padding: 0 12px;
+    
+    color: var(--text-light);
+    font-weight: 500;
+}
+
+/* ===== ESTILOS PARA ESTADO DE ÚLTIMO CIERRE ===== */
+
+.estado-ok {
+    color: #28a745;
+    font-weight: bold;
+    margin: 0;
+}
+
+.estado-sobrante {
+    color: #ffc107;
+    font-weight: bold;
+    margin: 0;
+}
+
+.estado-faltante {
+    color: #dc3545;
+    font-weight: bold;
+    margin: 0;
+}
+
+.estado-neutral {
+    color: #6c757d;
+    margin: 0;
+}
+
+.UltimaOperacion {
+    font-size: 0.9em;
+    color: #6c757d;
+    margin-top: 8px;
+    line-height: 1.4;
+}
+
+/* Animación para diferencias */
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+.estado-sobrante, .estado-faltante {
+    animation: pulse 2s infinite;
+}
 
 
 
+.movimientos-caja {
+    background: white;
+    border-radius: 0px;
+    padding: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.movimientos-caja h3 {
+    
+    margin-bottom: 15px;
+    font-size: calc(1.3rem + .6vw);
+}
+
+.table-responsive {
+    max-height: 300px;
+    overflow-y: auto;
+}

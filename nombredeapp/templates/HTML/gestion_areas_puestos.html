@@ -1,0 +1,136 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Áreas y Puestos</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'CSS/gestion_areas_puestos.css' %}">
+</head>
+<body>
+    <div class="container">
+        <header class="page-header">
+            <a href="{% url 'inicio' %}" class="back-btn">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+            <h1><i class="fas fa-sitemap"></i> Gestión de Áreas y Puestos</h1>
+            <button class="btn btn-primary" id="btn-crear-area">
+                <i class="fas fa-plus"></i> Nueva Área
+            </button>
+        </header>
+
+        <div class="filters-section">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="search-input" placeholder="Buscar áreas o puestos...">
+            </div>
+            <div class="filters">
+                <button class="filter-btn active" data-filter="all">
+                    <i class="fas fa-list"></i> Todas
+                </button>
+                <button class="filter-btn" data-filter="with-positions">
+                    <i class="fas fa-users"></i> Con Puestos
+                </button>
+                <button class="filter-btn" data-filter="empty">
+                    <i class="fas fa-inbox"></i> Sin Puestos
+                </button>
+            </div>
+        </div>
+
+        <div id="areas-container" class="areas-container">
+            <div class="loading-spinner">
+                <i class="fas fa-spinner fa-spin"></i> Cargando...
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CREAR/EDITAR ÁREA -->
+    <div id="modal-area" class="modal-overlay">
+        <div class="modal-content">
+            <h2 id="modal-area-titulo">
+                <i class="fas fa-folder-plus"></i> <span>Nueva Área</span>
+            </h2>
+            <div class="form-group">
+                <label for="area-nombre">Nombre del Área: <span class="required">*</span></label>
+                <input type="text" id="area-nombre" class="form-control" placeholder="Ej: Ventas, Administración...">
+            </div>
+            <div class="error-msg" id="area-error-msg"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-light" id="btn-area-cancelar">Cancelar</button>
+                <button type="button" class="btn btn-success" id="btn-area-guardar">
+                    <i class="fas fa-check"></i> Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CREAR/EDITAR PUESTO -->
+    <div id="modal-puesto" class="modal-overlay">
+        <div class="modal-content modal-large">
+            <h2 id="modal-puesto-titulo">
+                <i class="fas fa-user-tag"></i> <span>Nuevo Puesto</span>
+            </h2>
+            <div class="form-group">
+                <label for="puesto-nombre">Nombre del Puesto: <span class="required">*</span></label>
+                <input type="text" id="puesto-nombre" class="form-control" placeholder="Ej: Cajero, Supervisor...">
+            </div>
+            <div class="form-group">
+                <label for="puesto-salario">Salario del Puesto: <span class="required">*</span></label>
+                <input type="number" id="puesto-salario" class="form-control" placeholder="Ej: 350000" min="0" step="0.01">
+                <small style="color: #6c757d; margin-top: 5px; display: block;">
+                    <i class="fas fa-info-circle"></i> Los empleados asignados a este puesto tendrán este salario automáticamente
+                </small>
+            </div>
+            <div class="form-group">
+                <label>Permisos del Puesto:</label>
+                <div class="permisos-grid">
+                    <label class="permiso-item">
+                        <input type="checkbox" name="permiso" value="caja">
+                        <div class="permiso-card">
+                            <i class="fas fa-cash-register"></i>
+                            <span>Caja</span>
+                            <small>Gestionar punto de venta</small>
+                        </div>
+                    </label>
+                    <label class="permiso-item">
+                        <input type="checkbox" name="permiso" value="stock">
+                        <div class="permiso-card">
+                            <i class="fas fa-boxes"></i>
+                            <span>Stock</span>
+                            <small>Gestionar inventario</small>
+                        </div>
+                    </label>
+                    <label class="permiso-item">
+                        <input type="checkbox" name="permiso" value="crear_empleado">
+                        <div class="permiso-card">
+                            <i class="fas fa-user-plus"></i>
+                            <span>Crear Empleados</span>
+                            <small>Recursos humanos</small>
+                        </div>
+                    </label>
+                    <label class="permiso-item">
+                        <input type="checkbox" name="permiso" value="asistencias">
+                        <div class="permiso-card">
+                            <i class="fas fa-clock"></i>
+                            <span>Asistencias</span>
+                            <small>Ver y gestionar horarios</small>
+                        </div>
+                    </label>
+                </div>
+            </div>
+            <div class="error-msg" id="puesto-error-msg"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-light" id="btn-puesto-cancelar">Cancelar</button>
+                <button type="button" class="btn btn-success" id="btn-puesto-guardar">
+                    <i class="fas fa-check"></i> Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CARGAR SCRIPTS -->
+    <script src="{% static 'JS/audio-system.js' %}"></script>
+    <script src="{% static 'JS/gestion_areas_puestos.js' %}"></script>
+</body>
+</html>
