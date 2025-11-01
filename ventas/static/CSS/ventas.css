@@ -1,10 +1,10 @@
-:root{       
-    --panel:#1b1b1b;    
-    --panel-2:#202020;  
-    --ink:#e6e6e6;      
-    --line:#3a3a3a;      
-    --pill:#3b3b3b;      
-    --pill-hi:#4a4a4a; 
+:root{      
+    --panel:#ffffff;    /* Cambiado a blanco */
+    --panel-2:#f8f9fa;  /* Gris muy claro */
+    --ink:#333333;      /* Texto oscuro */
+    --line:#dee2e6;     /* Bordes grises claros */
+    --pill:#e9ecef;     /* Pills grises claros */
+    --pill-hi:#ced4da;  /* Pills hover */
 }
 
 body {
@@ -16,13 +16,11 @@ body {
     overflow-x: hidden;
 }
 
-
-
 .frame{
     background:var(--panel);
     border-radius:18px;
-    border:2px solid #111;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 10px 30px rgba(0,0,0,.55);
+    border:2px solid #e0e0e0; /* Borde más suave */
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 10px 30px rgba(0,0,0,.15);
     padding:18px;
 }
 
@@ -34,11 +32,11 @@ body {
     padding:6px 14px;
     font-weight:600;
     letter-spacing:.2px;
-    color:#eaeaea;
+    color:#495057; /* Texto gris oscuro */
 }
 
 .btn-purple{
-    background:#565656;
+    background:#6f42c1;
     color:#fff;
     border:none;
     border-radius:10px;
@@ -48,7 +46,7 @@ body {
     padding: 8px 16px;
 }
 .btn-purple:hover{
-    background:#919191;
+    background:#5a2dac;
     color:#fff;
 }
 
@@ -62,7 +60,7 @@ body {
     background:var(--panel-2);
     border-radius:12px;
     padding:12px;
-    border:1px solid #141414;
+    border:1px solid var(--line);
     box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
 }
 
@@ -75,41 +73,50 @@ body {
 
 .gridhead .pill{ text-align:center; }
 
+/* ===== TABLA BLANCA ===== */
 table.sheet{
     width:100%;
     border-collapse:separate;
     border-spacing:0;
-    background:#181818;
+    background:#ffffff; /* Fondo blanco sólido */
     border:1px solid var(--line);
     border-radius:10px;
     overflow:hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1); /* Sombra suave */
 }
 
 table.sheet thead th{
-    background:#1b1b1b;
-    color:#dcdcdc;
+    background:#f8f9fa; /* Gris muy claro para encabezado */
+    color:#495057; /* Texto gris oscuro */
     font-weight:600;
     text-align:center;
-    border-bottom:1px solid var(--line);
-    padding:10px 8px;
+    border-bottom:2px solid var(--line);
+    padding:12px 8px;
 }
 
 table.sheet tbody td{
-    background:#151515;
-    color:#f1f1f1;
+    background:#ffffff; /* Fondo blanco */
+    color:#212529; /* Texto casi negro */
     border-top:1px solid var(--line);
     border-right:1px solid var(--line);
-    padding:10px 8px;
+    padding:12px 8px;
     text-align:center;
+    transition: background-color 0.2s ease;
 }
 
-table.sheet tbody tr:nth-child(even) td{ background:#121212; }
+table.sheet tbody tr:nth-child(even) td{ 
+    background:#f8f9fa; /* Gris muy claro para filas pares */
+}
+
 table.sheet td:last-child, table.sheet th:last-child{ border-right:none; }
-table.sheet tbody tr:hover td{ background:#1e1e1e; }
+
+table.sheet tbody tr:hover td{ 
+    background:#e3f2fd; /* Azul muy claro al hover */
+}
 
 .side{
     background:var(--panel-2);
-    border:1px solid #141414;
+    border:1px solid var(--line);
     box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
     border-radius:12px;
     padding:12px;
@@ -117,18 +124,21 @@ table.sheet tbody tr:hover td{ background:#1e1e1e; }
 
 .inpt{
     width:100%;
-    background:#2a2a2a;
+    background:#ffffff;
     border:1px solid var(--pill-hi);
-    color:#fff;
+    color:#333;
     border-radius:10px;
     padding:8px 10px;
     outline:none;
 }
 
-.inpt:focus{ border-color:#6f42c1; }
+.inpt:focus{ 
+    border-color:#6f42c1; 
+    box-shadow: 0 0 0 2px rgba(111, 66, 193, 0.2);
+}
 
 .preview{
-    background:#0f0f0f;
+    background:#ffffff;
     border:1px solid var(--line);
     border-radius:10px;
     display:flex;
@@ -154,30 +164,45 @@ table.sheet tbody tr:hover td{ background:#1e1e1e; }
 }
 
 .btn-green{
-    background:#3ac46d;
-    border:none;
-    border-radius:999px;
-    padding:8px 18px;
-    font-weight:600;
-    color: #000;
-}
-
-.btn-red{
-    background:#e34b4b;
+    background:#28a745;
     border:none;
     border-radius:999px;
     padding:8px 18px;
     font-weight:600;
     color: #fff;
+    transition: background-color 0.2s ease;
+}
+
+.btn-green:hover{
+    background:#218838;
+}
+
+.btn-red{
+    background:#dc3545;
+    border:none;
+    border-radius:999px;
+    padding:8px 18px;
+    font-weight:600;
+    color: #fff;
+    transition: background-color 0.2s ease;
+}
+
+.btn-red:hover{
+    background:#c82333;
 }
 
 .btn-orange{
-    background:#f39c12;
+    background:#fd7e14;
     border:none;
     border-radius:999px;
     padding:8px 18px;
     font-weight:600;
     color:#fff;
+    transition: background-color 0.2s ease;
+}
+
+.btn-orange:hover{
+    background:#e66a00;
 }
 
 /* Estilos para los botones de cantidad */
@@ -200,6 +225,7 @@ table.sheet tbody tr:hover td{ background:#1e1e1e; }
     justify-content: center;
     cursor: pointer;
     font-weight: bold;
+    transition: background-color 0.2s ease;
 }
 
 .qty-btn:hover {
@@ -230,6 +256,7 @@ table.sheet tbody tr:hover td{ background:#1e1e1e; }
     max-height: 80vh;
     overflow-y: auto;
     position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
 }
 
 .close-modal {
@@ -259,6 +286,16 @@ table.sheet tbody tr:hover td{ background:#1e1e1e; }
 
 .label {
     margin-bottom: 8px;
+    color: #495057;
+    font-weight: 600;
+}
+
+/* Mejoras visuales adicionales */
+.gridhead .pill {
+    background: #e9ecef;
+    border-color: #ced4da;
+    color: #495057;
+    font-weight: 600;
 }
 
 /* Responsive */
