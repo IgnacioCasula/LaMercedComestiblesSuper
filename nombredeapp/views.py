@@ -7,20 +7,326 @@ from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.http import JsonResponse, HttpRequest, HttpResponse
 from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from django.core.mail import send_mail
 from django.db import transaction
-from django.db.models import Q
 
+from datetime import datetime, time
 from caja.models import (
-    Usuarios, Roles, UsuxRoles, Empleados, Horario, Caja
+    Usuarios, Roles, UsuxRoles, Empleados, Horario, Caja, Asistencias
 )
-
 
 MAX_INTENTOS = 3
 BLOQUEO_MINUTOS = 5
 CODIGO_EXPIRA_MINUTOS = 5
+
+
+def _verificar_y_restaurar_sesion_gracia(request):
+    """
+    Verifica si el usuario está dentro del período de gracia de 2 minutos
+    y restaura la sesión sin registrar salida.
+    
+    Retorna el usuario_id si está en período de gracia, None si no.
+    """
+    try:
+        grace_cookie = request.get_signed_cookie(
+            'grace_logout',
+            default=None,
+            salt='logout-grace',
+            max_age=130
+        )
+        
+        if grace_cookie:
+            # Parsear cookie: formato "usuario_id|timestamp_iso"
+            parts = grace_cookie.split('|')
+            if len(parts) == 2:
+                usuario_id, expira_str = parts
+                try:
+                    expira = timezone.datetime.fromisoformat(expira_str)
+                    if timezone.is_naive(expira):
+                        expira = timezone.make_aware(expira)
+                    
+                    ahora = timezone.now()
+                    
+                    # Verificar si aún está dentro del período de gracia
+                    if ahora < expira:
+                        print(f"✅ Usuario {usuario_id} dentro del período de gracia")
+                        
+                        # ELIMINAR el registro de salida de hoy
+                        try:
+                            empleado = Empleados.objects.get(idusuarios_id=usuario_id)
+                            hoy = timezone.localdate()
+                            
+                            asistencia = Asistencias.objects.filter(
+                                idempleado=empleado,
+                                fechaasistencia=hoy,
+                                horasalida__isnull=False  # Que tenga salida registrada
+                            ).order_by('-horasalida').first()
+                            
+                            if asistencia:
+                                # Eliminar la hora de salida
+                                asistencia.horasalida = None
+                                asistencia.save()
+                                print(f"✅ Salida eliminada para usuario {usuario_id}")
+                        except Exception as e:
+                            print(f"⚠️ Error al eliminar salida: {e}")
+                        
+                        return usuario_id
+                    else:
+                        print(f"⏰ Período de gracia expirado para usuario {usuario_id}")
+                except Exception as e:
+                    print(f"⚠️ Error parseando cookie de gracia: {e}")
+        
+    except Exception as e:
+        print(f"⚠️ Error verificando período de gracia: {e}")
+    
+    return None
+
+
+def _registrar_entrada_automatica(usuario_id):
+    """
+    Registra automáticamente la entrada de un empleado al hacer login.
+    Retorna True si se registró, False si ya tenía entrada.
+    """
+    try:
+        empleado = Empleados.objects.get(idusuarios_id=usuario_id)
+        hoy = timezone.localdate()
+        
+        # Verificar si ya tiene entrada hoy
+        asistencia_hoy = Asistencias.objects.filter(
+            idempleado=empleado,
+            fechaasistencia=hoy
+        ).first()
+        
+        if asistencia_hoy:
+            # Ya tiene entrada registrada hoy
+            return False
+        
+        # Obtener el rol actual del usuario
+        rol = Roles.objects.filter(usuxroles__idusuarios_id=usuario_id).first()
+        
+        # Crear registro de asistencia (entrada)
+        hora_actual = timezone.localtime().time()
+        Asistencias.objects.create(
+            idempleado=empleado,
+            fechaasistencia=hoy,
+            horaentrada=hora_actual,
+            horasalida=None,  # Sin salida todavía
+            rol=rol
+        )
+        
+        print(f"✅ Entrada automática registrada: {empleado.idusuarios.nombreusuario} a las {hora_actual}")
+        return True
+        
+    except Empleados.DoesNotExist:
+        # Si no es empleado (ej: admin sin registro), no hacer nada
+        return False
+    except Exception as e:
+        print(f"❌ Error registrando entrada automática: {e}")
+        return False
+
+
+def _registrar_salida_automatica(usuario_id):
+    """
+    Registra automáticamente la salida de un empleado al hacer logout.
+    Retorna True si se registró, False si no había entrada o ya tenía salida.
+    """
+    try:
+        empleado = Empleados.objects.get(idusuarios_id=usuario_id)
+        hoy = timezone.localdate()
+        
+        # Buscar la asistencia de hoy sin salida registrada
+        asistencia = Asistencias.objects.filter(
+            idempleado=empleado,
+            fechaasistencia=hoy,
+            horasalida__isnull=True
+        ).first()
+        
+        if not asistencia:
+            # No hay entrada registrada hoy o ya registró su salida
+            return False
+        
+        # Registrar hora de salida
+        hora_actual = timezone.localtime().time()
+        asistencia.horasalida = hora_actual
+        asistencia.save()
+        
+        print(f"✅ Salida automática registrada: {empleado.idusuarios.nombreusuario} a las {hora_actual}")
+        return True
+        
+    except Empleados.DoesNotExist:
+        return False
+    except Exception as e:
+        print(f"❌ Error registrando salida automática: {e}")
+        return False
+
+
+def _verificar_autenticacion(request: HttpRequest) -> bool:
+    """Verifica si el usuario está autenticado"""
+    usuario_id = request.session.get('usuario_id')
+    if not usuario_id:
+        return False
+    
+    usuario = Usuarios.objects.filter(idusuarios=usuario_id).first()
+    return usuario is not None
+
+
+def _verificar_estado_empleado(request: HttpRequest) -> tuple[bool, str]:
+    """Verifica si el empleado tiene un estado válido"""
+    usuario_id = request.session.get('usuario_id')
+    if not usuario_id:
+        return False, 'No hay sesión activa.'
+    
+    try:
+        usuario = Usuarios.objects.filter(idusuarios=usuario_id).first()
+        if not usuario:
+            return False, 'Usuario no encontrado.'
+        
+        empleado = Empleados.objects.get(idusuarios=usuario)
+        
+        if empleado.estado == 'Suspendido':
+            return False, 'Tu cuenta ha sido suspendida temporalmente. Contacta con Recursos Humanos.'
+        elif empleado.estado == 'Despedido':
+            return False, 'Tu cuenta ha sido desactivada. Contacta con Recursos Humanos.'
+        
+        return True, ''
+        
+    except Empleados.DoesNotExist:
+        return True, ''
+    except Exception as e:
+        print(f"Error verificando estado del empleado: {e}")
+        return True, ''
+
+
+@require_http_methods(['POST'])
+def registrar_entrada(request):
+    """Registra la entrada de un empleado"""
+    usuario_id = request.session.get('usuario_id')
+    if not usuario_id:
+        return JsonResponse({'error': 'No autenticado'}, status=401)
+    
+    try:
+        empleado = Empleados.objects.get(idusuarios_id=usuario_id)
+        
+        # Verificar si ya tiene entrada hoy
+        hoy = timezone.localdate()
+        asistencia_hoy = Asistencias.objects.filter(
+            idempleado=empleado,
+            fechaasistencia=hoy,
+            horasalida__isnull=True
+        ).first()
+        
+        if asistencia_hoy:
+            return JsonResponse({
+                'error': 'Ya registraste tu entrada hoy',
+                'hora_entrada': asistencia_hoy.horaentrada.strftime('%H:%M')
+            }, status=400)
+        
+        # Obtener el rol actual del usuario
+        rol = Roles.objects.filter(usuxroles__idusuarios_id=usuario_id).first()
+        
+        # Crear registro de asistencia
+        hora_actual = timezone.localtime().time()
+        asistencia = Asistencias.objects.create(
+            idempleado=empleado,
+            fechaasistencia=hoy,
+            horaentrada=hora_actual,
+            rol=rol
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Entrada registrada correctamente',
+            'hora': hora_actual.strftime('%H:%M'),
+            'fecha': hoy.strftime('%d/%m/%Y')
+        })
+        
+    except Empleados.DoesNotExist:
+        return JsonResponse({'error': 'Empleado no encontrado'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@require_http_methods(['POST'])
+def registrar_salida(request):
+    """Registra la salida de un empleado"""
+    usuario_id = request.session.get('usuario_id')
+    if not usuario_id:
+        return JsonResponse({'error': 'No autenticado'}, status=401)
+    
+    try:
+        empleado = Empleados.objects.get(idusuarios_id=usuario_id)
+        
+        # Buscar la asistencia de hoy sin salida registrada
+        hoy = timezone.localdate()
+        asistencia = Asistencias.objects.filter(
+            idempleado=empleado,
+            fechaasistencia=hoy,
+            horasalida__isnull=True
+        ).first()
+        
+        if not asistencia:
+            return JsonResponse({
+                'error': 'No hay entrada registrada hoy o ya registraste tu salida'
+            }, status=400)
+        
+        # Registrar hora de salida
+        hora_actual = timezone.localtime().time()
+        asistencia.horasalida = hora_actual
+        asistencia.save()
+        
+        # Calcular horas trabajadas
+        entrada_dt = datetime.combine(hoy, asistencia.horaentrada)
+        salida_dt = datetime.combine(hoy, hora_actual)
+        horas_trabajadas = (salida_dt - entrada_dt).total_seconds() / 3600
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Salida registrada correctamente',
+            'hora_entrada': asistencia.horaentrada.strftime('%H:%M'),
+            'hora_salida': hora_actual.strftime('%H:%M'),
+            'horas_trabajadas': round(horas_trabajadas, 2)
+        })
+        
+    except Empleados.DoesNotExist:
+        return JsonResponse({'error': 'Empleado no encontrado'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@require_http_methods(['GET'])
+def estado_asistencia_hoy(request):
+    """Obtiene el estado de la asistencia del día de hoy"""
+    usuario_id = request.session.get('usuario_id')
+    if not usuario_id:
+        return JsonResponse({'error': 'No autenticado'}, status=401)
+    
+    try:
+        empleado = Empleados.objects.get(idusuarios_id=usuario_id)
+        hoy = timezone.localdate()
+        
+        asistencia = Asistencias.objects.filter(
+            idempleado=empleado,
+            fechaasistencia=hoy
+        ).first()
+        
+        if not asistencia:
+            return JsonResponse({
+                'tiene_entrada': False,
+                'tiene_salida': False
+            })
+        
+        return JsonResponse({
+            'tiene_entrada': True,
+            'tiene_salida': asistencia.horasalida is not None,
+            'hora_entrada': asistencia.horaentrada.strftime('%H:%M') if asistencia.horaentrada else None,
+            'hora_salida': asistencia.horasalida.strftime('%H:%M') if asistencia.horasalida else None
+        })
+        
+    except Empleados.DoesNotExist:
+        return JsonResponse({'error': 'Empleado no encontrado'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 def _get_session_dict(request: HttpRequest, key: str, default: dict) -> dict:
@@ -45,53 +351,28 @@ def _get_caja_abierta(usuario_id):
         return False
 
 
-def _verificar_autenticacion(request: HttpRequest) -> bool:
-    """Verifica si el usuario está autenticado"""
-    usuario_id = request.session.get('usuario_id')
-    if not usuario_id:
-        return False
-    
-    usuario = Usuarios.objects.filter(idusuarios=usuario_id).first()
-    return usuario is not None
-
-def _verificar_estado_empleado(request: HttpRequest) -> tuple[bool, str]:
-    """
-    Verifica si el empleado tiene un estado válido para acceder al sistema.
-    
-    Returns:
-        tuple: (es_valido, mensaje_error)
-        - es_valido: True si puede acceder, False si está suspendido/despedido
-        - mensaje_error: Mensaje descriptivo del problema (vacío si es_valido=True)
-    """
-    usuario_id = request.session.get('usuario_id')
-    if not usuario_id:
-        return False, 'No hay sesión activa.'
-    
-    try:
-        usuario = Usuarios.objects.filter(idusuarios=usuario_id).first()
-        if not usuario:
-            return False, 'Usuario no encontrado.'
-        
-        # Intentar obtener el registro de empleado
-        empleado = Empleados.objects.get(idusuarios=usuario)
-        
-        # Validar estado
-        if empleado.estado == 'Suspendido':
-            return False, 'Tu cuenta ha sido suspendida temporalmente. Contacta con Recursos Humanos.'
-        elif empleado.estado == 'Despedido':
-            return False, 'Tu cuenta ha sido desactivada. Contacta con Recursos Humanos.'
-        
-        # Estado válido (Trabajando u otro estado activo)
-        return True, ''
-        
-    except Empleados.DoesNotExist:
-        # Si no es empleado (ej: administrador del sistema), permitir acceso
-        return True, ''
-    except Exception as e:
-        print(f"Error verificando estado del empleado: {e}")
-        return True, ''  # En caso de error, permitir acceso para no bloquear el sistema
-
 def login_view(request: HttpRequest) -> HttpResponse:
+    # 🔥 VERIFICAR PERÍODO DE GRACIA PRIMERO
+    usuario_en_gracia = _verificar_y_restaurar_sesion_gracia(request)
+    if usuario_en_gracia:
+        # Restaurar sesión automáticamente
+        request.session['usuario_id'] = int(usuario_en_gracia)
+        usuario = Usuarios.objects.get(idusuarios=int(usuario_en_gracia))
+        request.session['nombre_usuario'] = usuario.nombreusuario
+        
+        # Obtener roles
+        roles_ids = list(UsuxRoles.objects.filter(idusuarios=usuario).values_list('idroles', flat=True))
+        if len(roles_ids) <= 1:
+            if roles_ids:
+                request.session['rol_id'] = roles_ids[0]
+        
+        # Limpiar cookie de gracia
+        respuesta = redirect('inicio')
+        respuesta.delete_cookie('grace_logout')
+        
+        messages.success(request, '¡Bienvenido de vuelta! Tu sesión fue restaurada y continúas en turno.')
+        return respuesta
+    
     estado = _get_session_dict(request, 'login_estado', {
         'intentos': 0,
         'bloqueado_hasta': None,
@@ -141,31 +422,32 @@ def login_view(request: HttpRequest) -> HttpResponse:
             messages.error(request, f'Credenciales inválidas. Intento {estado["intentos"]} de {MAX_INTENTOS}.')
             return redirect('login')
 
-        # NUEVA VALIDACIÓN: Verificar el estado del empleado
+        # Verificar estado del empleado
         try:
             empleado = Empleados.objects.get(idusuarios=usuario)
             
-            # Si el empleado está suspendido o despedido, no permitir el acceso
             if empleado.estado == 'Suspendido':
                 messages.error(request, 'Tu cuenta ha sido suspendida temporalmente. Contacta con Recursos Humanos.')
                 return redirect('login')
             elif empleado.estado == 'Despedido':
                 messages.error(request, 'Tu cuenta ha sido desactivada. Contacta con Recursos Humanos.')
                 return redirect('login')
-            # Si el estado es "Trabajando" u otro estado activo, permitir el acceso
             
         except Empleados.DoesNotExist:
-            # Si no es un empleado (podría ser un administrador del sistema sin registro en Empleados)
-            # Permitir el acceso normalmente
             pass
 
-        # Si llegamos aquí, el usuario está autenticado y tiene un estado válido
+        # ✅ Autenticación exitosa
         estado['intentos'] = 0
         estado['bloqueado_hasta'] = None
         request.session['login_estado'] = estado
 
         request.session['usuario_id'] = usuario.idusuarios
         request.session['nombre_usuario'] = usuario.nombreusuario
+
+        # 🔥 REGISTRAR ENTRADA AUTOMÁTICA
+        entrada_registrada = _registrar_entrada_automatica(usuario.idusuarios)
+        if entrada_registrada:
+            messages.success(request, f'¡Bienvenido! Tu entrada fue registrada a las {timezone.localtime().strftime("%H:%M")}')
 
         roles_ids = list(UsuxRoles.objects.filter(idusuarios=usuario).values_list('idroles', flat=True))
         if len(roles_ids) <= 1:
@@ -347,7 +629,7 @@ def inicio_view(request: HttpRequest) -> HttpResponse:
         if 'supervisor' in nombre_rol_lower:
             permisos_usuario.add('asistencias')
         
-        # Permisos basados en la descripción del rol (donde se guardan desde gestion_areas_puestos)
+        # Permisos basados en la descripción del rol
         if 'caja' in descripcion_rol_lower:
             permisos_usuario.add('caja')
         
@@ -393,9 +675,10 @@ def inicio_view(request: HttpRequest) -> HttpResponse:
         'has_gestion_stock': has_gestion_stock,
         'caja_abierta': caja_abierta,
         'debug_roles': list(roles_usuario.values_list('nombrerol', flat=True)),
-        'debug_permisos': list(permisos_usuario),  # Para debugging
+        'debug_permisos': list(permisos_usuario),
     }
     return render(request, 'HTML/inicio.html', context)
+
 
 @require_http_methods(['GET'])
 def api_caja_status(request: HttpRequest) -> JsonResponse:
@@ -409,21 +692,29 @@ def api_caja_status(request: HttpRequest) -> JsonResponse:
 
 
 def logout_view(request: HttpRequest) -> HttpResponse:
-    """Cierra la sesión con un periodo de gracia de 2 minutos."""
+    """Cierra la sesión y registra la salida automática."""
     usuario_id = request.session.get('usuario_id')
     respuesta = redirect('login')
 
     if usuario_id:
+        # 🔥 REGISTRAR SALIDA AUTOMÁTICA ANTES DE CERRAR SESIÓN
+        salida_registrada = _registrar_salida_automatica(usuario_id)
+        if salida_registrada:
+            print(f"✅ Salida registrada automáticamente para usuario {usuario_id}")
+        
+        # Período de gracia de 2 minutos
         expira = timezone.now() + timedelta(minutes=2)
         valor = f"{usuario_id}|{expira.isoformat()}"
         respuesta.set_signed_cookie(
             key='grace_logout',
             value=valor,
             salt='logout-grace',
-            max_age=130,
+            max_age=130,  # 2 minutos + 10 segundos de margen
             httponly=True,
             samesite='Lax',
         )
+        
+        messages.info(request, 'Sesión cerrada. Tienes 2 minutos para volver sin que se registre tu salida.')
 
     try:
         request.session.flush()
@@ -439,10 +730,9 @@ def crear_empleado_view(request: HttpRequest) -> HttpResponse:
         messages.error(request, 'Acceso denegado. Por favor, inicia sesión.')
         return redirect('login')
     
-    # NUEVA VALIDACIÓN: Verificar estado del empleado
     es_valido, mensaje_error = _verificar_estado_empleado(request)
     if not es_valido:
-        request.session.flush()  # Cerrar sesión
+        request.session.flush()
         messages.error(request, mensaje_error)
         return redirect('login')
     
@@ -478,8 +768,6 @@ def api_areas(request):
     return JsonResponse(data, safe=False)
 
 
-# ===== REEMPLAZAR ESTAS FUNCIONES EN views.py =====
-
 def api_areas_puestos(request):
     """Devuelve todas las áreas con sus puestos, permisos y salarios."""
     try:
@@ -488,7 +776,6 @@ def api_areas_puestos(request):
         resultado = []
         for area in areas:
             area_nombre = area['nombrearea']
-            # Excluir roles placeholder
             puestos = Roles.objects.filter(
                 nombrearea=area_nombre
             ).exclude(
@@ -500,7 +787,6 @@ def api_areas_puestos(request):
                 permisos = []
                 nombre_rol = puesto.nombrerol.lower()
                 
-                # Extraer permisos
                 if 'vendedor' in nombre_rol or 'registrar venta' in nombre_rol:
                     permisos.extend(['registrar_venta', 'caja'])
                 elif 'caja' in nombre_rol or 'cajero' in nombre_rol:
@@ -513,7 +799,6 @@ def api_areas_puestos(request):
                 if 'supervisor' in nombre_rol:
                     permisos.append('asistencias')
                 
-                # Extraer salario de la descripción
                 salario = 0
                 if puesto.descripcionrol and 'Salario: $' in puesto.descripcionrol:
                     try:
@@ -558,11 +843,9 @@ def api_crear_area(request):
             if not nombre_area:
                 return JsonResponse({'error': 'El nombre del área es obligatorio.'}, status=400)
             
-            # Verificar si ya existe un área con este nombre
             if Roles.objects.filter(nombrearea__iexact=nombre_area).exists():
                 return JsonResponse({'error': 'Ya existe un área con este nombre.'}, status=400)
             
-            # Crear un rol placeholder para que el área exista en el sistema
             rol_placeholder = Roles.objects.create(
                 nombrerol=f"_placeholder_{nombre_area}",
                 nombrearea=nombre_area,
@@ -598,7 +881,6 @@ def api_editar_area(request, area_nombre):
             if nuevo_nombre != area_nombre and Roles.objects.filter(nombrearea__iexact=nuevo_nombre).exists():
                 return JsonResponse({'error': 'Ya existe un área con este nombre.'}, status=400)
             
-            # Actualizar todos los roles (puestos) que pertenecen a esta área
             Roles.objects.filter(nombrearea=area_nombre).update(nombrearea=nuevo_nombre)
             
             return JsonResponse({
@@ -627,7 +909,6 @@ def api_crear_puesto_nuevo(request):
             if not all([nombre_puesto, area_id]):
                 return JsonResponse({'error': 'Faltan datos obligatorios.'}, status=400)
             
-            # Validar salario
             try:
                 salario = float(salario)
                 if salario < 0:
@@ -635,7 +916,6 @@ def api_crear_puesto_nuevo(request):
             except (ValueError, TypeError):
                 return JsonResponse({'error': 'El salario debe ser un número válido.'}, status=400)
             
-            # Verificar que no exista ya un puesto con el mismo nombre en el área
             if Roles.objects.filter(
                 nombrerol__iexact=nombre_puesto, 
                 nombrearea=area_id
@@ -644,13 +924,11 @@ def api_crear_puesto_nuevo(request):
             ).exists():
                 return JsonResponse({'error': 'Ya existe un puesto con este nombre en esta área.'}, status=400)
             
-            # Eliminar el placeholder si existe
             Roles.objects.filter(
                 nombrearea=area_id,
                 nombrerol__startswith='_placeholder_'
             ).delete()
             
-            # Crear descripción con permisos y salario
             permisos_desc = ', '.join([p.replace('_', ' ').title() for p in permisos]) if permisos else 'Sin permisos'
             descripcion = f'Puesto de {nombre_puesto} con permisos: {permisos_desc} | Salario: ${salario}'
             
@@ -687,7 +965,6 @@ def api_editar_puesto(request, puesto_id):
             if not nombre_puesto:
                 return JsonResponse({'error': 'El nombre del puesto es obligatorio.'}, status=400)
             
-            # Validar salario
             try:
                 salario = float(salario)
                 if salario < 0:
@@ -706,13 +983,11 @@ def api_editar_puesto(request, puesto_id):
             ).exclude(idroles=puesto_id).exists():
                 return JsonResponse({'error': 'Ya existe un puesto con este nombre en esta área.'}, status=400)
             
-            # Actualizar puesto
             permisos_desc = ', '.join([p.replace('_', ' ').title() for p in permisos]) if permisos else 'Sin permisos'
             puesto.nombrerol = nombre_puesto
             puesto.descripcionrol = f'Puesto de {nombre_puesto} con permisos: {permisos_desc} | Salario: ${salario}'
             puesto.save()
             
-            # Actualizar salario de todos los empleados con este puesto
             empleados_actualizados = Empleados.objects.filter(cargoempleado=puesto.nombrerol).update(
                 salarioempleado=salario
             )
@@ -742,7 +1017,6 @@ def api_puestos_por_area_con_permisos(request, area_id):
             permisos = []
             nombre_rol = puesto.nombrerol.lower()
             
-            # Extraer permisos
             if 'vendedor' in nombre_rol or 'registrar venta' in nombre_rol:
                 permisos.extend(['registrar_venta', 'caja'])
             elif 'caja' in nombre_rol or 'cajero' in nombre_rol:
@@ -755,7 +1029,6 @@ def api_puestos_por_area_con_permisos(request, area_id):
             if 'supervisor' in nombre_rol:
                 permisos.append('asistencias')
             
-            # Extraer salario de la descripción
             salario = 0
             if puesto.descripcionrol and 'Salario: $' in puesto.descripcionrol:
                 try:
@@ -828,12 +1101,10 @@ def api_registrar_empleado_actualizado(request):
         puesto_seleccionado = data.get('puesto', {}) or {}
         puesto_id = puesto_seleccionado.get('id')
         
-        # Obtener salario del puesto
         salario_puesto = 0
         if puesto_id:
             try:
                 rol_puesto = Roles.objects.get(idroles=puesto_id)
-                # Extraer salario de la descripción
                 if rol_puesto.descripcionrol and 'Salario: $' in rol_puesto.descripcionrol:
                     try:
                         salario_str = rol_puesto.descripcionrol.split('Salario: $')[1].split('|')[0].strip()
@@ -846,7 +1117,7 @@ def api_registrar_empleado_actualizado(request):
         nuevo_empleado = Empleados.objects.create(
             idusuarios=nuevo_usuario,
             cargoempleado=puesto_seleccionado.get('nombre', 'Sin Puesto'),
-            salarioempleado=salario_puesto,  # Asignar salario del puesto
+            salarioempleado=salario_puesto,
             fechacontratado=timezone.now().date(),
             estado='Trabajando'
         )
@@ -855,7 +1126,6 @@ def api_registrar_empleado_actualizado(request):
             rol_puesto = Roles.objects.get(idroles=puesto_id)
             UsuxRoles.objects.create(idusuarios=nuevo_usuario, idroles=rol_puesto)
             
-            # Crear horarios
             horario_data = data.get('horario', {})
             if horario_data:
                 dias_semana_map = {'Lu': 0, 'Ma': 1, 'Mi': 2, 'Ju': 3, 'Vi': 4, 'Sa': 5, 'Do': 6}
@@ -895,7 +1165,6 @@ def api_registrar_empleado_actualizado(request):
                                     hora_fin=tramo['end']
                                 )
 
-        # Enviar email
         try:
             send_mail(
                 subject='¡Bienvenido! Tus credenciales de acceso',
@@ -949,10 +1218,9 @@ def gestion_stock_view(request: HttpRequest) -> HttpResponse:
         messages.error(request, 'Acceso denegado. Por favor, inicia sesión.')
         return redirect('login')
     
-    # NUEVA VALIDACIÓN: Verificar estado del empleado
     es_valido, mensaje_error = _verificar_estado_empleado(request)
     if not es_valido:
-        request.session.flush()  # Cerrar sesión
+        request.session.flush()
         messages.error(request, mensaje_error)
         return redirect('login')
     
@@ -991,10 +1259,9 @@ def menu_caja_view(request: HttpRequest) -> HttpResponse:
         messages.error(request, 'Acceso denegado. Por favor, inicia sesión.')
         return redirect('login')
     
-    # NUEVA VALIDACIÓN: Verificar estado del empleado
     es_valido, mensaje_error = _verificar_estado_empleado(request)
     if not es_valido:
-        request.session.flush()  # Cerrar sesión
+        request.session.flush()
         messages.error(request, mensaje_error)
         return redirect('login')
     
@@ -1032,10 +1299,9 @@ def gestion_areas_puestos_view(request: HttpRequest) -> HttpResponse:
         messages.error(request, 'Acceso denegado. Por favor, inicia sesión.')
         return redirect('login')
     
-    # NUEVA VALIDACIÓN: Verificar estado del empleado
     es_valido, mensaje_error = _verificar_estado_empleado(request)
     if not es_valido:
-        request.session.flush()  # Cerrar sesión
+        request.session.flush()
         messages.error(request, mensaje_error)
         return redirect('login')
     
@@ -1076,39 +1342,11 @@ def _generar_y_enviar_codigo(request: HttpRequest, destino: str) -> None:
     except Exception as e:
         print(f"Error al enviar email: {e}")
 
-# ===== VISTA PRINCIPAL LISTA EMPLEADOS =====
-def lista_empleados_view(request: HttpRequest) -> HttpResponse:
-    """Vista para la lista de empleados."""
-    if not _verificar_autenticacion(request):
-        messages.error(request, 'Acceso denegado. Por favor, inicia sesión.')
-        return redirect('login')
-    
-    usuario_id = request.session.get('usuario_id')
-    usuario = Usuarios.objects.filter(idusuarios=usuario_id).first()
-    
-    if not usuario:
-        messages.error(request, 'Acceso denegado. Por favor, inicia sesión.')
-        return redirect('login')
-    
-    roles_usuario = list(
-        Roles.objects.filter(usuxroles__idusuarios_id=usuario_id).values_list('nombrerol', flat=True)
-    )
-    
-    is_admin = 'Administrador' in roles_usuario or 'Recursos Humanos' in roles_usuario
-    
-    if not is_admin:
-        messages.error(request, 'No tienes permisos para acceder a esta página.')
-        return redirect('inicio')
-    
-    return render(request, 'HTML/lista_empleados.html')
 
-
-# ===== API LISTA EMPLEADOS =====
 @require_http_methods(['GET'])
 def api_lista_empleados(request: HttpRequest) -> JsonResponse:
     """API para obtener la lista de empleados (optimizada para grandes cantidades)."""
     try:
-        # Solo traer los campos necesarios para la lista
         empleados = Empleados.objects.select_related(
             'idusuarios'
         ).prefetch_related(
@@ -1126,10 +1364,8 @@ def api_lista_empleados(request: HttpRequest) -> JsonResponse:
             'fechacontratado'
         ).order_by('-fechacontratado')
         
-        # Obtener áreas de los roles
         empleados_list = []
         for emp in empleados:
-            # Buscar el área del empleado
             usuario_id = Empleados.objects.get(idempleado=emp['idempleado']).idusuarios_id
             roles = Roles.objects.filter(usuxroles__idusuarios_id=usuario_id).first()
             
@@ -1155,7 +1391,6 @@ def api_lista_empleados(request: HttpRequest) -> JsonResponse:
         return JsonResponse({'error': str(e)}, status=500)
 
 
-# ===== API DETALLE EMPLEADO =====
 @require_http_methods(['GET'])
 def api_detalle_empleado(request: HttpRequest, empleado_id: int) -> JsonResponse:
     """API para obtener el detalle completo de un empleado."""
@@ -1163,10 +1398,8 @@ def api_detalle_empleado(request: HttpRequest, empleado_id: int) -> JsonResponse
         empleado = Empleados.objects.select_related('idusuarios').get(idempleado=empleado_id)
         usuario = empleado.idusuarios
         
-        # Obtener rol y área
         rol = Roles.objects.filter(usuxroles__idusuarios=usuario).first()
         
-        # Obtener horarios
         horarios = Horario.objects.filter(empleado=empleado).values(
             'dia_semana',
             'semana_del_mes',
@@ -1186,7 +1419,7 @@ def api_detalle_empleado(request: HttpRequest, empleado_id: int) -> JsonResponse
             'fecha_nacimiento': str(getattr(usuario, 'fecha_nacimiento', '')) if getattr(usuario, 'fecha_nacimiento', None) else '',
             'puesto': empleado.cargoempleado,
             'area': rol.nombrearea if rol else 'Sin área',
-            'area_id': rol.nombrearea if rol else None,  # Usar nombre de área como ID
+            'area_id': rol.nombrearea if rol else None,
             'puesto_id': rol.idroles if rol else None,
             'salario': float(empleado.salarioempleado),
             'estado': empleado.estado,
@@ -1212,7 +1445,6 @@ def api_detalle_empleado(request: HttpRequest, empleado_id: int) -> JsonResponse
         return JsonResponse({'error': str(e)}, status=500)
 
 
-# ===== API EDITAR EMPLEADO =====
 @require_http_methods(['POST'])
 @transaction.atomic
 def api_editar_empleado(request: HttpRequest, empleado_id: int) -> JsonResponse:
@@ -1220,7 +1452,6 @@ def api_editar_empleado(request: HttpRequest, empleado_id: int) -> JsonResponse:
     try:
         data = json.loads(request.body)
         
-        # Validar datos obligatorios
         nombre = data.get('nombre', '').strip()
         apellido = data.get('apellido', '').strip()
         dni = data.get('dni', '').strip()
@@ -1229,19 +1460,15 @@ def api_editar_empleado(request: HttpRequest, empleado_id: int) -> JsonResponse:
         if not all([nombre, apellido, dni, email]):
             return JsonResponse({'error': 'Faltan datos obligatorios'}, status=400)
         
-        # Obtener empleado y usuario
         empleado = Empleados.objects.select_related('idusuarios').get(idempleado=empleado_id)
         usuario = empleado.idusuarios
         
-        # Verificar si el email ya existe (excepto para este usuario)
         if Usuarios.objects.filter(emailusuario=email).exclude(idusuarios=usuario.idusuarios).exists():
             return JsonResponse({'error': 'El email ya está en uso por otro empleado'}, status=400)
         
-        # Verificar si el DNI ya existe (excepto para este usuario)
         if Usuarios.objects.filter(dniusuario=dni).exclude(idusuarios=usuario.idusuarios).exists():
             return JsonResponse({'error': 'El DNI ya está registrado por otro empleado'}, status=400)
         
-        # Actualizar datos del usuario
         usuario.nombreusuario = nombre
         usuario.apellidousuario = apellido
         usuario.dniusuario = dni
@@ -1249,25 +1476,17 @@ def api_editar_empleado(request: HttpRequest, empleado_id: int) -> JsonResponse:
         usuario.telefono = data.get('telefono', '')
         usuario.save()
         
-        # Actualizar datos del empleado
         empleado.salarioempleado = float(data.get('salario', 0))
         estado_anterior = empleado.estado
         empleado.estado = data.get('estado', 'Trabajando')
         
-        # IMPORTANTE: Si el estado cambió a Suspendido o Despedido, el usuario no podrá acceder
-        # Esto se maneja en el login verificando el estado del empleado
-        
-        # Actualizar puesto si se proporcionó
         puesto_id = data.get('puesto_id')
         if puesto_id:
             try:
                 nuevo_rol = Roles.objects.get(idroles=puesto_id)
                 empleado.cargoempleado = nuevo_rol.nombrerol
                 
-                # Actualizar la relación UsuxRoles
-                # Eliminar roles anteriores
                 UsuxRoles.objects.filter(idusuarios=usuario).delete()
-                # Crear nuevo rol
                 UsuxRoles.objects.create(idusuarios=usuario, idroles=nuevo_rol)
                 
             except Roles.DoesNotExist:
@@ -1275,13 +1494,10 @@ def api_editar_empleado(request: HttpRequest, empleado_id: int) -> JsonResponse:
         
         empleado.save()
         
-        # Actualizar horarios
         horarios_data = data.get('horarios', [])
-        if horarios_data is not None:  # Permitir array vacío para eliminar todos los horarios
-            # Eliminar horarios anteriores
+        if horarios_data is not None:
             Horario.objects.filter(empleado=empleado).delete()
             
-            # Crear nuevos horarios
             if horarios_data:
                 rol_actual = Roles.objects.filter(usuxroles__idusuarios=usuario).first()
                 for horario in horarios_data:
@@ -1311,20 +1527,17 @@ def api_editar_empleado(request: HttpRequest, empleado_id: int) -> JsonResponse:
         return JsonResponse({'error': f'Error al actualizar: {str(e)}'}, status=500)
 
 
-# ===== API ÁREAS (simplificada) =====
 @require_http_methods(['GET'])
 def api_areas_simple(request: HttpRequest) -> JsonResponse:
     """API para obtener lista simple de áreas."""
     try:
         areas = Roles.objects.values('nombrearea').distinct().order_by('nombrearea')
         
-        # Crear lista con ID único basado en el nombre
         areas_list = []
         for idx, area in enumerate(areas, start=1):
-            # Buscar el primer rol de esa área para obtener su ID
             primer_rol = Roles.objects.filter(nombrearea=area['nombrearea']).first()
             areas_list.append({
-                'id': area['nombrearea'],  # Usar el nombre como ID para el filtro
+                'id': area['nombrearea'],
                 'nombre': area['nombrearea']
             })
         
@@ -1334,7 +1547,6 @@ def api_areas_simple(request: HttpRequest) -> JsonResponse:
         return JsonResponse({'error': str(e)}, status=500)
 
 
-# ===== API PUESTOS POR ÁREA (para edición) =====
 @require_http_methods(['GET'])
 def api_puestos_por_area_simple(request: HttpRequest, area_nombre: str) -> JsonResponse:
     """API para obtener puestos de un área específica (para el select de edición)."""
@@ -1353,4 +1565,3 @@ def api_puestos_por_area_simple(request: HttpRequest, area_nombre: str) -> JsonR
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-    
