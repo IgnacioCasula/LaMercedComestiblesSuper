@@ -195,6 +195,24 @@ def apertura_caja_view(request):
             
             apertura.save()
             
+
+            try:
+                Movimientosdecaja.objects.create(
+                    nombreusuariomovcaja=usuario_nombre,
+                    fechamovcaja=ahora.date(),
+                    horamovcaja=ahora.time(),
+                    nombrecajamovcaja=apertura.nombrecaja,
+                    tipomovcaja='APERTURA',
+                    conceptomovcaja=f'Apertura de caja - {apertura.observacionapertura}',
+                    valormovcaja=apertura.montoinicialcaja,
+                    saldomovcaja=apertura.montoinicialcaja,
+                    idusuarios_id=usuario_id,
+                    idcaja=apertura
+                )
+            except Exception as e:
+                print(f"Error registrando movimiento de apertura: {e}")
+
+
             # Guardar en sesión
             request.session['caja_abierta'] = True
             request.session['id_caja'] = apertura.idcaja
@@ -246,24 +264,38 @@ def cierre_caja_view(request):
                     fechaventa=hoy
                 )
                 
-                # Calcular totales por método de pago
-                ventas_efectivo_result = ventas_dia.filter(metodopago='Efectivo').aggregate(
-                    total=models.Sum('totalventa')
-                )
+                # Calcular totales por método de pago - CORREGIDO
+                ventas_efectivo_result = ventas_dia.filter(
+                    models.Q(metodopago='EFECTIVO') | 
+                    models.Q(metodopago='Efectivo')
+                ).aggregate(total=models.Sum('totalventa'))
                 ventas_efectivo = ventas_efectivo_result['total'] or 0.0
                 
-                ventas_tarjeta_result = ventas_dia.filter(metodopago='Tarjeta').aggregate(
-                    total=models.Sum('totalventa')
-                )
+                # ✅ CORRECCIÓN: Incluir todos los tipos de tarjeta
+                ventas_tarjeta_result = ventas_dia.filter(
+                    models.Q(metodopago='TARJETA DEBITO') |
+                    models.Q(metodopago='TARJETA CREDITO') |
+                    models.Q(metodopago='Tarjeta Débito') |
+                    models.Q(metodopago='Tarjeta Crédito') |
+                    models.Q(metodopago__icontains='TARJETA')
+                ).aggregate(total=models.Sum('totalventa'))
                 ventas_tarjeta = ventas_tarjeta_result['total'] or 0.0
                 
-                ventas_transferencia_result = ventas_dia.filter(metodopago='Transferencia').aggregate(
-                    total=models.Sum('totalventa')
-                )
+                ventas_transferencia_result = ventas_dia.filter(
+                    models.Q(metodopago='TRANSFERENCIA') |
+                    models.Q(metodopago='Transferencia')
+                ).aggregate(total=models.Sum('totalventa'))
                 ventas_transferencia = ventas_transferencia_result['total'] or 0.0
                 
                 total_sistema = ventas_efectivo + ventas_tarjeta + ventas_transferencia
                 total_efectivo_esperado = caja.montoinicialcaja + ventas_efectivo
+
+                # ✅ NUEVO: Obtener movimientos de caja para el resumen
+                movimientos_caja = Movimientosdecaja.objects.filter(
+                    idcaja=caja,
+                    fechamovcaja=hoy
+                ).order_by('horamovcaja')
+
                 
         except Caja.DoesNotExist:
             messages.error(request, "No se encontró la caja.")
@@ -294,6 +326,14 @@ def cierre_caja_view(request):
             
             # Registrar movimiento de caja si tienes el modelo
             try:
+
+
+                ultimo_movimiento = Movimientosdecaja.objects.filter(
+                    idcaja=caja
+                ).order_by('-idmovcaja').first()
+                
+                saldo_actual = ultimo_movimiento.saldomovcaja if ultimo_movimiento else caja.montoinicialcaja
+
                 Movimientosdecaja.objects.create(
                     nombreusuariomovcaja=usuario_nombre,
                     fechamovcaja=ahora.date(),
@@ -333,7 +373,8 @@ def cierre_caja_view(request):
         "ventas_tarjeta": ventas_tarjeta,
         "ventas_transferencia": ventas_transferencia,
         "total_sistema": total_sistema,
-        "total_efectivo_esperado": total_efectivo_esperado
+        "total_efectivo_esperado": total_efectivo_esperado,
+        "movimientos_caja": movimientos_caja
     })
 
 def obtener_ultimo_cierre(request):
