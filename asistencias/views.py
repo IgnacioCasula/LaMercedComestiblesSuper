@@ -40,37 +40,29 @@ def calendar_events(request):
     start_str = request.GET.get('start')
     end_str = request.GET.get('end')
 
-    # Validaciones
     if not all([usuario_id, start_str, end_str]):
-        print("âŒ Faltan parÃ¡metros: usuario_id, start o end")
         return JsonResponse([], safe=False)
 
     try:
         empleado = Empleados.objects.get(idusuarios_id=usuario_id)
-        print(f"âœ“ Empleado encontrado: {empleado}")
     except Empleados.DoesNotExist:
-        print("âŒ Empleado no encontrado")
         return JsonResponse([], safe=False)
     
-    # Parsear fechas
     try:
         start_date = datetime.fromisoformat(start_str.split('T')[0]).date()
         end_date = datetime.fromisoformat(end_str.split('T')[0]).date()
-        print(f"âœ“ Rango de fechas: {start_date} a {end_date}")
     except Exception as e:
-        print(f"âŒ Error parseando fechas: {e}")
         return JsonResponse([], safe=False)
 
-    # Obtener horarios y asistencias
+    # Obtener TODOS los horarios del empleado
     horarios = Horario.objects.filter(empleado=empleado).select_related('rol')
+    
+    # Obtener todas las asistencias en el rango
     asistencias = Asistencias.objects.filter(
         idempleado=empleado, 
         fechaasistencia__gte=start_date,
         fechaasistencia__lt=end_date
     ).select_related('rol')
-
-    print(f"âœ“ Horarios encontrados: {horarios.count()}")
-    print(f"âœ“ Asistencias encontradas: {asistencias.count()}")
 
     events = []
     
@@ -78,16 +70,16 @@ def calendar_events(request):
     asistencias_map = defaultdict(list)
     for a in asistencias:
         asistencias_map[a.fechaasistencia].append(a)
-        print(f"  - Asistencia: {a.fechaasistencia} | Entrada: {a.horaentrada} | Salida: {a.horasalida} | Rol: {a.rol}")
 
     total_days = (end_date - start_date).days
+    ahora = timezone.now()
     
     for day_offset in range(total_days):
         current_date = start_date + timedelta(days=day_offset)
-        dia_semana_actual = current_date.weekday()  # 0=Lunes, 6=Domingo
+        dia_semana_actual = current_date.weekday()
         semana_del_mes_actual = get_week_of_month(current_date)
         
-        # Buscar turnos programados para este dÃ­a
+        # Buscar TODOS los turnos programados para este día
         turnos_programados = [
             h for h in horarios 
             if h.dia_semana == dia_semana_actual and h.semana_del_mes == semana_del_mes_actual
@@ -104,17 +96,19 @@ def calendar_events(request):
             turno_inicio = timezone.make_aware(datetime.combine(current_date, turno.hora_inicio))
             turno_fin = timezone.make_aware(datetime.combine(current_date, turno.hora_fin))
             
-            # Si el turno termina despuÃ©s de medianoche
+            # Si el turno termina después de medianoche
             if turno.hora_fin < turno.hora_inicio:
                 turno_fin += timedelta(days=1)
             
-            # Buscar la mejor asistencia que coincida con este turno
+            # Buscar la asistencia que mejor coincida con este turno
             mejor_asistencia = None
             min_diff = float('inf')
-            margen_busqueda_inicio = turno_inicio - timedelta(hours=2)  # Margen de 2 horas antes
+            
+            # Margen de búsqueda: desde 2 horas antes hasta el final del turno
+            margen_inicio = turno_inicio - timedelta(hours=2)
+            margen_fin = turno_fin
 
             for asistencia in asistencias_del_dia:
-                # Verificar que coincida el rol y no estÃ© procesada
                 if (asistencia.rol == rol and 
                     asistencia.idasistencia not in asistencias_procesadas and 
                     asistencia.horaentrada):
@@ -123,83 +117,88 @@ def calendar_events(request):
                         datetime.combine(current_date, asistencia.horaentrada)
                     )
                     
-                    # Verificar que estÃ© dentro del margen de bÃºsqueda
-                    if hora_entrada_reg >= margen_busqueda_inicio:
+                    # Verificar que esté dentro del margen
+                    if margen_inicio <= hora_entrada_reg <= margen_fin:
                         diff = abs((hora_entrada_reg - turno_inicio).total_seconds())
                         if diff < min_diff:
                             min_diff = diff
                             mejor_asistencia = asistencia
 
             titulo = f"{rol.nombrerol if rol else 'Sin Rol'}"
-            area = rol.nombrearea if rol else 'Sin Ãrea'
+            area = rol.nombrearea if rol else 'Sin Área'
 
             if mejor_asistencia:
                 # HAY ASISTENCIA REGISTRADA
                 asistencias_procesadas.add(mejor_asistencia.idasistencia)
                 
-                # Usar la hora REAL de entrada registrada
                 hora_entrada_real = timezone.make_aware(
                     datetime.combine(current_date, mejor_asistencia.horaentrada)
                 )
                 
-                # Usar la hora REAL de salida si existe, sino usar la programada
+                # CORRECCIÓN: Solo usar hora de salida si realmente existe
                 if mejor_asistencia.horasalida:
                     hora_salida_real = timezone.make_aware(
                         datetime.combine(current_date, mejor_asistencia.horasalida)
                     )
-                    # Si la salida es antes que la entrada, es del dÃ­a siguiente
                     if mejor_asistencia.horasalida < mejor_asistencia.horaentrada:
                         hora_salida_real += timedelta(days=1)
                 else:
-                    # Si no hay hora de salida, usar la programada
-                    hora_salida_real = turno_fin
+                    # Si no hay salida, usar la hora actual si es hoy y está en turno
+                    # O usar la hora programada de fin si es día pasado
+                    if current_date == timezone.localdate() and ahora < turno_fin:
+                        hora_salida_real = ahora  # Está en turno AHORA
+                    else:
+                        hora_salida_real = turno_fin  # Usar hora programada
                 
-                # Calcular puntualidad comparando entrada real vs programada
-                diff_puntualidad = (hora_entrada_real - turno_inicio).total_seconds()
+                # Calcular diferencia en MINUTOS
+                diff_minutos = (hora_entrada_real - turno_inicio).total_seconds() / 60
                 
-                if diff_puntualidad <= -600:  # -10 minutos o mÃ¡s temprano
+                # Clasificación mejorada
+                if diff_minutos <= -10:  # 10+ minutos antes
                     estado, className = ("Temprano", "event-temprano")
-                elif diff_puntualidad > 300:  # +5 minutos o mÃ¡s tarde
-                    estado, className = ("Tarde", "event-tarde")
-                else:  # Entre -10 y +5 minutos
+                elif -10 < diff_minutos <= 5:  # Entre -10 y +5 minutos
                     estado, className = ("Justo", "event-justo")
+                elif 5 < diff_minutos <= 60:  # Entre +5 minutos y +1 hora
+                    estado, className = ("Tarde", "event-tarde")
+                else:  # Más de 1 hora tarde
+                    estado, className = ("Muy Tarde", "event-ausente")
 
-                # MOSTRAR HORAS REALES, NO PROGRAMADAS
                 events.append({
                     'title': titulo,
-                    'start': hora_entrada_real.isoformat(),  # HORA REAL
-                    'end': hora_salida_real.isoformat(),      # HORA REAL
+                    'start': hora_entrada_real.isoformat(),
+                    'end': hora_salida_real.isoformat(),
                     'classNames': [className],
                     'extendedProps': {
                         'area': area,
                         'estado': estado,
                         'entrada_registrada': mejor_asistencia.horaentrada.strftime('%H:%M'),
-                        'salida_registrada': mejor_asistencia.horasalida.strftime('%H:%M') if mejor_asistencia.horasalida else 'En turno',
+                        'salida_registrada': mejor_asistencia.horasalida.strftime('%H:%M') if mejor_asistencia.horasalida else None,
                         'entrada_programada': turno.hora_inicio.strftime('%H:%M'),
-                        'salida_programada': turno.hora_fin.strftime('%H:%M')
+                        'salida_programada': turno.hora_fin.strftime('%H:%M'),
+                        'diferencia_minutos': round(diff_minutos, 1),
+                        'en_turno': not mejor_asistencia.horasalida  # Flag para saber si está en turno
                     }
                 })
             else:
-                # NO HAY ASISTENCIA REGISTRADA - Mostrar turno programado
+                # NO HAY ASISTENCIA REGISTRADA
                 event_data = {
                     'title': titulo,
                     'start': turno_inicio.isoformat(),
                     'end': turno_fin.isoformat(),
                     'extendedProps': {
                         'area': area,
-                        'entrada_registrada': 'N/A',
-                        'salida_registrada': 'N/A',
+                        'entrada_registrada': None,
+                        'salida_registrada': None,
                         'entrada_programada': turno.hora_inicio.strftime('%H:%M'),
-                        'salida_programada': turno.hora_fin.strftime('%H:%M')
+                        'salida_programada': turno.hora_fin.strftime('%H:%M'),
+                        'en_turno': False
                     }
                 }
                 
                 if current_date < timezone.localdate():
-                    # DÃ­a pasado sin asistencia = Ausente
                     event_data['extendedProps']['estado'] = 'Ausente'
                     event_data['classNames'] = ['event-ausente']
                 else:
-                    # DÃ­a futuro = Programado
                     event_data['extendedProps']['estado'] = 'Programado'
                     event_data['classNames'] = ['event-programado']
                 
@@ -209,16 +208,15 @@ def calendar_events(request):
         for asistencia in asistencias_del_dia:
             if asistencia.idasistencia not in asistencias_procesadas:
                 titulo = f"{asistencia.rol.nombrerol if asistencia.rol else 'Sin Rol'}"
-                area = asistencia.rol.nombrearea if asistencia.rol else 'Sin Ãrea'
+                area = asistencia.rol.nombrearea if asistencia.rol else 'Sin Área'
                 
                 if asistencia.horaentrada:
                     start_time = timezone.make_aware(
                         datetime.combine(current_date, asistencia.horaentrada)
                     )
                 else:
-                    start_time = None
+                    continue
                 
-                # Calcular hora de fin
                 if asistencia.horasalida:
                     end_time = timezone.make_aware(
                         datetime.combine(current_date, asistencia.horasalida)
@@ -226,20 +224,26 @@ def calendar_events(request):
                     if asistencia.horasalida < asistencia.horaentrada:
                         end_time += timedelta(days=1)
                 else:
-                    end_time = start_time + timedelta(hours=8) if start_time else None
+                    # Si es hoy y no tiene salida, usar hora actual
+                    if current_date == timezone.localdate():
+                        end_time = ahora
+                    else:
+                        end_time = start_time + timedelta(hours=8)
                 
                 events.append({
                     'title': titulo,
-                    'start': start_time.isoformat() if start_time else None,
-                    'end': end_time.isoformat() if end_time else None,
+                    'start': start_time.isoformat(),
+                    'end': end_time.isoformat(),
                     'classNames': ['event-fuera-de-turno'],
                     'extendedProps': {
                         'area': area,
                         'estado': 'Fuera de Turno',
-                        'entrada_registrada': asistencia.horaentrada.strftime('%H:%M') if asistencia.horaentrada else 'N/A',
-                        'salida_registrada': asistencia.horasalida.strftime('%H:%M') if asistencia.horasalida else 'En turno'
+                        'entrada_registrada': asistencia.horaentrada.strftime('%H:%M'),
+                        'salida_registrada': asistencia.horasalida.strftime('%H:%M') if asistencia.horasalida else None,
+                        'entrada_programada': None,
+                        'salida_programada': None,
+                        'en_turno': not asistencia.horasalida
                     }
                 })
     
-    print(f"âœ“ Total de eventos generados: {len(events)}")
     return JsonResponse(events, safe=False)

@@ -12,11 +12,6 @@ urlpatterns = [
     path('seleccionar-rol/', views.seleccionar_rol_view, name='seleccionar_rol'),
     path('logout/', views.logout_view, name='logout'),
     
-    # Rutas para registro de asistencias
-    path('api/registrar-entrada/', views.registrar_entrada, name='registrar_entrada'),
-    path('api/registrar-salida/', views.registrar_salida, name='registrar_salida'),
-    path('api/estado-asistencia-hoy/', views.estado_asistencia_hoy, name='estado_asistencia_hoy'),
-
     # Rutas principales
     path('inicio/', views.inicio_view, name='inicio'),
     
@@ -34,7 +29,7 @@ urlpatterns = [
     # API Estado de Caja
     path('api/caja-status/', views.api_caja_status, name='api_caja_status'),
     
-    # APIs de áreas y puestos (SIN las rutas de eliminar)
+    # APIs de áreas y puestos
     path('api/areas-puestos/', views.api_areas_puestos, name='api_areas_puestos'),
     path('api/areas-puestos/crear-area/', views.api_crear_area, name='api_crear_area_nueva'),
     path('api/areas-puestos/editar-area/<str:area_nombre>/', views.api_editar_area, name='api_editar_area'),
@@ -54,4 +49,9 @@ urlpatterns = [
     # APIs simples para selects
     path('api/areas-simple/', views.api_areas_simple, name='api_areas_simple'),
     path('api/puestos-simple/<str:area_nombre>/', views.api_puestos_por_area_simple, name='api_puestos_por_area_simple'),
+    
+    # APIs de asistencia (manuales - backup)
+    path('api/registrar-entrada/', views.registrar_entrada, name='api_registrar_entrada'),
+    path('api/registrar-salida/', views.registrar_salida, name='api_registrar_salida'),
+    path('api/estado-asistencia-hoy/', views.estado_asistencia_hoy, name='api_estado_asistencia_hoy'),
 ]

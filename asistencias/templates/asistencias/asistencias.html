@@ -12,7 +12,6 @@
     <script src="https://unpkg.com/tippy.js@6"></script>
     
     <style>
-        /* ===== RESET Y BASE ===== */
         * {
             margin: 0;
             padding: 0;
@@ -28,7 +27,6 @@
             overflow-x: hidden;
         }
 
-        /* ===== EFECTOS DE FONDO ===== */
         body::before,
         body::after {
             content: '';
@@ -63,7 +61,6 @@
             50% { transform: translate(30px, -30px) scale(1.1); }
         }
 
-        /* ===== CONTENEDOR ===== */
         .container {
             max-width: 1400px;
             margin: 0 auto;
@@ -71,7 +68,6 @@
             z-index: 1;
         }
 
-        /* ===== HEADER ===== */
         .page-header {
             background: rgba(255, 255, 255, 0.95);
             padding: 25px 35px;
@@ -87,14 +83,8 @@
         }
 
         @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .header-content {
@@ -145,23 +135,16 @@
             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
         }
 
-        /* ===== CONTENIDO PRINCIPAL ===== */
         .content-wrapper {
             display: grid;
-            grid-template-columns: 1fr 300px;
+            grid-template-columns: 1fr 350px;
             gap: 30px;
             animation: fadeIn 0.6s ease-out 0.2s backwards;
         }
 
         @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .calendar-card {
@@ -194,36 +177,48 @@
         }
 
         .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px;
-            margin-bottom: 10px;
+            padding: 14px;
+            margin-bottom: 12px;
             border-radius: 10px;
             transition: all 0.3s ease;
             cursor: default;
+            border: 2px solid transparent;
         }
 
         .legend-item:hover {
             background: rgba(102, 126, 234, 0.05);
+            border-color: rgba(102, 126, 234, 0.2);
             transform: translateX(5px);
         }
 
+        .legend-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 6px;
+        }
+
         .legend-color {
-            width: 20px;
-            height: 20px;
+            width: 24px;
+            height: 24px;
             border-radius: 6px;
             flex-shrink: 0;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
 
-        .legend-text {
-            font-size: 0.95em;
-            color: #495057;
-            font-weight: 500;
+        .legend-title {
+            font-size: 1em;
+            color: #2c3e50;
+            font-weight: 600;
         }
 
-        /* ===== FULLCALENDAR ===== */
+        .legend-description {
+            font-size: 0.85em;
+            color: #6c757d;
+            margin-left: 36px;
+            line-height: 1.4;
+        }
+
         #calendar {
             min-height: 600px;
         }
@@ -248,7 +243,7 @@
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
         }
 
-        .fc-button:hover {
+        .fc-button:hover:not(:disabled) {
             transform: translateY(-2px) !important;
             box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4) !important;
         }
@@ -258,21 +253,48 @@
             cursor: not-allowed !important;
         }
 
+        /* CORRECCIÓN: Eventos que NO se salen del calendario */
         .fc-event {
             border: none !important;
             padding: 6px 8px !important;
             border-radius: 6px !important;
-            font-size: 0.85em !important;
+            font-size: 0.82em !important;
             cursor: pointer !important;
             transition: all 0.3s ease !important;
+            overflow: visible !important;
+            line-height: 1.3 !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+            position: relative !important;
+        }
+
+        .fc-daygrid-event {
+            white-space: normal !important;
+            align-items: flex-start !important;
         }
 
         .fc-event:hover {
-            transform: scale(1.05) !important;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+            transform: translateY(-2px) scale(1.02) !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+            z-index: 100 !important;
         }
 
-        /* ===== ESTADOS ===== */
+        .fc-event-main {
+            padding: 0 !important;
+        }
+
+        .fc-event-title {
+            font-weight: 600 !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
+
+        .fc-event-time {
+            font-weight: 700 !important;
+            font-size: 1.05em !important;
+        }
+
+        /* Estados */
         .event-programado {
             background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%) !important;
             border-left: 4px solid #495057 !important;
@@ -293,7 +315,8 @@
             border-left: 4px solid #a04000 !important;
         }
 
-        .event-ausente {
+        .event-ausente,
+        .event-muy-tarde {
             background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) !important;
             border-left: 4px solid #922b21 !important;
         }
@@ -321,14 +344,25 @@
             background: rgba(0, 0, 0, 0.02) !important;
         }
 
-        /* ===== TOOLTIP ===== */
+        /* Mejorar vista semana */
+        .fc-timegrid-slot {
+            height: 3em !important;
+        }
+
+        .fc-timegrid-event {
+            border-radius: 6px !important;
+            padding: 4px 6px !important;
+        }
+
+        /* Tooltip */
         .tippy-box[data-theme~='asistencia'] {
             background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
             color: white;
             border-radius: 12px;
-            padding: 12px 16px;
-            font-size: 0.9em;
+            padding: 16px;
+            font-size: 0.88em;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            max-width: 280px;
         }
 
         .tippy-box[data-theme~='asistencia'] .tippy-arrow {
@@ -336,20 +370,187 @@
         }
 
         .tooltip-content {
-            line-height: 1.8;
+            line-height: 1.6;
         }
 
         .tooltip-content strong {
             color: #a8d5e2;
+            font-size: 0.9em;
+        }
+
+        .tooltip-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 6px 0;
+            gap: 12px;
+        }
+
+        .tooltip-label {
+            font-size: 0.85em;
+            opacity: 0.85;
+        }
+
+        .tooltip-value {
+            font-weight: 600;
+            text-align: right;
         }
 
         .tooltip-divider {
-            margin: 8px 0;
+            margin: 10px 0;
             border: none;
             border-top: 1px solid rgba(255, 255, 255, 0.2);
         }
 
-        /* ===== RESPONSIVE ===== */
+        .tooltip-diferencia {
+            margin-top: 10px;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 6px;
+            font-weight: 600;
+            text-align: center;
+            font-size: 0.95em;
+        }
+
+        .tooltip-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 5px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        /* Modal de detalles */
+        .detail-modal {
+            border: none;
+            border-radius: 16px;
+            padding: 0;
+            max-width: 450px;
+            width: 90%;
+            background: white;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .detail-modal::backdrop {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 24px;
+            border-radius: 16px 16px 0 0;
+        }
+
+        .modal-header h3 {
+            margin: 0 0 8px 0;
+            font-size: 1.4em;
+            font-weight: 700;
+        }
+
+        .modal-header .area-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .modal-section {
+            margin-bottom: 20px;
+        }
+
+        .modal-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .modal-section-title {
+            font-size: 0.9em;
+            font-weight: 700;
+            color: #667eea;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .modal-info-grid {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 12px 16px;
+            align-items: center;
+        }
+
+        .modal-info-label {
+            font-size: 0.9em;
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .modal-info-value {
+            font-size: 1em;
+            color: #2c3e50;
+            font-weight: 600;
+            text-align: right;
+        }
+
+        .modal-estado-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .modal-diferencia-box {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 16px;
+            border-radius: 10px;
+            text-align: center;
+            border-left: 4px solid;
+        }
+
+        .modal-diferencia-box .label {
+            font-size: 0.85em;
+            color: #6c757d;
+            margin-bottom: 6px;
+        }
+
+        .modal-diferencia-box .value {
+            font-size: 1.3em;
+            font-weight: 700;
+        }
+
+        .modal-actions {
+            padding: 16px 24px;
+            background: #f8f9fa;
+            border-radius: 0 0 16px 16px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .modal-btn {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 0.95em;
+        }
+
+        .modal-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
         @media (max-width: 1200px) {
             .content-wrapper {
                 grid-template-columns: 1fr;
@@ -360,9 +561,7 @@
         }
 
         @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
+            body { padding: 10px; }
             .page-header {
                 flex-direction: column;
                 padding: 20px;
@@ -372,12 +571,8 @@
                 flex-direction: column;
                 text-align: center;
             }
-            .user-info h1 {
-                font-size: 1.4em;
-            }
-            .calendar-card {
-                padding: 15px;
-            }
+            .user-info h1 { font-size: 1.4em; }
+            .calendar-card { padding: 15px; }
             .fc-toolbar {
                 flex-direction: column !important;
                 gap: 10px !important;
@@ -402,7 +597,7 @@
                 </div>
             </div>
             <a href="{% url 'inicio' %}" class="back-btn">
-                <i class="fas fa-arrow-left"></i> Volver al Inicio
+                <i class="fas fa-arrow-left"></i> Volver
             </a>
         </div>
 
@@ -412,63 +607,128 @@
             </div>
 
             <div class="legend-card">
-                <h3><i class="fas fa-info-circle"></i> Leyenda</h3>
+                <h3><i class="fas fa-info-circle"></i> Leyenda de Estados</h3>
                 
                 <div class="legend-item">
-                    <div class="legend-color" style="background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);"></div>
-                    <span class="legend-text">Programado</span>
+                    <div class="legend-header">
+                        <div class="legend-color" style="background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);"></div>
+                        <span class="legend-title">Programado</span>
+                    </div>
+                    <div class="legend-description">
+                        Turno futuro sin registro de asistencia aún
+                    </div>
                 </div>
 
                 <div class="legend-item">
-                    <div class="legend-color" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);"></div>
-                    <span class="legend-text">Temprano (-10min)</span>
+                    <div class="legend-header">
+                        <div class="legend-color" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);"></div>
+                        <span class="legend-title">Temprano</span>
+                    </div>
+                    <div class="legend-description">
+                        Llegaste 10+ minutos antes de tu hora programada
+                    </div>
                 </div>
 
                 <div class="legend-item">
-                    <div class="legend-color" style="background: linear-gradient(135deg, #27ae60 0%, #229954 100%);"></div>
-                    <span class="legend-text">Puntual</span>
+                    <div class="legend-header">
+                        <div class="legend-color" style="background: linear-gradient(135deg, #27ae60 0%, #229954 100%);"></div>
+                        <span class="legend-title">Puntual</span>
+                    </div>
+                    <div class="legend-description">
+                        Llegaste a tiempo (entre -10 y +5 minutos)
+                    </div>
                 </div>
 
                 <div class="legend-item">
-                    <div class="legend-color" style="background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);"></div>
-                    <span class="legend-text">Tarde (+5min)</span>
+                    <div class="legend-header">
+                        <div class="legend-color" style="background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);"></div>
+                        <span class="legend-title">Tarde</span>
+                    </div>
+                    <div class="legend-description">
+                        Llegaste entre 5 y 60 minutos tarde
+                    </div>
                 </div>
 
                 <div class="legend-item">
-                    <div class="legend-color" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);"></div>
-                    <span class="legend-text">Ausente</span>
+                    <div class="legend-header">
+                        <div class="legend-color" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);"></div>
+                        <span class="legend-title">Ausente / Muy Tarde</span>
+                    </div>
+                    <div class="legend-description">
+                        No registraste entrada o llegaste más de 1 hora tarde
+                    </div>
                 </div>
 
                 <div class="legend-item">
-                    <div class="legend-color" style="background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);"></div>
-                    <span class="legend-text">Fuera de Turno</span>
+                    <div class="legend-header">
+                        <div class="legend-color" style="background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);"></div>
+                        <span class="legend-title">Fuera de Turno</span>
+                    </div>
+                    <div class="legend-description">
+                        Registraste entrada sin turno programado
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- MODAL DE DETALLE -->
+    <dialog id="detail-modal" class="detail-modal">
+        <div class="modal-header">
+            <h3 id="modal-title">Cajero</h3>
+            <span class="area-badge">📂 <span id="modal-area">Caja</span></span>
+        </div>
+        <div class="modal-body">
+            <!-- Estado -->
+            <div class="modal-section">
+                <div class="modal-section-title">Estado de Asistencia</div>
+                <div style="text-align: center;">
+                    <span id="modal-estado" class="modal-estado-badge">Puntual</span>
+                </div>
+            </div>
+
+            <!-- Horario Programado -->
+            <div class="modal-section" id="modal-programado-section">
+                <div class="modal-section-title">📅 Horario Programado</div>
+                <div class="modal-info-grid">
+                    <span class="modal-info-label">⏰ Entrada:</span>
+                    <span class="modal-info-value" id="modal-prog-entrada">08:00</span>
+                    <span class="modal-info-label">⏰ Salida:</span>
+                    <span class="modal-info-value" id="modal-prog-salida">16:00</span>
+                </div>
+            </div>
+
+            <!-- Registro Real -->
+            <div class="modal-section" id="modal-registro-section">
+                <div class="modal-section-title">✅ Registro Real</div>
+                <div class="modal-info-grid">
+                    <span class="modal-info-label">🟢 Entrada:</span>
+                    <span class="modal-info-value" id="modal-reg-entrada">07:55</span>
+                    <span class="modal-info-label">🔴 Salida:</span>
+                    <span class="modal-info-value" id="modal-reg-salida">16:10</span>
+                </div>
+            </div>
+
+            <!-- Diferencia -->
+            <div class="modal-diferencia-box" id="modal-diferencia-box">
+                <div class="label">⏱️ Diferencia</div>
+                <div class="value" id="modal-diferencia-value">5 minutos antes</div>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="modal-btn" onclick="document.getElementById('detail-modal').close(); if(window.audioSystem) window.audioSystem.play('select');">Cerrar</button>
+        </div>
+    </dialog>
+
     <script src="{% static 'JS/audio-system.js' %}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 Iniciando calendario...');
-            
             var calendarEl = document.getElementById('calendar');
             
-            if (!calendarEl) {
-                console.error('❌ #calendar no encontrado');
+            if (!calendarEl || typeof FullCalendar === 'undefined') {
+                console.error('❌ Error: Calendario no disponible');
                 return;
             }
-            
-            console.log('✓ Elemento encontrado');
-            console.log('✓ URL:', calendarEl.dataset.eventsUrl);
-            
-            if (typeof FullCalendar === 'undefined') {
-                console.error('❌ FullCalendar no cargado');
-                calendarEl.innerHTML = '<div style="padding: 40px; text-align: center; color: #e74c3c;"><i class="fas fa-exclamation-triangle" style="font-size: 3em;"></i><p>Error: FullCalendar no disponible</p></div>';
-                return;
-            }
-            
-            console.log('✓ FullCalendar disponible');
             
             var calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: 'dayGridMonth',
@@ -485,19 +745,22 @@
                     week: 'Semana',
                     day: 'Día'
                 },
+                slotMinTime: '00:00:00',
+                slotMaxTime: '23:59:59',
+                allDaySlot: false,
+                
+                // NUEVO: Clic en día va a vista día
+                dateClick: function(info) {
+                    calendar.changeView('timeGridDay', info.dateStr);
+                },
                 
                 events: function(fetchInfo, successCallback, failureCallback) {
                     const url = `${calendarEl.dataset.eventsUrl}?start=${fetchInfo.startStr}&end=${fetchInfo.endStr}`;
-                    console.log('📅 Cargando:', url);
 
                     fetch(url)
-                        .then(r => {
-                            console.log('📡 Status:', r.status);
-                            return r.json();
-                        })
+                        .then(r => r.json())
                         .then(data => {
-                            console.log('✅ Eventos recibidos:', data.length);
-                            console.log('📋 Primer evento:', data[0]);
+                            console.log('✅ Eventos:', data.length);
                             successCallback(data);
                         })
                         .catch(e => {
@@ -508,63 +771,174 @@
 
                 eventContent: function(arg) {
                     const props = arg.event.extendedProps;
+                    const view = arg.view.type;
                     const icons = {
                         'Justo': 'fa-circle-check',
                         'Temprano': 'fa-hourglass-start',
                         'Tarde': 'fa-clock',
+                        'Muy Tarde': 'fa-circle-xmark',
                         'Ausente': 'fa-circle-xmark',
                         'Programado': 'fa-calendar-days',
                         'Fuera de Turno': 'fa-triangle-exclamation'
                     };
                     
-                    const startTime = arg.event.start ? arg.event.start.toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'}) : '';
+                    const startTime = arg.event.start.toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'});
                     const endTime = arg.event.end ? arg.event.end.toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'}) : '';
-                    const timeText = endTime ? `${startTime} - ${endTime}` : startTime;
-
-                    return {
-                        html: `
-                            <div style="padding: 4px;">
-                                <div style="font-weight: 700; font-size: 0.95em;">${timeText}</div>
-                                <div style="font-size: 0.9em;">${arg.event.title}</div>
-                                <div style="font-size: 0.85em;">
-                                    <i class="fa-solid ${icons[props.estado] || 'fa-question'}"></i> ${props.estado}
-                                </div>
-                            </div>
-                        `
-                    };
-                },
-
-                eventDidMount: function(info) {
-                    if (typeof tippy !== 'undefined') {
-                        const props = info.event.extendedProps;
-                        
-                        console.log('🔍 Props del evento:', props);
-                        
-                        let content = `
-                            <div class="tooltip-content">
-                                <div><strong>Puesto:</strong> ${info.event.title}</div>
-                                <div><strong>Área:</strong> ${props.area || 'N/A'}</div>
-                                <hr class="tooltip-divider">
-                                <div><strong>Estado:</strong> ${props.estado}</div>
+                    
+                    // Formato diferente según la vista
+                    if (view === 'timeGridDay' || view === 'timeGridWeek') {
+                        // Vista día/semana: Más detalles
+                        let html = `
+                            <div style="padding: 6px; line-height: 1.4;">
+                                <div style="font-weight: 700; font-size: 0.95em; margin-bottom: 4px;">${arg.event.title}</div>
                         `;
                         
-                        // Si tiene horario programado, mostrarlo
-                        if (props.entrada_programada && props.entrada_programada !== 'N/A') {
-                            content += `
-                                <hr class="tooltip-divider">
-                                <div style="color: #a8d5e2;"><strong>📅 Horario Programado</strong></div>
-                                <div>⏰ ${props.entrada_programada} - ${props.salida_programada}</div>
+                        // Horario programado (siempre mostrar si existe)
+                        if (props.entrada_programada && props.salida_programada) {
+                        }
+                        
+                        // Hora real de entrada (si existe)
+                        if (props.entrada_registrada) {
+                            html += `
+                                <div style="font-size: 0.8em; font-weight: 600; margin-bottom: 3px;">
+                                    ✅ Entrada: ${props.entrada_registrada}
+                                </div>
                             `;
                         }
                         
-                        // Mostrar entrada y salida registrada
-                        if (props.entrada_registrada && props.entrada_registrada !== 'N/A') {
+                        // Estado
+                        html += `
+                            <div style="font-size: 0.82em; margin-top: 3px;">
+                                <i class="fa-solid ${icons[props.estado]}"></i> ${props.estado}
+                            </div>
+                        `;
+                        
+                        // Badge "En turno"
+                        if (props.en_turno) {
+                            html += `<div style="font-size: 0.75em; background: rgba(255,255,255,0.25); padding: 2px 6px; border-radius: 4px; margin-top: 3px;">📍 En turno ahora</div>`;
+                        }
+                        
+                        html += `</div>`;
+                        return { html };
+                    } else {
+                        // Vista mes: Mostrar info completa pero compacta
+                        let html = `<div style="padding: 4px 6px; line-height: 1.4;">`;
+                        
+                        // Título
+                        html += `<div style="font-size: 0.88em; font-weight: 700; margin-bottom: 3px;">${arg.event.title}</div>`;
+                        
+                        // Horario programado
+                        if (props.entrada_programada && props.salida_programada) {
+                            html += `<div style="font-size: 0.78em; opacity: 0.92;">📅 ${props.entrada_programada}-${props.salida_programada}</div>`;
+                        }
+                        
+                        // Hora real de entrada
+                        if (props.entrada_registrada) {
+                            html += `<div style="font-size: 0.78em; font-weight: 600; margin-top: 2px;">✅ ${props.entrada_registrada}</div>`;
+                        }
+                        
+                        // Estado con icono
+                        html += `<div style="font-size: 0.75em; margin-top: 2px;"><i class="fa-solid ${icons[props.estado]}" style="font-size: 0.85em;"></i> ${props.estado}</div>`;
+                        
+                        html += `</div>`;
+                        
+                        return { html };
+                    }
+                },
+
+                eventDidMount: function(info) {
+                    const props = info.event.extendedProps;
+                    
+                    // TOOLTIP COMPACTO
+                    if (typeof tippy !== 'undefined') {
+                        let content = `
+                            <div class="tooltip-content">
+                                <div class="tooltip-row">
+                                    <span class="tooltip-label">🏢 Puesto:</span>
+                                    <span class="tooltip-value">${info.event.title}</span>
+                                </div>
+                                <div class="tooltip-row">
+                                    <span class="tooltip-label">📂 Área:</span>
+                                    <span class="tooltip-value">${props.area || 'N/A'}</span>
+                                </div>
+                        `;
+                        
+                        // Estado con badge
+                        const estadoColors = {
+                            'Temprano': '#3498db',
+                            'Justo': '#27ae60',
+                            'Tarde': '#e67e22',
+                            'Muy Tarde': '#e74c3c',
+                            'Ausente': '#e74c3c',
+                            'Programado': '#6c757d',
+                            'Fuera de Turno': '#34495e'
+                        };
+                        content += `
+                            <div class="tooltip-row" style="margin-top: 8px;">
+                                <span class="tooltip-label">Estado:</span>
+                                <span class="tooltip-badge" style="background: ${estadoColors[props.estado]}; color: white;">${props.estado}</span>
+                            </div>
+                        `;
+                        
+                        // Horario programado
+                        if (props.entrada_programada) {
                             content += `
                                 <hr class="tooltip-divider">
-                                <div style="color: #a8d5e2;"><strong>✅ Registro Real</strong></div>
-                                <div>🔵 Entrada: ${props.entrada_registrada}</div>
-                                <div>🔴 Salida: ${props.salida_registrada || 'En turno'}</div>
+                                <div style="text-align: center; margin-bottom: 6px;"><strong>📅 Horario Programado</strong></div>
+                                <div class="tooltip-row">
+                                    <span class="tooltip-label">⏰ Horario:</span>
+                                    <span class="tooltip-value">${props.entrada_programada} - ${props.salida_programada}</span>
+                                </div>
                             `;
+                        }
+                        
+                        // Registro real
+                        if (props.entrada_registrada) {
+                            content += `
+                                <hr class="tooltip-divider">
+                                <div style="text-align: center; margin-bottom: 6px;"><strong>✅ Registro Real</strong></div>
+                                <div class="tooltip-row">
+                                    <span class="tooltip-label">🟢 Entrada:</span>
+                                    <span class="tooltip-value">${props.entrada_registrada}</span>
+                                </div>
+                            `;
+                            
+                            if (props.en_turno) {
+                                content += `<div style="text-align: center; margin-top: 6px; font-style: italic; color: #a8d5e2;">📍 Actualmente en turno</div>`;
+                            } else if (props.salida_registrada) {
+                                content += `
+                                    <div class="tooltip-row">
+                                        <span class="tooltip-label">🔴 Salida:</span>
+                                        <span class="tooltip-value">${props.salida_registrada}</span>
+                                    </div>
+                                `;
+                            }
+                            
+                            // Diferencia en minutos
+                            if (props.diferencia_minutos !== undefined && props.entrada_programada) {
+                                const diff = props.diferencia_minutos;
+                                let diffText, diffColor;
+                                
+                                if (diff <= -10) {
+                                    diffText = `${Math.abs(diff).toFixed(0)} min antes ⏪`;
+                                    diffColor = '#3498db';
+                                } else if (diff > -10 && diff <= 5) {
+                                    diffText = '✓ Puntual';
+                                    diffColor = '#27ae60';
+                                } else if (diff > 5 && diff <= 60) {
+                                    diffText = `${diff.toFixed(0)} min tarde ⏩`;
+                                    diffColor = '#e67e22';
+                                } else {
+                                    diffText = `${diff.toFixed(0)} min tarde ⚠️`;
+                                    diffColor = '#e74c3c';
+                                }
+                                
+                                content += `
+                                    <div class="tooltip-diferencia" style="color: ${diffColor};">
+                                        ⏱️ ${diffText}
+                                    </div>
+                                `;
+                            }
                         }
                         
                         content += `</div>`;
@@ -574,9 +948,15 @@
                             allowHTML: true,
                             theme: 'asistencia',
                             arrow: true,
-                            placement: 'top'
+                            placement: 'top',
+                            interactive: true
                         });
                     }
+                    
+                    // EVENTO CLICK PARA ABRIR MODAL
+                    info.el.addEventListener('click', function() {
+                        mostrarModalDetalle(info.event);
+                    });
                 },
                 
                 eventClassNames: function(arg) {
@@ -585,6 +965,7 @@
                         'Temprano': 'event-temprano',
                         'Justo': 'event-justo',
                         'Tarde': 'event-tarde',
+                        'Muy Tarde': 'event-ausente',
                         'Ausente': 'event-ausente',
                         'Fuera de Turno': 'event-fuera-de-turno'
                     };
@@ -592,14 +973,101 @@
                 }
             });
             
-            console.log('🎨 Renderizando...');
             calendar.render();
-            console.log('✅ Calendario listo');
+
+            // Función para mostrar modal de detalle
+            function mostrarModalDetalle(event) {
+                const props = event.extendedProps;
+                const modal = document.getElementById('detail-modal');
+                
+                // Actualizar contenido del modal
+                document.getElementById('modal-title').textContent = event.title;
+                document.getElementById('modal-area').textContent = props.area || 'Sin Área';
+                
+                // Estado
+                const estadoColors = {
+                    'Temprano': '#3498db',
+                    'Justo': '#27ae60',
+                    'Tarde': '#e67e22',
+                    'Muy Tarde': '#e74c3c',
+                    'Ausente': '#e74c3c',
+                    'Programado': '#6c757d',
+                    'Fuera de Turno': '#34495e'
+                };
+                const estadoBadge = document.getElementById('modal-estado');
+                estadoBadge.textContent = props.estado;
+                estadoBadge.style.background = estadoColors[props.estado];
+                
+                // Horario programado
+                const programadoSection = document.getElementById('modal-programado-section');
+                if (props.entrada_programada && props.salida_programada) {
+                    programadoSection.style.display = 'block';
+                    document.getElementById('modal-prog-entrada').textContent = props.entrada_programada;
+                    document.getElementById('modal-prog-salida').textContent = props.salida_programada;
+                } else {
+                    programadoSection.style.display = 'none';
+                }
+                
+                // Registro real
+                const registroSection = document.getElementById('modal-registro-section');
+                if (props.entrada_registrada) {
+                    registroSection.style.display = 'block';
+                    document.getElementById('modal-reg-entrada').textContent = props.entrada_registrada;
+                    
+                    const regSalida = document.getElementById('modal-reg-salida');
+                    if (props.en_turno) {
+                        regSalida.textContent = 'En turno actual';
+                        regSalida.style.fontStyle = 'italic';
+                        regSalida.style.color = '#667eea';
+                    } else if (props.salida_registrada) {
+                        regSalida.textContent = props.salida_registrada;
+                        regSalida.style.fontStyle = 'normal';
+                        regSalida.style.color = '#2c3e50';
+                    } else {
+                        regSalida.textContent = 'No registrada';
+                        regSalida.style.fontStyle = 'italic';
+                        regSalida.style.color = '#6c757d';
+                    }
+                } else {
+                    registroSection.style.display = 'none';
+                }
+                
+                // Diferencia
+                const difBox = document.getElementById('modal-diferencia-box');
+                if (props.diferencia_minutos !== undefined && props.entrada_programada) {
+                    difBox.style.display = 'block';
+                    const diff = props.diferencia_minutos;
+                    let diffText, diffColor;
+                    
+                    if (diff <= -10) {
+                        diffText = `${Math.abs(diff).toFixed(0)} minutos antes`;
+                        diffColor = '#3498db';
+                    } else if (diff > -10 && diff <= 5) {
+                        diffText = 'Puntual ✓';
+                        diffColor = '#27ae60';
+                    } else if (diff > 5 && diff <= 60) {
+                        diffText = `${diff.toFixed(0)} minutos tarde`;
+                        diffColor = '#e67e22';
+                    } else {
+                        diffText = `${diff.toFixed(0)} minutos tarde`;
+                        diffColor = '#e74c3c';
+                    }
+                    
+                    difBox.style.borderLeftColor = diffColor;
+                    document.getElementById('modal-diferencia-value').textContent = diffText;
+                    document.getElementById('modal-diferencia-value').style.color = diffColor;
+                } else {
+                    difBox.style.display = 'none';
+                }
+                
+                modal.showModal();
+                if (window.audioSystem) window.audioSystem.play('select');
+            }
 
             // Sonidos
             if (window.audioSystem) {
                 document.addEventListener('click', e => {
-                    if (e.target.closest('.fc-button, .back-btn')) {
+                    if (e.target.closest('.fc-button, .back-btn, .fc-daygrid-day')) {
                         window.audioSystem.play('select');
                     }
                 });

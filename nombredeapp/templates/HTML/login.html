@@ -304,53 +304,6 @@
             z-index: 1;
         }
 
-        /* BOTÓN DE ASISTENCIA (fuera del formulario) */
-        .action-btn {
-            width: 100%;
-            padding: 16px;
-            border: none;
-            border-radius: 12px;
-            color: white;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-            margin-top: 12px;
-        }
-
-        .action-btn.registrar-asistencia {
-            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
-            box-shadow: 0 8px 20px rgba(39, 174, 96, 0.4);
-        }
-
-        .action-btn.registrar-asistencia.salida {
-            background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
-            box-shadow: 0 8px 20px rgba(230, 126, 34, 0.4);
-        }
-
-        .action-btn.registrar-asistencia.completado {
-            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
-            box-shadow: 0 8px 20px rgba(149, 165, 166, 0.4);
-            cursor: not-allowed;
-            opacity: 0.7;
-        }
-
-        .action-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
-        }
-
-        .action-btn:disabled {
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-
         .recovery-section {
             background: rgba(255, 255, 255, 0.15);
             backdrop-filter: blur(10px);
@@ -396,6 +349,24 @@
             background: #f8f9fa;
         }
 
+        .info-note {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border-left: 4px solid #2196f3;
+            padding: 14px 16px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 13px;
+            color: #1565c0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .info-note i {
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
         @media (max-width: 500px) {
             .login-box { padding: 30px 24px; }
             .login-header h1 { font-size: 24px; }
@@ -415,7 +386,7 @@
             <div class="messages">
                 {% for message in messages %}
                 <div class="message {{ message.tags }}">
-                    <i class="fas fa-exclamation-circle"></i>
+                    <i class="fas fa-{% if message.tags == 'error' %}exclamation-circle{% else %}check-circle{% endif %}"></i>
                     <span>{{ message }}</span>
                 </div>
                 {% endfor %}
@@ -470,13 +441,12 @@
                     <i class="fas fa-sign-in-alt"></i>
                     <span>Entrar</span>
                 </button>
-            </form>
 
-            <!-- BOTÓN DE ASISTENCIA FUERA DEL FORMULARIO -->
-            <button type="button" id="btn-registrar-asistencia" class="action-btn registrar-asistencia">
-                <i class="fas fa-fingerprint"></i> 
-                <span id="texto-asistencia">Registrar Entrada</span>
-            </button>
+                <div class="info-note">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Al iniciar sesión se registrará automáticamente tu asistencia</span>
+                </div>
+            </form>
             {% endif %}
         </div>
 
@@ -535,91 +505,7 @@
                 
                 syncEmail();
             }
-
-            // GESTIÓN DE ASISTENCIAS (SIN AUTENTICACIÓN REQUERIDA)
-            const btnRegistrarAsistencia = document.getElementById('btn-registrar-asistencia');
-            const textoAsistencia = document.getElementById('texto-asistencia');
-
-            if (btnRegistrarAsistencia) {
-                // Verificar estado al cargar (solo si el usuario está autenticado)
-                fetch('/api/estado-asistencia-hoy/')
-                    .then(r => {
-                        if (!r.ok) throw new Error('No autenticado');
-                        return r.json();
-                    })
-                    .then(data => {
-                        if (data.tiene_entrada && !data.tiene_salida) {
-                            textoAsistencia.textContent = 'Registrar Salida';
-                            btnRegistrarAsistencia.classList.add('salida');
-                        } else if (data.tiene_entrada && data.tiene_salida) {
-                            btnRegistrarAsistencia.disabled = true;
-                            textoAsistencia.textContent = 'Jornada Finalizada';
-                            btnRegistrarAsistencia.classList.add('completado');
-                        }
-                    })
-                    .catch(err => {
-                        console.log('Usuario no autenticado, botón listo para primer registro');
-                    });
-
-                btnRegistrarAsistencia.addEventListener('click', async () => {
-                    const esEntrada = textoAsistencia.textContent === 'Registrar Entrada';
-                    const url = esEntrada ? '/api/registrar-entrada/' : '/api/registrar-salida/';
-                    
-                    btnRegistrarAsistencia.disabled = true;
-                    const iconoOriginal = btnRegistrarAsistencia.querySelector('i').className;
-                    btnRegistrarAsistencia.querySelector('i').className = 'fas fa-spinner fa-spin';
-                    
-                    try {
-                        const response = await fetch(url, {
-                            method: 'POST',
-                            headers: {
-                                'X-CSRFToken': getCookie('csrftoken')
-                            }
-                        });
-                        
-                        const data = await response.json();
-                        
-                        if (response.ok) {
-                            if (esEntrada) {
-                                textoAsistencia.textContent = 'Registrar Salida';
-                                btnRegistrarAsistencia.classList.add('salida');
-                                alert(`✅ Entrada registrada: ${data.hora}\n${data.fecha}`);
-                            } else {
-                                textoAsistencia.textContent = 'Jornada Finalizada';
-                                btnRegistrarAsistencia.classList.add('completado');
-                                alert(`✅ Salida registrada: ${data.hora_salida}\nHoras trabajadas: ${data.horas_trabajadas}h`);
-                            }
-                            btnRegistrarAsistencia.disabled = esEntrada ? false : true;
-                        } else {
-                            alert(`❌ ${data.error}`);
-                            btnRegistrarAsistencia.disabled = false;
-                        }
-                    } catch (error) {
-                        console.error('Error:', error);
-                        alert('Error de red. Intenta nuevamente.');
-                        btnRegistrarAsistencia.disabled = false;
-                    } finally {
-                        btnRegistrarAsistencia.querySelector('i').className = iconoOriginal;
-                    }
-                });
-            }
         });
-
-        // Helper para obtener CSRF token
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
     </script>
 </body>
 </html>
