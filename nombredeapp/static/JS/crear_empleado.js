@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (btnCancel) {
         btnCancel.addEventListener('click', () => {
             window.audioSystem.play('select');
-            if (confirm('Â¿EstÃ¡ seguro de que desea cancelar? Se perderÃ¡n todos los datos ingresados.')) {
+            if (confirm('¿Esta seguro de que desea cancelar? Se perderan todos los datos ingresados.')) {
                 window.audioSystem.play('negative');
                 window.location.href = document.body.dataset.inicioUrl;
             }
@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const date = new Date(year, month - 1, day);
                     if (date.getDate() !== day || date.getMonth() !== month - 1 || date.getFullYear() !== year) {
                         window.audioSystem.play('error');
-                        alert('Fecha invÃ¡lida. Por favor ingrese una fecha vÃ¡lida.');
+                        alert('Fecha invalida. Por favor ingrese una fecha valida.');
                         e.target.value = '';
                     }
                 }
@@ -214,7 +214,7 @@ document.addEventListener('DOMContentLoaded', function() {
         btnArea.addEventListener('click', () => {
             window.audioSystem.play('select');
             currentMode = 'area';
-            seleccionarTitulo.textContent = 'Seleccionar Ãrea';
+            seleccionarTitulo.textContent = 'Seleccionar Area';
             searchInput.value = '';
             cargarAreas();
             modalSeleccionar.style.display = 'flex';
@@ -223,7 +223,7 @@ document.addEventListener('DOMContentLoaded', function() {
         btnPuesto.addEventListener('click', () => {
             if (!selectedArea) {
                 window.audioSystem.play('error');
-                alert('Primero debes seleccionar un Ã¡rea');
+                alert('Primero debes seleccionar un Area');
                 return;
             }
             window.audioSystem.play('select');
@@ -283,7 +283,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     resultsList.appendChild(li);
                 });
             } catch (error) {
-                console.error("Error al cargar Ã¡reas:", error);
+                console.error("Error al cargar Areas:", error);
                 window.audioSystem.play('error');
                 resultsList.innerHTML = '<li>Error al cargar datos</li>';
             }
@@ -299,7 +299,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 resultsList.innerHTML = '';
                 if (filtered.length === 0) {
-                    resultsList.innerHTML = '<li>No hay puestos en esta Ã¡rea</li>';
+                    resultsList.innerHTML = '<li>No hay puestos en esta Area</li>';
                     return;
                 }
                 
@@ -517,7 +517,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const addBtn = document.createElement('button');
             addBtn.type = 'button';
             addBtn.className = 'add-btn';
-            addBtn.innerHTML = `<img src="${document.body.dataset.addIconUrl}" alt="AÃ±adir Semana">`;
+            addBtn.innerHTML = `<img src="${document.body.dataset.addIconUrl}" alt="Añadir Semana">`;
             addBtn.addEventListener('mouseenter', () => window.audioSystem.play('hover'));
             addBtn.addEventListener('click', addWeek);
             actionsDiv.appendChild(addBtn);
@@ -627,7 +627,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const addTimeSlotBtn = document.createElement('button');
                     addTimeSlotBtn.type = 'button';
                     addTimeSlotBtn.className = 'add-btn';
-                    addTimeSlotBtn.innerHTML = `<img src="${document.body.dataset.addIconUrl}" alt="AÃ±adir horario">`;
+                    addTimeSlotBtn.innerHTML = `<img src="${document.body.dataset.addIconUrl}" alt="Añadir horario">`;
                     addTimeSlotBtn.addEventListener('mouseenter', () => window.audioSystem.play('hover'));
                     addTimeSlotBtn.onclick = () => { 
                         window.audioSystem.play('positive');
@@ -715,14 +715,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             if (!data.area || !data.puesto) {
                 window.audioSystem.play('error');
-                alert('Por favor, selecciona un Ãrea y un Puesto para el empleado.');
+                alert('Por favor, selecciona un Area y un Puesto para el empleado.');
                 return;
             }
             
             // ===== VALIDACIÃ“N DE HORARIO =====
             if (Object.keys(dayColorMap).length === 0) {
                 window.audioSystem.play('error');
-                alert('Por favor, asigna al menos un dÃ­a de trabajo para el empleado.');
+                alert('Por favor, asigna al menos un di­a de trabajo para el empleado.');
                 return;
             }
             
@@ -740,7 +740,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (horarioIncompleto) {
                 window.audioSystem.play('error');
-                alert('Por favor, completa todos los horarios de entrada y salida para los dÃ­as asignados.');
+                alert('Por favor, completa todos los horarios de entrada y salida para los di­as asignados.');
                 return;
             }
             
@@ -778,7 +778,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (error) {
                 console.error('Error al enviar el formulario:', error);
                 window.audioSystem.play('error');
-                alert('OcurriÃ³ un error de red. IntÃ©ntalo de nuevo.');
+                alert('Ocurrio un error de red. Intentalo de nuevo.');
                 btnListo.disabled = false;
                 btnListo.innerHTML = '<i class="fas fa-check"></i> Listo';
             }
@@ -794,11 +794,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="modal-confirmacion-content">
                         <div class="modal-confirmacion-header">
                             <i class="fas fa-user-check"></i>
-                            <h2>Confirmar CreaciÃ³n de Empleado</h2>
+                            <h2>Confirmar Creacion de Empleado</h2>
                         </div>
                         <div class="modal-confirmacion-body">
                             <p class="modal-confirmacion-pregunta">
-                                Â¿EstÃ¡s seguro de que deseas crear este empleado con los siguientes datos?
+                                ¿Ests seguro de que deseas crear este empleado con los siguientes datos?
                             </p>
                             <div class="modal-confirmacion-datos">
                                 <div class="dato-item">
@@ -815,7 +815,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </div>
                                 <div class="dato-item">
                                     <i class="fas fa-briefcase"></i>
-                                    <span><strong>Ãrea:</strong> ${data.area?.nombre || 'N/A'}</span>
+                                    <span><strong>Area:</strong> ${data.area?.nombre || 'N/A'}</span>
                                 </div>
                                 <div class="dato-item">
                                     <i class="fas fa-user-tag"></i>
@@ -823,12 +823,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </div>
                                 <div class="dato-item">
                                     <i class="fas fa-calendar-check"></i>
-                                    <span><strong>DÃ­as laborales:</strong> ${totalDias} dÃ­a(s) asignado(s)</span>
+                                    <span><strong>Dias laborales:</strong> ${totalDias} dia(s) asignado(s)</span>
                                 </div>
                             </div>
                             <p class="modal-confirmacion-nota">
                                 <i class="fas fa-info-circle"></i>
-                                Se enviarÃ¡ un correo con las credenciales de acceso al email proporcionado.
+                                Se enviara un correo con las credenciales de acceso al email proporcionado.
                             </p>
                         </div>
                         <div class="modal-confirmacion-actions">
@@ -836,7 +836,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <i class="fas fa-times"></i> Cancelar
                             </button>
                             <button class="btn-modal-confirmacion btn-confirmar" id="btn-confirmar-si">
-                                <i class="fas fa-check"></i> SÃ­, estoy seguro
+                                <i class="fas fa-check"></i> Si­, estoy seguro
                             </button>
                         </div>
                     </div>

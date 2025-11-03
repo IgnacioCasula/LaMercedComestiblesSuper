@@ -360,4 +360,18 @@ body::after {
     }
 }
 
+.action-btn.registrar-asistencia {
+    background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+}
+
+.action-btn.registrar-asistencia.salida {
+    background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+}
+
+.action-btn.registrar-asistencia.completado {
+    background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
 /* ===== FIN ===== */

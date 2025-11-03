@@ -3,30 +3,30 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"/>
-  <title>La Merced Comestibles - Sistema de Gestión</title>
-  <!-- Material Icons + Roboto -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>La Merced - Gestión de Stock</title>
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-  <!-- Chart.js -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- CSS -->
-  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/stock_style.css' %}">
 </head>
 <body>
   <div class="container">
     <!-- Header -->
     <header class="header">
       <div class="logo">
-        <h1><i class="material-icons">store</i> La Merced <span>Comestibles</span></h1>
+        <h1><i class="material-icons">store</i> La Merced <span>Gestión de Stock</span></h1>
       </div>
       <div class="user-info">
-        <span>Administrador</span>
+        <span>{{ usuario_nombre }}</span>
         <i class="material-icons">account_circle</i>
       </div>
+      <a href="{% url 'inicio' %}" class="back-btn">
+        <i class="fas fa-arrow-left"></i> Volver al Inicio
+      </a>
     </header>
+
     <div class="main-content">
       <!-- Sidebar -->
       <aside class="sidebar">
@@ -59,34 +59,35 @@
           </ul>
         </nav>
       </aside>
+
       <!-- Content -->
       <main class="content">
         <!-- Dashboard -->
         <div class="section active" id="dashboard-section">
-          <h2>Dashboard</h2>
+          <h2><i class="fas fa-chart-line"></i> Dashboard</h2>
           <div class="dashboard-cards">
-            <div class="card">
+            <div class="card card-primary">
               <div class="card-icon"><i class="material-icons">inventory_2</i></div>
               <div class="card-info">
                 <h3>Total Productos</h3>
                 <p id="total-productos">0</p>
               </div>
             </div>
-            <div class="card">
-              <div class="card-icon"><i class="material-icons">point_of_sale</i></div>
+            <div class="card card-success">
+              <div class="card-icon"><i class="material-icons">category</i></div>
               <div class="card-info">
-                <h3>Ventas Hoy</h3>
-                <p id="ventas-hoy">$0</p>
+                <h3>Categorías</h3>
+                <p id="total-categorias">0</p>
               </div>
             </div>
-            <div class="card">
+            <div class="card card-info">
               <div class="card-icon"><i class="material-icons">local_shipping</i></div>
               <div class="card-info">
-                <h3>Total Proveedores</h3>
+                <h3>Proveedores</h3>
                 <p id="total-proveedores">0</p>
               </div>
             </div>
-            <div class="card danger" id="stock-bajo-card">
+            <div class="card card-danger" id="stock-bajo-card">
               <div class="card-icon"><i class="material-icons">warning</i></div>
               <div class="card-info">
                 <h3>Stock Bajo</h3>
@@ -96,24 +97,25 @@
           </div>
           <div class="dashboard-charts">
             <div class="chart-container">
-              <h3>Ventas Mensuales</h3>
-              <div class="chart"><canvas id="salesChart"></canvas></div>
+              <h3><i class="fas fa-chart-bar"></i> Productos por Categoría</h3>
+              <div class="chart"><canvas id="categoriesChart"></canvas></div>
             </div>
             <div class="chart-container">
-              <h3>Productos Más Vendidos</h3>
-              <div class="chart"><canvas id="productsChart"></canvas></div>
+              <h3><i class="fas fa-chart-pie"></i> Estado del Inventario</h3>
+              <div class="chart"><canvas id="stockChart"></canvas></div>
             </div>
           </div>
         </div>
+
         <!-- Productos -->
         <div class="section" id="productos-section">
-          <h2>Gestión de Productos</h2>
+          <h2><i class="fas fa-box"></i> Gestión de Productos</h2>
           <div class="section-header">
             <button class="btn btn-primary" onclick="openModal('producto')">
               <i class="material-icons">add</i> Nuevo Producto
             </button>
             <div class="search-box">
-              <input type="text" placeholder="Buscar producto..." onkeyup="filterTable('productos-table', this.value)">
+              <input type="text" placeholder="Buscar producto..." id="search-productos">
               <i class="material-icons">search</i>
             </div>
           </div>
@@ -125,22 +127,28 @@
                 <th>Código Barras</th><th>Categoría</th><th>Proveedor</th><th>Stock</th><th>Acciones</th>
               </tr>
               </thead>
-              <tbody id="productos-body"></tbody>
+              <tbody id="productos-body">
+                <tr>
+                  <td colspan="10" class="loading-cell">
+                    <div class="loading-spinner">
+                      <i class="fas fa-spinner fa-spin"></i> Cargando productos...
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
             </table>
           </div>
         </div>
+
         <!-- Stock Bajo -->
         <div class="section" id="stock-bajo-section">
           <h2>
-            Productos con Stock Bajo
-            <span class="badge" id="badge-stock-bajo">0 productos</span>
+            <i class="fas fa-exclamation-triangle"></i> Productos con Stock Bajo
+            <span class="badge badge-warning" id="badge-stock-bajo">0 productos</span>
           </h2>
           <div class="section-header">
-            <button class="btn btn-warning" onclick="generarReporteStockBajo()">
-              <i class="material-icons">picture_as_pdf</i> Generar Reporte
-            </button>
             <div class="search-box">
-              <input type="text" placeholder="Buscar..." onkeyup="filterTable('stock-bajo-table', this.value)">
+              <input type="text" placeholder="Buscar..." id="search-stock-bajo">
               <i class="material-icons">search</i>
             </div>
           </div>
@@ -152,19 +160,28 @@
                 <th>Código Barras</th><th>Categoría</th><th>Proveedor</th><th>Stock</th><th>Stock Mínimo</th><th>Acciones</th>
               </tr>
               </thead>
-              <tbody id="stock-bajo-body"></tbody>
+              <tbody id="stock-bajo-body">
+                <tr>
+                  <td colspan="11" class="loading-cell">
+                    <div class="loading-spinner">
+                      <i class="fas fa-spinner fa-spin"></i> Cargando productos...
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
             </table>
           </div>
         </div>
+
         <!-- Proveedores -->
         <div class="section" id="proveedores-section">
-          <h2>Gestión de Proveedores</h2>
+          <h2><i class="fas fa-truck"></i> Gestión de Proveedores</h2>
           <div class="section-header">
             <button class="btn btn-primary" onclick="openModal('proveedor')">
               <i class="material-icons">add</i> Nuevo Proveedor
             </button>
             <div class="search-box">
-              <input type="text" placeholder="Buscar proveedor..." onkeyup="filterTable('proveedores-table', this.value)">
+              <input type="text" placeholder="Buscar proveedor..." id="search-proveedores">
               <i class="material-icons">search</i>
             </div>
           </div>
@@ -175,43 +192,28 @@
                 <th>ID</th><th>Nombre</th><th>Teléfono</th><th>Email</th><th>CUIT</th><th>Acciones</th>
               </tr>
               </thead>
-              <tbody id="proveedores-body"></tbody>
+              <tbody id="proveedores-body">
+                <tr>
+                  <td colspan="6" class="loading-cell">
+                    <div class="loading-spinner">
+                      <i class="fas fa-spinner fa-spin"></i> Cargando proveedores...
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
             </table>
           </div>
         </div>
-        <!-- Categorías -->
-        <div class="section" id="categorias-section">
-          <h2>Gestión de Categorías</h2>
-          <div class="section-header">
-            <button class="btn btn-primary" onclick="openModal('categoria')">
-              <i class="material-icons">add</i> Nueva Categoría
-            </button>
-            <div class="search-box">
-              <input type="text" placeholder="Buscar categoría..." onkeyup="filterTable('categorias-table', this.value)">
-              <i class="material-icons">search</i>
-            </div>
-          </div>
-          <div class="table-container">
-            <table class="data-table" id="categorias-table">
-              <thead>
-              <tr>
-                <th>ID</th><th>Nombre</th><th>Descripción</th><th>N° Productos</th><th>Acciones</th>
-              </tr>
-              </thead>
-              <tbody id="categorias-body"></tbody>
-            </table>
-          </div>
-        </div>
-        <!-- MOVIMIENTOS -->
-        <div class="section" id="movimientos-section">
-          <h2>Movimientos de Stock</h2>
 
+        <!-- Movimientos -->
+        <div class="section" id="movimientos-section">
+          <h2><i class="fas fa-exchange-alt"></i> Movimientos de Stock</h2>
           <div class="section-header">
             <button class="btn btn-primary" onclick="openModal('movimiento')">
               <i class="material-icons">add</i> Nuevo Movimiento
             </button>
             <div class="search-box">
-              <input type="text" placeholder="Buscar..." onkeyup="filterTable('movimientos-table', this.value)">
+              <input type="text" placeholder="Buscar..." id="search-movimientos">
               <i class="material-icons">search</i>
             </div>
           </div>
@@ -224,26 +226,33 @@
                 <th>Producto</th>
                 <th>Tipo</th>
                 <th>Cantidad</th>
-                <th>Stock resultante</th>
+                <th>Stock Resultante</th>
                 <th>Notas</th>
               </tr>
               </thead>
-              <tbody id="movimientos-body"></tbody>
+              <tbody id="movimientos-body">
+                <tr>
+                  <td colspan="7" class="loading-cell">
+                    <div class="loading-spinner">
+                      <i class="fas fa-spinner fa-spin"></i> Cargando movimientos...
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
             </table>
           </div>
         </div>
-        <!-- VENTAS (SOLO HISTORIAL) -->
-        <div class="section" id="ventas-section">
-          <h2>Historial de Ventas</h2>
 
+        <!-- Ventas (Solo Lectura) -->
+        <div class="section" id="ventas-section">
+          <h2><i class="fas fa-cash-register"></i> Historial de Ventas</h2>
           <div class="section-header">
-            <span class="badge" title="Esta sección es solo lectura">Solo historial</span>
+            <span class="badge badge-info">Solo lectura</span>
             <div class="search-box">
-              <input type="text" placeholder="Buscar..." onkeyup="filterTable('ventas-table', this.value)">
+              <input type="text" placeholder="Buscar..." id="search-ventas">
               <i class="material-icons">search</i>
             </div>
           </div>
-
           <div class="table-container">
             <table class="data-table" id="ventas-table">
               <thead>
@@ -259,63 +268,173 @@
                 <th>Estado</th>
               </tr>
               </thead>
-              <tbody id="ventas-body"></tbody>
+              <tbody id="ventas-body">
+                <tr>
+                  <td colspan="9" class="loading-cell">
+                    <div class="loading-spinner">
+                      <i class="fas fa-spinner fa-spin"></i> Cargando ventas...
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
             </table>
           </div>
         </div>
 
+        <!-- Reportes -->
+        <div class="section" id="reportes-section">
+          <h2><i class="fas fa-chart-pie"></i> Reportes e Informes</h2>
+          <div class="reportes-grid">
+            <div class="reporte-card">
+              <div class="reporte-icon">
+                <i class="fas fa-file-pdf"></i>
+              </div>
+              <h3>Reporte de Inventario</h3>
+              <p>Listado completo de productos con stock actual</p>
+              <button class="btn btn-primary" onclick="generarReporteInventario()">
+                <i class="fas fa-download"></i> Generar PDF
+              </button>
+            </div>
+            <div class="reporte-card">
+              <div class="reporte-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+              </div>
+              <h3>Reporte Stock Bajo</h3>
+              <p>Productos que requieren reposición</p>
+              <button class="btn btn-warning" onclick="generarReporteStockBajo()">
+                <i class="fas fa-download"></i> Generar PDF
+              </button>
+            </div>
+            <div class="reporte-card">
+              <div class="reporte-icon">
+                <i class="fas fa-chart-line"></i>
+              </div>
+              <h3>Reporte de Movimientos</h3>
+              <p>Historial de entradas y salidas de stock</p>
+              <button class="btn btn-info" onclick="generarReporteMovimientos()">
+                <i class="fas fa-download"></i> Generar PDF
+              </button>
+            </div>
+            <div class="reporte-card">
+              <div class="reporte-icon">
+                <i class="fas fa-tags"></i>
+              </div>
+              <h3>Reporte por Categoría</h3>
+              <p>Productos agrupados por categoría</p>
+              <button class="btn btn-success" onclick="generarReporteCategorias()">
+                <i class="fas fa-download"></i> Generar PDF
+              </button>
+            </div>
+            <div class="reporte-card">
+              <div class="reporte-icon">
+                <i class="fas fa-truck"></i>
+              </div>
+              <h3>Reporte de Proveedores</h3>
+              <p>Listado de proveedores y sus productos</p>
+              <button class="btn btn-secondary" onclick="generarReporteProveedores()">
+                <i class="fas fa-download"></i> Generar PDF
+              </button>
+            </div>
+            <div class="reporte-card">
+              <div class="reporte-icon">
+                <i class="fas fa-file-excel"></i>
+              </div>
+              <h3>Exportar a Excel</h3>
+              <p>Exportar inventario completo a Excel</p>
+              <button class="btn btn-success" onclick="exportarExcel()">
+                <i class="fas fa-file-excel"></i> Exportar
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Categorías -->
+        <div class="section" id="categorias-section">
+          <h2><i class="fas fa-tags"></i> Gestión de Categorías</h2>
+          <div class="section-header">
+            <button class="btn btn-primary" onclick="openModal('categoria')">
+              <i class="material-icons">add</i> Nueva Categoría
+            </button>
+            <div class="search-box">
+              <input type="text" placeholder="Buscar categoría..." id="search-categorias">
+              <i class="material-icons">search</i>
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="data-table" id="categorias-table">
+              <thead>
+              <tr>
+                <th>ID</th><th>Nombre</th><th>Descripción</th><th>Nº Productos</th><th>Acciones</th>
+              </tr>
+              </thead>
+              <tbody id="categorias-body">
+                <tr>
+                  <td colspan="5" class="loading-cell">
+                    <div class="loading-spinner">
+                      <i class="fas fa-spinner fa-spin"></i> Cargando categorías...
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </main>
     </div>
   </div>
+
   <!-- Modal Producto -->
   <div id="modal-producto" class="modal">
     <div class="modal-content">
-      <span class="close" onclick="closeModal('producto')">&times;</span>
-      <h2 id="modal-producto-title">Nuevo Producto</h2>
+      <div class="modal-header">
+        <h2 id="modal-producto-title"><i class="fas fa-box"></i> Nuevo Producto</h2>
+        <span class="close" onclick="closeModal('producto')">&times;</span>
+      </div>
       <form id="form-producto">
         <input type="hidden" id="producto-id" value="">
+        <input type="hidden" id="producto-sucursal" value="{{ sucursal.idsucursal }}">
         <div class="form-row">
           <div class="form-group">
-            <label for="producto-nombre">Nombre:</label>
+            <label for="producto-nombre">Nombre: <span class="required">*</span></label>
             <input type="text" id="producto-nombre" required>
           </div>
           <div class="form-group">
-            <label for="producto-precio">Precio:</label>
+            <label for="producto-precio">Precio: <span class="required">*</span></label>
             <input type="number" id="producto-precio" step="0.01" min="0" required>
           </div>
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label for="producto-marca">Marca:</label>
+            <label for="producto-marca">Marca: <span class="required">*</span></label>
             <input type="text" id="producto-marca" required>
           </div>
           <div class="form-group">
-            <label for="producto-codigo">Código de Barras:</label>
+            <label for="producto-codigo">Código de Barras: <span class="required">*</span></label>
             <input type="text" id="producto-codigo" required>
           </div>
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label for="producto-categoria">Categoría:</label>
+            <label for="producto-categoria">Categoría: <span class="required">*</span></label>
             <select id="producto-categoria" required>
               <option value="">Seleccionar categoría</option>
             </select>
           </div>
           <div class="form-group">
             <label for="producto-proveedor">Proveedor:</label>
-            <select id="producto-proveedor" required>
+            <select id="producto-proveedor">
               <option value="">Seleccionar proveedor</option>
             </select>
           </div>
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label for="producto-stock">Stock:</label>
+            <label for="producto-stock">Stock Inicial: <span class="required">*</span></label>
             <input type="number" id="producto-stock" min="0" required>
           </div>
           <div class="form-group">
             <label for="producto-stock-min">Stock Mínimo:</label>
-            <input type="number" id="producto-stock-min" min="0" value="10" required>
+            <input type="number" id="producto-stock-min" min="0" value="10">
           </div>
         </div>
         <div class="form-group">
@@ -325,54 +444,64 @@
         </div>
         <div class="form-actions">
           <button type="button" class="btn btn-secondary" onclick="closeModal('producto')">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Guardar</button>
+          <button type="submit" class="btn btn-success">
+            <i class="fas fa-save"></i> Guardar
+          </button>
         </div>
       </form>
     </div>
   </div>
+
   <!-- Modal Proveedor -->
   <div id="modal-proveedor" class="modal">
     <div class="modal-content">
-      <span class="close" onclick="closeModal('proveedor')">&times;</span>
-      <h2 id="modal-proveedor-title">Nuevo Proveedor</h2>
+      <div class="modal-header">
+        <h2 id="modal-proveedor-title"><i class="fas fa-truck"></i> Nuevo Proveedor</h2>
+        <span class="close" onclick="closeModal('proveedor')">&times;</span>
+      </div>
       <form id="form-proveedor">
         <input type="hidden" id="proveedor-id" value="">
         <div class="form-row">
           <div class="form-group">
-            <label for="proveedor-nombre">Nombre:</label>
+            <label for="proveedor-nombre">Nombre: <span class="required">*</span></label>
             <input type="text" id="proveedor-nombre" required>
           </div>
           <div class="form-group">
-            <label for="proveedor-telefono">Teléfono:</label>
+            <label for="proveedor-telefono">Teléfono: <span class="required">*</span></label>
             <input type="tel" id="proveedor-telefono" required>
           </div>
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label for="proveedor-email">Email:</label>
+            <label for="proveedor-email">Email: <span class="required">*</span></label>
             <input type="email" id="proveedor-email" required>
           </div>
           <div class="form-group">
-            <label for="proveedor-cuit">CUIT:</label>
+            <label for="proveedor-cuit">CUIT: <span class="required">*</span></label>
             <input type="text" id="proveedor-cuit" placeholder="XX-XXXXXXXX-X" required>
           </div>
         </div>
         <div class="form-actions">
           <button type="button" class="btn btn-secondary" onclick="closeModal('proveedor')">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Guardar</button>
+          <button type="submit" class="btn btn-success">
+            <i class="fas fa-save"></i> Guardar
+          </button>
         </div>
       </form>
     </div>
   </div>
+
   <!-- Modal Categoría -->
   <div id="modal-categoria" class="modal">
     <div class="modal-content">
-      <span class="close" onclick="closeModal('categoria')">&times;</span>
-      <h2 id="modal-categoria-title">Nueva Categoría</h2>
+      <div class="modal-header">
+        <h2 id="modal-categoria-title"><i class="fas fa-tags"></i> Nueva Categoría</h2>
+        <span class="close" onclick="closeModal('categoria')">&times;</span>
+      </div>
       <form id="form-categoria">
         <input type="hidden" id="categoria-id" value="">
         <div class="form-group">
-          <label for="categoria-nombre">Nombre:</label>
+          <label for="categoria-nombre">Nombre: <span class="required">*</span></label>
           <input type="text" id="categoria-nombre" required>
         </div>
         <div class="form-group">
@@ -381,24 +510,31 @@
         </div>
         <div class="form-actions">
           <button type="button" class="btn btn-secondary" onclick="closeModal('categoria')">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Guardar</button>
+          <button type="submit" class="btn btn-success">
+            <i class="fas fa-save"></i> Guardar
+          </button>
         </div>
       </form>
     </div>
   </div>
+
   <!-- Modal Movimiento -->
   <div id="modal-movimiento" class="modal">
     <div class="modal-content">
-      <span class="close" onclick="closeModal('movimiento')">&times;</span>
-      <h2 id="modal-movimiento-title">Nuevo Movimiento</h2>
+      <div class="modal-header">
+        <h2 id="modal-movimiento-title"><i class="fas fa-exchange-alt"></i> Nuevo Movimiento</h2>
+        <span class="close" onclick="closeModal('movimiento')">&times;</span>
+      </div>
       <form id="form-movimiento">
         <div class="form-row">
           <div class="form-group">
-            <label for="mov-producto">Producto</label>
-            <select id="mov-producto" required></select>
+            <label for="mov-producto">Producto: <span class="required">*</span></label>
+            <select id="mov-producto" required>
+              <option value="">Seleccionar producto</option>
+            </select>
           </div>
           <div class="form-group">
-            <label for="mov-tipo">Tipo</label>
+            <label for="mov-tipo">Tipo: <span class="required">*</span></label>
             <select id="mov-tipo" required>
               <option value="">Seleccionar</option>
               <option value="Entrada">Entrada</option>
@@ -408,26 +544,36 @@
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label for="mov-cantidad">Cantidad</label>
+            <label for="mov-cantidad">Cantidad: <span class="required">*</span></label>
             <input type="number" id="mov-cantidad" min="1" required>
           </div>
           <div class="form-group">
-            <label for="mov-fecha">Fecha</label>
+            <label for="mov-fecha">Fecha: <span class="required">*</span></label>
             <input type="date" id="mov-fecha" required>
           </div>
         </div>
         <div class="form-group">
-          <label for="mov-notas">Notas</label>
+          <label for="mov-notas">Notas:</label>
           <textarea id="mov-notas" rows="2"></textarea>
         </div>
         <div class="form-actions">
           <button type="button" class="btn btn-secondary" onclick="closeModal('movimiento')">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Guardar</button>
+          <button type="submit" class="btn btn-success">
+            <i class="fas fa-save"></i> Guardar
+          </button>
         </div>
       </form>
     </div>
   </div>
-  <!-- JS -->
-  <script defer src="{% static 'js/script2.js' %}"></script>
+
+  <!-- Notificaciones -->
+  <div id="notification-container"></div>
+
+  <!-- Scripts -->
+  <script>
+    const SUCURSAL_ID = {{ sucursal.idsucursal }};
+    const CSRF_TOKEN = '{{ csrf_token }}';
+  </script>
+  <script src="{% static 'js/stock_script.js' %}"></script>
 </body>
 </html>

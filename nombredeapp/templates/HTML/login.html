@@ -349,6 +349,24 @@
             background: #f8f9fa;
         }
 
+        .info-note {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border-left: 4px solid #2196f3;
+            padding: 14px 16px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 13px;
+            color: #1565c0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .info-note i {
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
         @media (max-width: 500px) {
             .login-box { padding: 30px 24px; }
             .login-header h1 { font-size: 24px; }
@@ -368,7 +386,7 @@
             <div class="messages">
                 {% for message in messages %}
                 <div class="message {{ message.tags }}">
-                    <i class="fas fa-exclamation-circle"></i>
+                    <i class="fas fa-{% if message.tags == 'error' %}exclamation-circle{% else %}check-circle{% endif %}"></i>
                     <span>{{ message }}</span>
                 </div>
                 {% endfor %}
@@ -423,6 +441,11 @@
                     <i class="fas fa-sign-in-alt"></i>
                     <span>Entrar</span>
                 </button>
+
+                <div class="info-note">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Al iniciar sesión se registrará automáticamente tu asistencia</span>
+                </div>
             </form>
             {% endif %}
         </div>
@@ -443,7 +466,6 @@
         </div>
     </div>
 
-    <script src="{% static 'JS/audio-system.js' %}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             
@@ -452,17 +474,7 @@
             const passwordInput = document.getElementById('password');
             
             if (togglePasswordBtn && passwordInput) {
-                togglePasswordBtn.addEventListener('mouseenter', function() {
-                    if (window.audioSystem) {
-                        window.audioSystem.play('hover');
-                    }
-                });
-                
                 togglePasswordBtn.addEventListener('click', function() {
-                    if (window.audioSystem) {
-                        window.audioSystem.play('select');
-                    }
-                    
                     const type = passwordInput.getAttribute('type');
                     const icon = this.querySelector('i');
                     
@@ -493,64 +505,6 @@
                 
                 syncEmail();
             }
-            
-            // SONIDOS EN FORMULARIOS
-            const loginForm = document.querySelector('.login-form');
-            if (loginForm) {
-                loginForm.addEventListener('submit', function() {
-                    if (window.audioSystem) {
-                        window.audioSystem.play('select');
-                    }
-                });
-            }
-            
-            const recoveryForm = document.querySelector('.recovery-section form');
-            if (recoveryForm) {
-                recoveryForm.addEventListener('submit', function() {
-                    if (window.audioSystem) {
-                        window.audioSystem.play('select');
-                    }
-                });
-            }
-            
-            // SONIDOS EN INPUTS
-            const allInputs = document.querySelectorAll('input[type="text"], input[type="password"], input[type="email"]');
-            allInputs.forEach(function(input) {
-                input.addEventListener('focus', function() {
-                    if (window.audioSystem) {
-                        window.audioSystem.play('select');
-                    }
-                });
-            });
-            
-            // SONIDOS PARA MENSAJES
-            const errorMessages = document.querySelectorAll('.message.error, .blocked-message');
-            if (errorMessages.length > 0) {
-                setTimeout(function() {
-                    if (window.audioSystem) {
-                        window.audioSystem.play('negative');
-                    }
-                }, 200);
-            }
-            
-            const successMessages = document.querySelectorAll('.message.success');
-            if (successMessages.length > 0) {
-                setTimeout(function() {
-                    if (window.audioSystem) {
-                        window.audioSystem.play('positive');
-                    }
-                }, 200);
-            }
-            
-            // ANIMACIONES HOVER BOTONES
-            const buttons = document.querySelectorAll('.btn-login, .btn-recovery');
-            buttons.forEach(function(button) {
-                button.addEventListener('mouseenter', function() {
-                    if (window.audioSystem) {
-                        window.audioSystem.play('hover');
-                    }
-                });
-            });
         });
     </script>
 </body>
