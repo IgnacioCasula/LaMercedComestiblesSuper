@@ -17,7 +17,7 @@ class GestorVenta {
         document.getElementById('productoInput').addEventListener('input', () => this.buscarProductos());
        
         document.getElementById('btnEmitirTicket').addEventListener('click', () => this.emitirTicket());
-        document.getElementById('btnActivarEliminar').addEventListener('click', () => this.activarEliminar());
+        
         // ELIMINADO: btnProcesarVenta
         document.getElementById('btnCancelarTodo').addEventListener('click', () => this.cancelarTodo());
        
@@ -35,14 +35,16 @@ class GestorVenta {
        
         const resultados = Object.entries(this.catalogo).filter(([id, producto]) =>
             producto.nombre.toLowerCase().includes(query) ||
-            (producto.codigo_barras && producto.codigo_barras.toString().includes(query))
+            (producto.codigo_barras && producto.codigo_barras.toString().includes(query)) ||
+            (producto.marca && producto.marca.toLowerCase().includes(query))
         ).slice(0, 10);
        
         resultados.forEach(([id, producto]) => {
             const option = document.createElement('option');
-            option.value = producto.nombre;
+            option.value = `${producto.nombre} - $${producto.precio}`;
             option.setAttribute('data-id', id);
-            datalist.appendChild(option);
+            option.setAttribute('data-precio', producto.precio);
+               datalist.appendChild(option);
         });
     }
 
@@ -98,6 +100,7 @@ class GestorVenta {
                     <button class="qty-btn" type="button">-</button>
                     <span class="qty-value">1</span>
                     <button class="qty-btn" type="button">+</button>
+                    <button class="btn-eliminar-producto" onclick="gestorVenta.eliminarProducto(this)">X</button>
                 </div>
             </td>
             <td class="nombre">${producto.nombre}</td>
@@ -110,6 +113,12 @@ class GestorVenta {
         botones[1].addEventListener('click', () => this.modificarCantidad(nuevaFila, 1));
        
         tablaBody.appendChild(nuevaFila);
+    }
+
+    eliminarProducto(boton) {
+        const fila = boton.closest('tr');
+        fila.remove();
+        this.calcularTotales();
     }
 
     modificarCantidad(fila, cambio) {
@@ -159,21 +168,7 @@ class GestorVenta {
         this.calcularTotales();
     }
 
-    activarEliminar() {
-        const filas = document.querySelectorAll("#tablaBody tr");
-        filas.forEach(fila => {
-            if (!fila.querySelector(".btn-x")) {
-                const btnX = document.createElement("button");
-                btnX.textContent = "❌";
-                btnX.className = "btn-x btn btn-sm btn-danger ms-2";
-                btnX.onclick = () => {
-                    fila.remove();
-                    this.calcularTotales();
-                };
-                fila.querySelector(".nombre").appendChild(btnX);
-            }
-        });
-    }
+    
 
     async procesarVenta() {
         console.log('💾 Procesando venta...');

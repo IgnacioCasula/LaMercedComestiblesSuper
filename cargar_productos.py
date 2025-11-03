@@ -12,7 +12,8 @@ from caja.models import Categorias, Productos, Inventarios, Sucursales, Ubicacio
 
 def cargar_ubicacion_y_sucursal():
     """Cargar ubicación y sucursal base si no existen"""
-    print("📍 Cargando ubicación y sucursal...")
+    print("📍 Cargando ubicación y s
+    ucursal...")
     
     # Crear ubicación
     ubicacion, created_ubicacion = Ubicaciones.objects.get_or_create(
@@ -90,28 +91,44 @@ def cargar_productos_base():
     
     # Productos con precios actualizados
     productos_data = [
-        # Almacén
-        {"nombre": "Fideos María", "precio": 500, "marca": "María", "codigo_barra": 7791234567890, "categoria": "Almacén"},
-        {"nombre": "Arroz Largo Fino", "precio": 700, "marca": "Gallo", "codigo_barra": 7791234567891, "categoria": "Almacén"},
-        
-        # Frutas y Verduras
-        {"nombre": "Manzana Roja", "precio": 300, "marca": "Fruta Fresca", "codigo_barra": 7791234567898, "categoria": "Frutas y Verduras"},
-        {"nombre": "Banana", "precio": 200, "marca": "Fruta Fresca", "codigo_barra": 7791234567899, "categoria": "Frutas y Verduras"},
-        {"nombre": "Naranja", "precio": 250, "marca": "Fruta Fresca", "codigo_barra": 7791234567800, "categoria": "Frutas y Verduras"},
-        {"nombre": "Tomate Perita", "precio": 180, "marca": "Verdura Fresca", "codigo_barra": 7791234567801, "categoria": "Frutas y Verduras"},
-        {"nombre": "Papa Negra", "precio": 120, "marca": "Verdura Fresca", "codigo_barra": 7791234567802, "categoria": "Frutas y Verduras"},
-        
-        # Lácteos
-        {"nombre": "Leche Entera 1L", "precio": 800, "marca": "La Serenísima", "codigo_barra": 7791234567894, "categoria": "Lácteos"},
-        {"nombre": "Queso Cremoso", "precio": 1800, "marca": "La Paulina", "codigo_barra": 7791234567895, "categoria": "Lácteos"},
-        
-        # Carnes
-        {"nombre": "Pechuga de Pollo", "precio": 1500, "marca": "Granja", "codigo_barra": 7791234567804, "categoria": "Carnes"},
-        {"nombre": "Carne Molida", "precio": 2200, "marca": "Carnicería", "codigo_barra": 7791234567805, "categoria": "Carnes"},
-        
-        # Panadería
-        {"nombre": "Pan Lactal", "precio": 900, "marca": "Bimbo", "codigo_barra": 7791234567807, "categoria": "Panadería"},
-        {"nombre": "Huevos (docena)", "precio": 1200, "marca": "Granja", "codigo_barra": 7791234567812, "categoria": "Panadería"},
+        # 🥛 LÁCTEOS Y REFRIGERADOS
+        {"nombre": "Leche Entera La Serenísima (1L)", "precio": 1450, "marca": "La Serenísima", "codigo_barra": 7790080080004, "categoria": "Lácteos"},
+        {"nombre": "Yogur Bebible Sancor Frutilla (900g)", "precio": 2300, "marca": "Sancor", "codigo_barra": 7790070014022, "categoria": "Lácteos"},
+        {"nombre": "Manteca La Primera (200g)", "precio": 3500, "marca": "La Primera", "codigo_barra": 7792742010202, "categoria": "Lácteos"},
+        {"nombre": "Queso Cremoso Ilolay (250g)", "precio": 4800, "marca": "Ilolay", "codigo_barra": 7791850100251, "categoria": "Lácteos"},
+        {"nombre": "Queso Rallado Sancor (40g)", "precio": 950, "marca": "Sancor", "codigo_barra": 7790070001859, "categoria": "Lácteos"},
+        {"nombre": "Papas Bastón Congeladas McCain (720g)", "precio": 3700, "marca": "McCain", "codigo_barra": 7790750275816, "categoria": "Lácteos"},
+        {"nombre": "Helado Pote Dulce de Leche Grido (1kg)", "precio": 6200, "marca": "Grido", "codigo_barra": 7790290123456, "categoria": "Lácteos"},
+
+        # 🛒 ALMACÉN Y DESPENSA
+        {"nombre": "Aceite de Girasol Cocinero (900ml)", "precio": 2800, "marca": "Cocinero", "codigo_barra": 7790750275816, "categoria": "Almacén"},
+        {"nombre": "Fideos Spaghetti Lucchetti (500g)", "precio": 1300, "marca": "Lucchetti", "codigo_barra": 7790382000030, "categoria": "Almacén"},
+        {"nombre": "Arroz Largo Fino Gallo (1kg)", "precio": 1950, "marca": "Gallo", "codigo_barra": 7790070502018, "categoria": "Almacén"},
+        {"nombre": "Azúcar Ledesma (1kg)", "precio": 1200, "marca": "Ledesma", "codigo_barra": 7790150000010, "categoria": "Almacén"},
+        {"nombre": "Yerba Mate Playadito (1kg)", "precio": 5900, "marca": "Playadito", "codigo_barra": 7791000000171, "categoria": "Almacén"},
+        {"nombre": "Galletitas Cerealitas Avena (106g)", "precio": 1100, "marca": "Cerealitas", "codigo_barra": 7790382000047, "categoria": "Almacén"},
+        {"nombre": "Arvejas en Lata Cumaná (350g)", "precio": 850, "marca": "Cumaná", "codigo_barra": 7790885100072, "categoria": "Almacén"},
+        {"nombre": "Café Molido La Virginia (250g)", "precio": 2500, "marca": "La Virginia", "codigo_barra": 7790895011048, "categoria": "Almacén"},
+        {"nombre": "Mayonesa Hellmann's Clásica (237g)", "precio": 1400, "marca": "Hellmann's", "codigo_barra": 7791290001042, "categoria": "Almacén"},
+
+        # 🥤 BEBIDAS
+        {"nombre": "Gaseosa Coca-Cola (1.5L)", "precio": 3100, "marca": "Coca-Cola", "codigo_barra": 7790070773663, "categoria": "Bebidas"},
+        {"nombre": "Agua Mineral Villa del Sur (2L)", "precio": 1850, "marca": "Villa del Sur", "codigo_barra": 7790400012108, "categoria": "Bebidas"},
+        {"nombre": "Agua Tónica Paso de los Toros (1.5L)", "precio": 2050, "marca": "Paso de los Toros", "codigo_barra": 7790400100650, "categoria": "Bebidas"},
+        {"nombre": "Cerveza Quilmes Clásica (Lata 473ml)", "precio": 1800, "marca": "Quilmes", "codigo_barra": 7790400012146, "categoria": "Bebidas"},
+        {"nombre": "Vino Tinto Malbec Alma Mora (750ml)", "precio": 4800, "marca": "Alma Mora", "codigo_barra": 7790080000453, "categoria": "Bebidas"},
+
+        # 🧴 LIMPIEZA Y CUIDADO PERSONAL
+        {"nombre": "Jabón en Polvo Ala (800g)", "precio": 3900, "marca": "Ala", "codigo_barra": 7791290022306, "categoria": "Limpieza"},
+        {"nombre": "Shampoo Pantene Restauración (400ml)", "precio": 4200, "marca": "Pantene", "codigo_barra": 7500435165243, "categoria": "Limpieza"},
+        {"nombre": "Lavandina Ayudín (1L)", "precio": 1350, "marca": "Ayudín", "codigo_barra": 7791290001806, "categoria": "Limpieza"},
+        {"nombre": "Papel Higiénico Higienol (4 rollos)", "precio": 2700, "marca": "Higienol", "codigo_barra": 7790510000520, "categoria": "Limpieza"},
+        {"nombre": "Detergente para Platos Magistral (500ml)", "precio": 1150, "marca": "Magistral", "codigo_barra": 7791290000212, "categoria": "Limpieza"},
+        {"nombre": "Jabón Líquido para Ropa Skip (800ml)", "precio": 5100, "marca": "Skip", "codigo_barra": 7791290022801, "categoria": "Limpieza"},
+        {"nombre": "Limpiador de Pisos Poett (900ml)", "precio": 1900, "marca": "Poett", "codigo_barra": 7790460045812, "categoria": "Limpieza"},
+
+        # 🏠 PRODUCTOS PARA EL HOGAR
+        {"nombre": "Piloto Automático Glade (Difusor + Repuesto)", "precio": 6700, "marca": "Glade", "codigo_barra": 7791290022306, "categoria": "Hogar"},
     ]
     
     productos_creados = 0
