@@ -74,6 +74,8 @@ navItems.forEach(item => {
     if (sectionId === 'proveedores') cargarProveedores();
     if (sectionId === 'categorias') cargarCategorias();
     if (sectionId === 'stock-bajo') cargarStockBajo();
+    if (sectionId === 'movimientos') cargarMovimientos();
+    if (sectionId === 'ventas') cargarVentas();
     if (sectionId === 'dashboard') {
       cargarProductos();
       actualizarDashboard();
@@ -89,7 +91,12 @@ function setupSearch(inputId, tableId) {
   input.addEventListener('input', (e) => {
     const searchTerm = e.target.value.toLowerCase();
     const table = byId(tableId);
-    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    if (!table) return;
+    
+    const tbody = table.getElementsByTagName('tbody')[0];
+    if (!tbody) return;
+    
+    const rows = tbody.getElementsByTagName('tr');
     
     for (let row of rows) {
       const text = row.textContent.toLowerCase();
@@ -102,6 +109,8 @@ setupSearch('search-productos', 'productos-table');
 setupSearch('search-proveedores', 'proveedores-table');
 setupSearch('search-categorias', 'categorias-table');
 setupSearch('search-stock-bajo', 'stock-bajo-table');
+setupSearch('search-movimientos', 'movimientos-table');
+setupSearch('search-ventas', 'ventas-table');
 
 /* ===== CARGAR DATOS ===== */
 async function cargarProductos() {
@@ -144,6 +153,80 @@ async function cargarCategorias() {
   } catch (error) {
     console.error('Error:', error);
     showNotification('Error al cargar categorías', 'error');
+  }
+}
+
+async function cargarMovimientos() {
+  try {
+    const tbody = byId('movimientos-body');
+    if (!tbody) return;
+    
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" class="loading-cell">
+          <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i> Cargando movimientos...
+          </div>
+        </td>
+      </tr>
+    `;
+    
+    const response = await fetch('/stock/api/movimientos/');
+    if (!response.ok) throw new Error('Error al cargar movimientos');
+    
+    movimientos = await response.json();
+    renderMovimientos();
+  } catch (error) {
+    console.error('Error:', error);
+    showNotification('Error al cargar movimientos', 'error');
+    const tbody = byId('movimientos-body');
+    if (tbody) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" style="text-align: center; padding: 40px; color: #dc3545;">
+            <i class="material-icons" style="font-size: 3rem; display: block; margin-bottom: 10px;">error</i>
+            Error al cargar movimientos
+          </td>
+        </tr>
+      `;
+    }
+  }
+}
+
+async function cargarVentas() {
+  try {
+    const tbody = byId('ventas-body');
+    if (!tbody) return;
+    
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="9" class="loading-cell">
+          <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i> Cargando ventas...
+          </div>
+        </td>
+      </tr>
+    `;
+    
+    const response = await fetch('/stock/api/ventas/');
+    if (!response.ok) throw new Error('Error al cargar ventas');
+    
+    ventas = await response.json();
+    renderVentas();
+  } catch (error) {
+    console.error('Error:', error);
+    showNotification('Error al cargar ventas', 'error');
+    const tbody = byId('ventas-body');
+    if (tbody) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="9" style="text-align: center; padding: 40px; color: #dc3545;">
+            <i class="material-icons" style="font-size: 3rem; display: block; margin-bottom: 10px;">error</i>
+            Error al cargar ventas
+          </td>
+        </tr>
+      `;
+    }
   }
 }
 
@@ -264,6 +347,78 @@ function renderCategorias() {
   }).join('');
 }
 
+function renderMovimientos() {
+  const tbody = byId('movimientos-body');
+  if (!tbody) return;
+  
+  if (movimientos.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align: center; padding: 40px; color: #6c757d;">
+          <i class="material-icons" style="font-size: 3rem; display: block; margin-bottom: 10px;">swap_horiz</i>
+          No hay movimientos registrados
+        </td>
+      </tr>
+    `;
+    return;
+  }
+  
+  tbody.innerHTML = movimientos.map(m => {
+    const tipoBadge = m.tipo === 'Entrada' ? 
+      '<span style="color: #28a745; font-weight: 600;">⬆ Entrada</span>' : 
+      '<span style="color: #dc3545; font-weight: 600;">⬇ Salida</span>';
+    
+    return `
+      <tr>
+        <td>${m.id}</td>
+        <td>${m.fecha}</td>
+        <td>${m.producto}</td>
+        <td>${tipoBadge}</td>
+        <td>${m.cantidad}</td>
+        <td>—</td>
+        <td>${m.notas || '—'}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderVentas() {
+  const tbody = byId('ventas-body');
+  if (!tbody) return;
+  
+  if (ventas.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="9" style="text-align: center; padding: 40px; color: #6c757d;">
+          <i class="material-icons" style="font-size: 3rem; display: block; margin-bottom: 10px;">point_of_sale</i>
+          No hay ventas registradas
+        </td>
+      </tr>
+    `;
+    return;
+  }
+  
+  tbody.innerHTML = ventas.map(v => {
+    const estadoBadge = v.estado === 'Completada' ? 
+      '<span style="color: #28a745; font-weight: 600;">✓ Completada</span>' : 
+      '<span style="color: #ffc107; font-weight: 600;">⏳ Pendiente</span>';
+    
+    return `
+      <tr>
+        <td>V-${String(v.venta_id).padStart(4, '0')}</td>
+        <td>${v.fecha}</td>
+        <td>${v.hora}</td>
+        <td>${v.producto}</td>
+        <td>${v.cantidad}</td>
+        <td>${fmtMoney(v.precio_unitario)}</td>
+        <td><strong>${fmtMoney(v.total)}</strong></td>
+        <td>${v.metodo}</td>
+        <td>${estadoBadge}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
 function cargarStockBajo() {
   const tbody = byId('stock-bajo-body');
   if (!tbody) return;
@@ -378,7 +533,6 @@ function initCharts() {
 function updateCharts() {
   if (!categoriesChart || !stockChart) return;
   
-  // Productos por categoría
   const catCount = {};
   productos.forEach(p => {
     catCount[p.categoria] = (catCount[p.categoria] || 0) + 1;
@@ -392,7 +546,6 @@ function updateCharts() {
   categoriesChart.data.datasets[0].data = sortedCats.map(c => c[1]);
   categoriesChart.update();
   
-  // Estado del inventario
   const stockBajo = productos.filter(p => p.stock < p.stockMinimo).length;
   const stockNormal = productos.length - stockBajo;
   
@@ -430,6 +583,15 @@ function openModal(type) {
       byId('form-categoria').reset();
     }
   }
+  
+  if (type === 'movimiento') {
+    byId('modal-movimiento-title').innerHTML = '<i class="fas fa-exchange-alt"></i> Nuevo Movimiento';
+    byId('form-movimiento').reset();
+    llenarSelectProductosMovimiento();
+    // Establecer fecha de hoy
+    const hoy = new Date().toISOString().split('T')[0];
+    byId('mov-fecha').value = hoy;
+  }
 }
 
 function closeModal(type) {
@@ -438,18 +600,15 @@ function closeModal(type) {
   
   modal.classList.remove('show');
   
-  // Limpiar campos ID
   const idField = byId(`${type}-id`);
   if (idField) idField.value = '';
 }
 
-// Cerrar modal al hacer clic fuera
 window.onclick = function(e) {
   document.querySelectorAll('.modal').forEach(m => {
     if (e.target === m) {
       m.classList.remove('show');
-      // Limpiar IDs
-      ['producto', 'proveedor', 'categoria'].forEach(type => {
+      ['producto', 'proveedor', 'categoria', 'movimiento'].forEach(type => {
         const idField = byId(`${type}-id`);
         if (idField) idField.value = '';
       });
@@ -482,6 +641,20 @@ function llenarSelectProveedores() {
     const option = document.createElement('option');
     option.value = p.id;
     option.textContent = p.nombre;
+    select.appendChild(option);
+  });
+}
+
+function llenarSelectProductosMovimiento() {
+  const select = byId('mov-producto');
+  if (!select) return;
+  
+  select.innerHTML = '<option value="">Seleccionar producto</option>';
+  
+  productos.forEach(p => {
+    const option = document.createElement('option');
+    option.value = p.id;
+    option.textContent = `${p.nombre} (Stock: ${p.stock})`;
     select.appendChild(option);
   });
 }
@@ -539,91 +712,6 @@ async function guardarProducto(e) {
       showNotification(result.message || 'Producto guardado correctamente', 'success');
       closeModal('producto');
       await cargarProductos();
-    } else {
-      showNotification(result.error || 'Error al guardar producto', 'error');
-    }
-  } catch (error) {
-    console.error('Error:', error);
-    showNotification('Error de conexión', 'error');
-  }
-}
-
-function editarProducto(id) {
-  const p = productos.find(x => x.id === id);
-  if (!p) return;
-  
-  byId('producto-id').value = p.id;
-  byId('producto-nombre').value = p.nombre;
-  byId('producto-precio').value = p.precio;
-  byId('producto-marca').value = p.marca;
-  byId('producto-codigo').value = p.codigo;
-  byId('producto-categoria').value = p.categoria_id || '';
-  byId('producto-proveedor').value = p.proveedor_id || '';
-  byId('producto-stock').value = p.stock;
-  byId('producto-stock-min').value = p.stockMinimo;
-  
-  if (p.imagen) {
-    byId('image-preview').innerHTML = `<img src="${p.imagen}" alt="Preview">`;
-  }
-  
-  byId('modal-producto-title').innerHTML = '<i class="fas fa-box"></i> Editar Producto';
-  openModal('producto');
-}
-
-async function eliminarProducto(id) {
-  if (!confirm('¿Eliminar este producto?')) return;
-  
-  try {
-    const response = await fetch(`/stock/api/productos/${id}/eliminar/`, {
-      method: 'DELETE',
-      headers: {
-        'X-CSRFToken': getCookie('csrftoken')
-      }
-    });
-    
-    const result = await response.json();
-    
-    if (response.ok) {
-      showNotification(result.message || 'Producto eliminado', 'success');
-      await cargarProductos();
-    } else {
-      showNotification(result.error || 'Error al eliminar', 'error');
-    }
-  } catch (error) {
-    console.error('Error:', error);
-    showNotification('Error de conexión', 'error');
-  }
-}
-
-/* ===== CRUD PROVEEDORES ===== */
-async function guardarProveedor(e) {
-  e.preventDefault();
-  
-  const id = byId('proveedor-id').value;
-  const data = {
-    nombre: byId('proveedor-nombre').value.trim(),
-    telefono: byId('proveedor-telefono').value.trim(),
-    email: byId('proveedor-email').value.trim(),
-    cuit: byId('proveedor-cuit').value.trim()
-  };
-  
-  try {
-    const url = id ? `/stock/api/proveedores/${id}/editar/` : '/stock/api/proveedores/crear/';
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': getCookie('csrftoken')
-      },
-      body: JSON.stringify(data)
-    });
-    
-    const result = await response.json();
-    
-    if (response.ok) {
-      showNotification(result.message || 'Proveedor guardado correctamente', 'success');
-      closeModal('proveedor');
-      await cargarProveedores();
     } else {
       showNotification(result.error || 'Error al guardar proveedor', 'error');
     }
@@ -745,6 +833,180 @@ async function eliminarCategoria(id) {
   }
 }
 
+/* ===== GESTIÓN DE MOVIMIENTOS ===== */
+async function guardarMovimiento(e) {
+  e.preventDefault();
+  
+  showNotification('Funcionalidad de movimientos en desarrollo. Por ahora edita el stock desde productos.', 'info');
+  closeModal('movimiento');
+}
+
+/* ===== REPORTES ===== */
+function generarReporteInventario() {
+  if (productos.length === 0) {
+    showNotification('No hay productos para generar el reporte', 'error');
+    return;
+  }
+  
+  showNotification('Generando Reporte de Inventario...', 'info');
+  
+  // Crear CSV
+  let csv = 'ID,Nombre,Marca,Categoría,Stock,Precio,Proveedor,Código\n';
+  
+  productos.forEach(p => {
+    csv += `PRD${String(p.id).padStart(3, '0')},`;
+    csv += `"${p.nombre}",`;
+    csv += `"${p.marca}",`;
+    csv += `"${p.categoria}",`;
+    csv += `${p.stock},`;
+    csv += `${p.precio},`;
+    csv += `"${p.proveedor}",`;
+    csv += `${p.codigo}\n`;
+  });
+  
+  descargarCSV(csv, 'inventario_completo.csv');
+  showNotification('Reporte generado correctamente', 'success');
+}
+
+function generarReporteStockBajo() {
+  const stockBajo = productos.filter(p => p.stock < p.stockMinimo);
+  
+  if (stockBajo.length === 0) {
+    showNotification('No hay productos con stock bajo', 'info');
+    return;
+  }
+  
+  showNotification('Generando Reporte de Stock Bajo...', 'info');
+  
+  let csv = 'ID,Nombre,Stock Actual,Stock Mínimo,Diferencia,Proveedor\n';
+  
+  stockBajo.forEach(p => {
+    const diferencia = p.stockMinimo - p.stock;
+    csv += `PRD${String(p.id).padStart(3, '0')},`;
+    csv += `"${p.nombre}",`;
+    csv += `${p.stock},`;
+    csv += `${p.stockMinimo},`;
+    csv += `${diferencia},`;
+    csv += `"${p.proveedor}"\n`;
+  });
+  
+  descargarCSV(csv, 'stock_bajo.csv');
+  showNotification('Reporte generado correctamente', 'success');
+}
+
+function generarReporteMovimientos() {
+  if (movimientos.length === 0) {
+    showNotification('No hay movimientos para generar el reporte', 'error');
+    return;
+  }
+  
+  showNotification('Generando Reporte de Movimientos...', 'info');
+  
+  let csv = 'ID,Fecha,Producto,Tipo,Cantidad,Notas\n';
+  
+  movimientos.forEach(m => {
+    csv += `${m.id},`;
+    csv += `${m.fecha},`;
+    csv += `"${m.producto}",`;
+    csv += `${m.tipo},`;
+    csv += `${m.cantidad},`;
+    csv += `"${m.notas || ''}"\n`;
+  });
+  
+  descargarCSV(csv, 'movimientos.csv');
+  showNotification('Reporte generado correctamente', 'success');
+}
+
+function generarReporteCategorias() {
+  if (productos.length === 0) {
+    showNotification('No hay productos para generar el reporte', 'error');
+    return;
+  }
+  
+  showNotification('Generando Reporte por Categoría...', 'info');
+  
+  // Agrupar por categoría
+  const porCategoria = {};
+  
+  productos.forEach(p => {
+    if (!porCategoria[p.categoria]) {
+      porCategoria[p.categoria] = {
+        productos: [],
+        totalStock: 0,
+        valorTotal: 0
+      };
+    }
+    porCategoria[p.categoria].productos.push(p);
+    porCategoria[p.categoria].totalStock += p.stock;
+    porCategoria[p.categoria].valorTotal += p.stock * p.precio;
+  });
+  
+  let csv = 'Categoría,Cantidad Productos,Stock Total,Valor Total\n';
+  
+  Object.keys(porCategoria).forEach(cat => {
+    const datos = porCategoria[cat];
+    csv += `"${cat}",`;
+    csv += `${datos.productos.length},`;
+    csv += `${datos.totalStock},`;
+    csv += `${datos.valorTotal.toFixed(2)}\n`;
+  });
+  
+  descargarCSV(csv, 'reporte_categorias.csv');
+  showNotification('Reporte generado correctamente', 'success');
+}
+
+function generarReporteProveedores() {
+  if (productos.length === 0) {
+    showNotification('No hay productos para generar el reporte', 'error');
+    return;
+  }
+  
+  showNotification('Generando Reporte de Proveedores...', 'info');
+  
+  // Agrupar por proveedor
+  const porProveedor = {};
+  
+  productos.forEach(p => {
+    if (!porProveedor[p.proveedor]) {
+      porProveedor[p.proveedor] = [];
+    }
+    porProveedor[p.proveedor].push(p);
+  });
+  
+  let csv = 'Proveedor,Producto,Stock,Precio\n';
+  
+  Object.keys(porProveedor).forEach(prov => {
+    porProveedor[prov].forEach(p => {
+      csv += `"${prov}",`;
+      csv += `"${p.nombre}",`;
+      csv += `${p.stock},`;
+      csv += `${p.precio}\n`;
+    });
+  });
+  
+  descargarCSV(csv, 'reporte_proveedores.csv');
+  showNotification('Reporte generado correctamente', 'success');
+}
+
+function exportarExcel() {
+  generarReporteInventario();
+}
+
+function descargarCSV(contenido, nombreArchivo) {
+  const blob = new Blob([contenido], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', nombreArchivo);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+}
+
 /* ===== INICIALIZACIÓN ===== */
 document.addEventListener('DOMContentLoaded', async () => {
   // Event listeners para formularios
@@ -757,6 +1019,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const fCat = byId('form-categoria');
   if (fCat) fCat.addEventListener('submit', guardarCategoria);
   
+  const fMov = byId('form-movimiento');
+  if (fMov) fMov.addEventListener('submit', guardarMovimiento);
+  
   // Inicializar gráficos
   initCharts();
   
@@ -766,4 +1031,202 @@ document.addEventListener('DOMContentLoaded', async () => {
   await cargarProductos();
   
   console.log('✅ Sistema de Gestión de Stock inicializado');
-});
+},
+
+function editarProducto(id) {
+  const p = productos.find(x => x.id === id);
+  if (!p) return;
+  
+  byId('producto-id').value = p.id;
+  byId('producto-nombre').value = p.nombre;
+  byId('producto-precio').value = p.precio;
+  byId('producto-marca').value = p.marca;
+  byId('producto-codigo').value = p.codigo;
+  byId('producto-categoria').value = p.categoria_id || '';
+  byId('producto-proveedor').value = p.proveedor_id || '';
+  byId('producto-stock').value = p.stock;
+  byId('producto-stock-min').value = p.stockMinimo;
+  
+  if (p.imagen) {
+    byId('image-preview').innerHTML = `<img src="${p.imagen}" alt="Preview">`;
+  }
+  
+  byId('modal-producto-title').innerHTML = '<i class="fas fa-box"></i> Editar Producto';
+  openModal('producto');
+}
+
+async function eliminarProducto(id) {
+  if (!confirm('¿Eliminar este producto?')) return;
+  
+  try {
+    const response = await fetch(`/stock/api/productos/${id}/eliminar/`, {
+      method: 'DELETE',
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken')
+      }
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok) {
+      showNotification(result.message || 'Producto eliminado', 'success');
+      await cargarProductos();
+    } else {
+      showNotification(result.error || 'Error al eliminar', 'error');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    showNotification('Error de conexión', 'error');
+  }
+}
+
+/* ===== CRUD PROVEEDORES ===== */
+/* ===== CRUD PROVEEDORES ===== */
+async function guardarProveedor(e) {
+  e.preventDefault();
+  
+  const id = byId('proveedor-id').value;
+  const data = {
+    nombre: byId('proveedor-nombre').value.trim(),
+    telefono: byId('proveedor-telefono').value.trim(),
+    email: byId('proveedor-email').value.trim(),
+    cuit: byId('proveedor-cuit').value.trim()
+  };
+  
+  try {
+    const url = id ? `/stock/api/proveedores/${id}/editar/` : '/stock/api/proveedores/crear/';
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: JSON.stringify(data)
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok) {
+      showNotification(result.message || 'Proveedor guardado correctamente', 'success');
+      closeModal('proveedor');
+      await cargarProveedores();
+    } else {
+      showNotification(result.error || 'Error al guardar proveedor', 'error');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    showNotification('Error de conexiÃ³n', 'error');
+  }
+}
+
+function editarProveedor(id) {
+  const p = proveedores.find(x => x.id === id);
+  if (!p) return;
+  
+  byId('proveedor-id').value = p.id;
+  byId('proveedor-nombre').value = p.nombre;
+  byId('proveedor-telefono').value = p.telefono;
+  byId('proveedor-email').value = p.email;
+  byId('proveedor-cuit').value = p.cuit;
+  
+  byId('modal-proveedor-title').innerHTML = '<i class="fas fa-truck"></i> Editar Proveedor';
+  openModal('proveedor');
+}
+
+async function eliminarProveedor(id) {
+  if (!confirm('Â¿Eliminar este proveedor?')) return;
+  
+  try {
+    const response = await fetch(`/stock/api/proveedores/${id}/eliminar/`, {
+      method: 'DELETE',
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken')
+      }
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok) {
+      showNotification(result.message || 'Proveedor eliminado', 'success');
+      await cargarProveedores();
+    } else {
+      showNotification(result.error || 'Error al eliminar', 'error');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    showNotification('Error de conexiÃ³n', 'error');
+  }
+}
+
+/* ===== CRUD CATEGORÃAS ===== */
+async function guardarCategoria(e) {
+  e.preventDefault();
+  
+  const id = byId('categoria-id').value;
+  const data = {
+    nombre: byId('categoria-nombre').value.trim(),
+    descripcion: byId('categoria-descripcion').value.trim()
+  };
+  
+  try {
+    const url = id ? `/stock/api/categorias/${id}/editar/` : '/stock/api/categorias/crear/';
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: JSON.stringify(data)
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok) {
+      showNotification(result.message || 'Categoria guardada correctamente', 'success');
+      closeModal('categoria');
+      await cargarCategorias();
+    } else {
+      showNotification(result.error || 'Error al guardar categoria', 'error');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    showNotification('Error de conexion', 'error');
+  }
+}
+
+function editarCategoria(id) {
+  const c = categorias.find(x => x.id === id);
+  if (!c) return;
+  
+  byId('categoria-id').value = c.id;
+  byId('categoria-nombre').value = c.nombre;
+  byId('categoria-descripcion').value = c.descripcion || '';
+  
+  byId('modal-categoria-title').innerHTML = '<i class="fas fa-tags"></i> Editar Categoria';
+  openModal('categoria');
+}
+
+async function eliminarCategoria(id) {
+  if (!confirm('Â¿Eliminar esta categorÃ­a?')) return;
+  
+  try {
+    const response = await fetch(`/stock/api/categorias/${id}/eliminar/`, {
+      method: 'DELETE',
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken')
+      }
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok) {
+      showNotification(result.message || 'Categoria eliminada', 'success');
+      await cargarCategorias();
+    } else {
+      showNotification(result.error || 'Error al eliminar', 'error');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    showNotification('Error de conexion', 'error');
+  }
+}

@@ -10,6 +10,7 @@ from django.views.decorators.http import require_http_methods
 from django.contrib import messages
 from django.core.mail import send_mail
 from django.db import transaction
+from .utils import registrar_actividad
 
 from datetime import datetime, time
 from caja.models import (
@@ -444,6 +445,13 @@ def login_view(request: HttpRequest) -> HttpResponse:
         request.session['usuario_id'] = usuario.idusuarios
         request.session['nombre_usuario'] = usuario.nombreusuario
 
+        registrar_actividad(
+            request,
+            'LOGIN',
+            f'Usuario {usuario.nombreusuario} inició sesión',
+            detalles={'usuario_id': usuario.idusuarios}
+        )
+
         # 🔥 REGISTRAR ENTRADA AUTOMÁTICA
         entrada_registrada = _registrar_entrada_automatica(usuario.idusuarios)
         if entrada_registrada:
@@ -698,6 +706,12 @@ def logout_view(request: HttpRequest) -> HttpResponse:
 
     if usuario_id:
         # 🔥 REGISTRAR SALIDA AUTOMÁTICA ANTES DE CERRAR SESIÓN
+        registrar_actividad(
+            request,
+            'LOGOUT',
+            'Usuario cerró sesión',
+            detalles={'usuario_id': usuario_id}
+        )
         salida_registrada = _registrar_salida_automatica(usuario_id)
         if salida_registrada:
             print(f"✅ Salida registrada automáticamente para usuario {usuario_id}")
@@ -1166,6 +1180,15 @@ def api_registrar_empleado_actualizado(request):
                                 )
 
         try:
+            registrar_actividad(
+                request,
+                'CREAR_EMPLEADO',
+                f'Creación de empleado: {nombre} {apellido}',
+                detalles={
+                    'empleado_id': nuevo_empleado.idempleado,
+                    'puesto': puesto_seleccionado.get('nombre')
+                }
+            )
             send_mail(
                 subject='¡Bienvenido! Tus credenciales de acceso',
                 message=f"Hola {nombre},\n\n¡Te damos la bienvenida al sistema! A continuación encontrarás tus datos para iniciar sesión:\n\nNombre de Usuario: {username}\nContraseña Temporal: {password}\n\nTe recomendamos cambiar tu contraseña después de tu primer inicio de sesión.\n\nSaludos,\nEl equipo de La Merced.",
@@ -1565,3 +1588,365 @@ def api_puestos_por_area_simple(request: HttpRequest, area_nombre: str) -> JsonR
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+    
+from django.core.paginator import Paginator
+import json
+from .utils import registrar_actividad, leer_logs, obtener_estadisticas_logs
+
+@require_http_methods(['GET'])
+def logs_actividad_view(request):
+    """Vista principal de logs de actividad - SOLO ADMINISTRADORES"""
+    if not _verificar_autenticacion(request):
+        messages.error(request, 'Acceso denegado. Por favor, inicia sesión.')
+        return redirect('login')
+    
+    usuario_id = request.session.get('usuario_id')
+    
+    # Verificar que sea administrador
+    roles_usuario = list(
+        Roles.objects.filter(usuxroles__idusuarios_id=usuario_id).values_list('nombrerol', flat=True)
+    )
+    
+    is_admin = 'Administrador' in roles_usuario or 'Recursos Humanos' in roles_usuario
+    
+    if not is_admin:
+        messages.error(request, 'No tienes permisos para acceder a los logs de actividad.')
+        return redirect('inicio')
+    
+    return render(request, 'HTML/logs_actividad.html', {
+        'usuario_nombre': request.session.get('nombre_usuario', 'Usuario')
+    })
+
+@require_http_methods(['GET'])
+def api_logs_actividad(request):
+    """API para obtener logs de actividad con filtros"""
+    usuario_id = request.session.get('usuario_id')
+    if not usuario_id:
+        return JsonResponse({'error': 'No autenticado'}, status=401)
+    
+    # Verificar permisos de administrador
+    roles_usuario = list(
+        Roles.objects.filter(usuxroles__idusuarios_id=usuario_id).values_list('nombrerol', flat=True)
+    )
+    
+    if not ('Administrador' in roles_usuario or 'Recursos Humanos' in roles_usuario):
+        return JsonResponse({'error': 'Sin permisos'}, status=403)
+    
+    try:
+        # Parámetros de filtrado
+        search = request.GET.get('search', '').strip()
+        tipo = request.GET.get('tipo', 'all')
+        nivel = request.GET.get('nivel', 'all')
+        fecha_inicio = request.GET.get('fecha_inicio', '')
+        fecha_fin = request.GET.get('fecha_fin', '')
+        page = int(request.GET.get('page', 1))
+        
+        # Leer logs con filtros
+        logs = leer_logs(
+            fecha_inicio=fecha_inicio if fecha_inicio else None,
+            fecha_fin=fecha_fin if fecha_fin else None,
+            tipo=tipo if tipo != 'all' else None,
+            nivel=nivel if nivel != 'all' else None,
+            search=search if search else None,
+            limit=10000  # Límite alto para paginación
+        )
+        
+        # Paginación manual
+        paginator = Paginator(logs, 50)
+        page_obj = paginator.get_page(page)
+        
+        # Agregar ID único a cada log (basado en timestamp)
+        logs_data = []
+        for idx, log in enumerate(page_obj):
+            log_copy = log.copy()
+            log_copy['id'] = hash(log.get('timestamp', str(idx)))
+            log_copy['tipo_actividad_display'] = get_tipo_display_name(log.get('tipo_actividad', ''))
+            log_copy['nivel_display'] = get_nivel_display_name(log.get('nivel', 'INFO'))
+            logs_data.append(log_copy)
+        
+        return JsonResponse({
+            'logs': logs_data,
+            'total': paginator.count,
+            'page': page,
+            'total_pages': paginator.num_pages,
+            'has_next': page_obj.has_next(),
+            'has_previous': page_obj.has_previous()
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@require_http_methods(['GET'])
+def api_estadisticas_logs(request):
+    """API para obtener estadísticas de los logs"""
+    usuario_id = request.session.get('usuario_id')
+    if not usuario_id:
+        return JsonResponse({'error': 'No autenticado'}, status=401)
+    
+    # Verificar permisos
+    roles_usuario = list(
+        Roles.objects.filter(usuxroles__idusuarios_id=usuario_id).values_list('nombrerol', flat=True)
+    )
+    
+    if not ('Administrador' in roles_usuario or 'Recursos Humanos' in roles_usuario):
+        return JsonResponse({'error': 'Sin permisos'}, status=403)
+    
+    try:
+        estadisticas = obtener_estadisticas_logs(dias=7)
+        return JsonResponse(estadisticas)
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@require_http_methods(['GET'])
+def api_detalle_log(request, log_timestamp):
+    """API para obtener el detalle completo de un log por timestamp"""
+    usuario_id = request.session.get('usuario_id')
+    if not usuario_id:
+        return JsonResponse({'error': 'No autenticado'}, status=401)
+    
+    # Verificar permisos
+    roles_usuario = list(
+        Roles.objects.filter(usuxroles__idusuarios_id=usuario_id).values_list('nombrerol', flat=True)
+    )
+    
+    if not ('Administrador' in roles_usuario or 'Recursos Humanos' in roles_usuario):
+        return JsonResponse({'error': 'Sin permisos'}, status=403)
+    
+    try:
+        # Leer todos los logs y buscar por timestamp
+        logs = leer_logs(limit=100000)
+        
+        log = None
+        for l in logs:
+            if l.get('timestamp') == log_timestamp:
+                log = l
+                break
+        
+        if not log:
+            return JsonResponse({'error': 'Log no encontrado'}, status=404)
+        
+        log['id'] = hash(log.get('timestamp', ''))
+        log['tipo_actividad_display'] = get_tipo_display_name(log.get('tipo_actividad', ''))
+        log['nivel_display'] = get_nivel_display_name(log.get('nivel', 'INFO'))
+        
+        return JsonResponse(log)
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+def get_tipo_display_name(tipo):
+    """Convierte el tipo de actividad a nombre legible"""
+    nombres = {
+        'LOGIN': 'Inicio de Sesión',
+        'LOGOUT': 'Cierre de Sesión',
+        'ENTRADA': 'Registro de Entrada',
+        'SALIDA': 'Registro de Salida',
+        'APERTURA_CAJA': 'Apertura de Caja',
+        'CIERRE_CAJA': 'Cierre de Caja',
+        'VENTA': 'Venta Realizada',
+        'CREAR_EMPLEADO': 'Creación de Empleado',
+        'EDITAR_EMPLEADO': 'Edición de Empleado',
+        'CREAR_AREA': 'Creación de Área',
+        'EDITAR_AREA': 'Edición de Área',
+        'CREAR_PUESTO': 'Creación de Puesto',
+        'EDITAR_PUESTO': 'Edición de Puesto',
+        'CREAR_PRODUCTO': 'Creación de Producto',
+        'EDITAR_PRODUCTO': 'Edición de Producto',
+        'ELIMINAR_PRODUCTO': 'Eliminación de Producto',
+        'CAMBIO_ESTADO': 'Cambio de Estado de Empleado',
+    }
+    return nombres.get(tipo, tipo)
+
+def get_nivel_display_name(nivel):
+    """Convierte el nivel a nombre legible"""
+    nombres = {
+        'INFO': 'Información',
+        'WARNING': 'Advertencia',
+        'ERROR': 'Error',
+        'CRITICAL': 'Crítico',
+    }
+    return nombres.get(nivel, nivel)
+
+# Agregar estos nuevos endpoints al archivo views.py
+
+@require_http_methods(['GET'])
+def api_buscar_empleados(request: HttpRequest) -> JsonResponse:
+    """API para buscar empleados existentes por nombre, apellido o DNI."""
+    query = request.GET.get('q', '').strip()
+    
+    if not query or len(query) < 2:
+        return JsonResponse([], safe=False)
+    
+    try:
+        # Buscar por nombre, apellido o DNI
+        empleados = Empleados.objects.select_related('idusuarios').filter(
+            Q(idusuarios__nombreusuario__icontains=query) |
+            Q(idusuarios__apellidousuario__icontains=query) |
+            Q(idusuarios__dniusuario__icontains=query)
+        ).order_by('idusuarios__nombreusuario')[:10]
+        
+        resultado = []
+        for emp in empleados:
+            usuario = emp.idusuarios
+            
+            # Obtener todos los roles actuales del empleado
+            roles_actuales = list(
+                Roles.objects.filter(usuxroles__idusuarios=usuario).values(
+                    'idroles', 'nombrerol', 'nombrearea'
+                )
+            )
+            
+            resultado.append({
+                'id': emp.idempleado,
+                'usuario_id': usuario.idusuarios,
+                'nombre': usuario.nombreusuario,
+                'apellido': usuario.apellidousuario,
+                'dni': usuario.dniusuario,
+                'email': usuario.emailusuario,
+                'telefono': usuario.telefono or '',
+                'imagen': usuario.imagenusuario,
+                'roles_actuales': roles_actuales,
+                'estado': emp.estado
+            })
+        
+        return JsonResponse(resultado, safe=False)
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@require_http_methods(['GET'])
+def api_roles_empleado(request: HttpRequest, empleado_id: int) -> JsonResponse:
+    """API para obtener todos los roles de un empleado."""
+    try:
+        empleado = Empleados.objects.select_related('idusuarios').get(idempleado=empleado_id)
+        usuario = empleado.idusuarios
+        
+        roles = Roles.objects.filter(usuxroles__idusuarios=usuario).values(
+            'idroles', 'nombrerol', 'nombrearea', 'descripcionrol'
+        )
+        
+        return JsonResponse({
+            'empleado_id': empleado.idempleado,
+            'nombre_completo': f"{usuario.nombreusuario} {usuario.apellidousuario}",
+            'roles': list(roles)
+        })
+        
+    except Empleados.DoesNotExist:
+        return JsonResponse({'error': 'Empleado no encontrado'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@require_http_methods(['POST'])
+@transaction.atomic
+def api_asignar_nuevo_rol(request: HttpRequest) -> JsonResponse:
+    """API para asignar un nuevo rol/área a un empleado existente."""
+    try:
+        data = json.loads(request.body)
+        
+        empleado_id = data.get('empleado_id')
+        puesto_id = data.get('puesto_id')
+        horario_data = data.get('horario', {})
+        
+        if not empleado_id or not puesto_id:
+            return JsonResponse({'error': 'Faltan datos obligatorios'}, status=400)
+        
+        # Verificar que el empleado existe
+        empleado = Empleados.objects.select_related('idusuarios').get(idempleado=empleado_id)
+        usuario = empleado.idusuarios
+        
+        # Verificar que el puesto existe
+        nuevo_rol = Roles.objects.get(idroles=puesto_id)
+        
+        # Verificar que el empleado no tenga ya este rol asignado
+        if UsuxRoles.objects.filter(idusuarios=usuario, idroles=nuevo_rol).exists():
+            return JsonResponse({
+                'error': f'El empleado ya tiene asignado el puesto "{nuevo_rol.nombrerol}"'
+            }, status=400)
+        
+        # Asignar el nuevo rol
+        UsuxRoles.objects.create(idusuarios=usuario, idroles=nuevo_rol)
+        
+        # Procesar horarios si se proporcionaron
+        if horario_data:
+            dias_semana_map = {'Lu': 0, 'Ma': 1, 'Mi': 2, 'Ju': 3, 'Vi': 4, 'Sa': 5, 'Do': 6}
+            day_color_map = horario_data.get('dayColorMap', {})
+            schedule_data = horario_data.get('scheduleData', {})
+            
+            # Mapeo de semanas
+            week_id_map = {}
+            current_week_number = 1
+            sorted_week_ids = sorted(
+                day_color_map.keys(), 
+                key=lambda k: int(k.split('-')[0][1:]) if '-' in k else 0
+            )
+            
+            for key in sorted_week_ids:
+                week_id = key.split('-')[0] if '-' in key else 'w0'
+                if week_id not in week_id_map:
+                    week_id_map[week_id] = current_week_number
+                    current_week_number += 1
+            
+            # Crear horarios
+            for composite_key, color in day_color_map.items():
+                parts = composite_key.split('-')
+                if len(parts) == 2:
+                    week_id_str, day_key = parts
+                    week_number = week_id_map.get(week_id_str, 1)
+                else:
+                    day_key = parts[0]
+                    week_number = 1
+                
+                day = dias_semana_map.get(day_key)
+                
+                if day is not None:
+                    tramos = schedule_data.get(color, [])
+                    for tramo in tramos:
+                        if tramo.get('start') and tramo.get('end'):
+                            Horario.objects.create(
+                                empleado=empleado,
+                                rol=nuevo_rol,
+                                dia_semana=day,
+                                semana_del_mes=week_number,
+                                hora_inicio=tramo['start'],
+                                hora_fin=tramo['end']
+                            )
+        
+        # Registrar actividad
+        registrar_actividad(
+            request,
+            'ASIGNAR_ROL',
+            f'Se asignó el rol "{nuevo_rol.nombrerol}" al empleado {usuario.nombreusuario} {usuario.apellidousuario}',
+            detalles={
+                'empleado_id': empleado.idempleado,
+                'rol_id': nuevo_rol.idroles,
+                'rol_nombre': nuevo_rol.nombrerol,
+                'area': nuevo_rol.nombrearea
+            }
+        )
+        
+        return JsonResponse({
+            'message': f'Rol "{nuevo_rol.nombrerol}" asignado correctamente al empleado',
+            'empleado': {
+                'id': empleado.idempleado,
+                'nombre': f"{usuario.nombreusuario} {usuario.apellidousuario}"
+            },
+            'nuevo_rol': {
+                'id': nuevo_rol.idroles,
+                'nombre': nuevo_rol.nombrerol,
+                'area': nuevo_rol.nombrearea
+            }
+        }, status=201)
+        
+    except Empleados.DoesNotExist:
+        return JsonResponse({'error': 'Empleado no encontrado'}, status=404)
+    except Roles.DoesNotExist:
+        return JsonResponse({'error': 'Puesto no encontrado'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': f'Error al asignar rol: {str(e)}'}, status=500)
+
+
+# También agregar import al inicio del archivo:
+from django.db.models import Q

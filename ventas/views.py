@@ -7,6 +7,7 @@ from django.contrib import messages
 import json
 from caja.models import Caja, Productos, Ventas, Movimientosdecaja, DetalleDeVentas, Inventarios, Ofertas
 from .forms import VentaForm, RecargoForm
+from .utils import registrar_actividad
 
 def registrar_venta(request):
     """Vista para registrar una nueva venta"""
@@ -106,7 +107,7 @@ def buscar_producto(request):
 
 @csrf_exempt
 def procesar_venta(request):
-    """API para procesar venta via AJAX"""
+    """API para procesar venta via AJAX - CON SOPORTE PARA VENTA RÁPIDA"""
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -164,7 +165,7 @@ def procesar_venta(request):
                 )
                 venta.save()
                
-                # Procesar detalles
+                # Procesar detalles de productos normales
                 total_venta = 0
                 for item in data.get('items', []):
                     producto = get_object_or_404(Productos, idproducto=item['producto_id'])
@@ -194,6 +195,23 @@ def procesar_venta(request):
                     # Actualizar inventario
                     inventario.cantidad -= item['cantidad']
                     inventario.save()
+                
+                # ✅ AGREGAR VENTA RÁPIDA (Frutas/Verduras)
+                venta_rapida_total = data.get('venta_rapida_total', 0) or 0
+                if venta_rapida_total > 0:
+                    total_venta += venta_rapida_total
+                    
+                    # Registrar en detalles usando el primer producto como placeholder
+                    # (Solo para mantener integridad referencial)
+                    producto_placeholder = Productos.objects.first()
+                    if producto_placeholder:
+                        DetalleDeVentas.objects.create(
+                            cantidadvendida=1,
+                            preciounitariodv=venta_rapida_total,
+                            subtotaldv=venta_rapida_total,
+                            idventa=venta,
+                            idproducto=producto_placeholder
+                        )
                
                 # Aplicar recargo
                 recargo = data.get('recargo', 0) or 0
@@ -203,8 +221,7 @@ def procesar_venta(request):
                 venta.totalventa = total_venta
                 venta.save()
                
-
-                # ✅ NUEVO: REGISTRAR MOVIMIENTO DE CAJA
+                # ✅ REGISTRAR MOVIMIENTO DE CAJA
                 try:
                     # Obtener el último saldo de la caja
                     ultimo_movimiento = Movimientosdecaja.objects.filter(
@@ -226,10 +243,22 @@ def procesar_venta(request):
                         idusuarios_id=request.session.get('usuario_id'),
                         idcaja=caja_activa
                     )
+                    
+                    # Registrar actividad en logs
+                    registrar_actividad(
+                        request,
+                        'VENTA',
+                        f'Venta #{venta.idventa} - Total: ${total_venta:.2f}',
+                        detalles={
+                            'venta_id': venta.idventa,
+                            'total': float(total_venta),
+                            'metodo_pago': data.get('metodo_pago'),
+                            'tiene_venta_rapida': venta_rapida_total > 0
+                        }
+                    )
                 except Exception as e:
                     print(f"Error registrando movimiento de caja: {e}")
                     # No interrumpir la venta por error en el movimiento
-
 
                 return JsonResponse({
                     'success': True,
@@ -240,6 +269,7 @@ def procesar_venta(request):
                 })
                
         except Exception as e:
+            print(f"Error procesando venta: {e}")
             return JsonResponse({
                 'success': False,
                 'error': str(e)
