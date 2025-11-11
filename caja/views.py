@@ -6,7 +6,7 @@ from .forms import AperturaCajaForm
 from .decorators import permiso_requerido
 from django.db import models
 from django.db.models import Sum  
-
+from .utils import registrar_actividad
 
 def obtener_o_crear_sucursal_sistema():
     """
@@ -218,6 +218,15 @@ def apertura_caja_view(request):
             request.session['id_caja'] = apertura.idcaja
             
             messages.success(request, "✅ Apertura registrada correctamente.")
+            registrar_actividad(
+                request,
+                'APERTURA_CAJA',
+                f'Apertura de caja con monto inicial ${apertura.montoinicialcaja}',
+                detalles={
+                    'caja_id': apertura.idcaja,
+                    'monto_inicial': float(apertura.montoinicialcaja)
+                }
+            )
             return redirect("inicio")
         else:
             messages.error(request, "❌ Error en los datos. Revise el formulario.")
@@ -355,10 +364,40 @@ def cierre_caja_view(request):
             
             if diferencia == 0:
                 messages.success(request, "✅ Caja cerrada correctamente. Sin diferencias.")
+                registrar_actividad(
+                    request,
+                    'CIERRE_CAJA',
+                    f'Cierre de caja - Diferencia: ${diferencia:.2f}',
+                    detalles={
+                        'caja_id': caja.idcaja,
+                        'diferencia': float(diferencia)
+                    },
+                    nivel='WARNING' if abs(diferencia) > 100 else 'INFO'
+                )
             elif diferencia > 0:
                 messages.success(request, f"✅ Caja cerrada. ⚠ SOBRANTE: ${diferencia:.2f}")
+                registrar_actividad(
+                    request,
+                    'CIERRE_CAJA',
+                    f'Cierre de caja - Diferencia: ${diferencia:.2f}',
+                    detalles={
+                        'caja_id': caja.idcaja,
+                        'diferencia': float(diferencia)
+                    },
+                    nivel='WARNING' if abs(diferencia) > 100 else 'INFO'
+                )
             else:
                 messages.success(request, f"✅ Caja cerrada. ⚠ FALTANTE: ${abs(diferencia):.2f}")
+                registrar_actividad(
+                    request,
+                    'CIERRE_CAJA',
+                    f'Cierre de caja - Diferencia: ${diferencia:.2f}',
+                    detalles={
+                        'caja_id': caja.idcaja,
+                        'diferencia': float(diferencia)
+                    },
+                    nivel='WARNING' if abs(diferencia) > 100 else 'INFO'
+                )
                 
             return redirect("inicio")
         except Exception as e:

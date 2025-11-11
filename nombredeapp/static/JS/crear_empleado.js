@@ -5,11 +5,16 @@ document.addEventListener('DOMContentLoaded', function() {
     let scheduleData = {};
     let dayColorMap = {};
     let weekIdCounter = 1;
+    let modoOperacion = null; // 'crear' o 'asignar'
+    let empleadoSeleccionado = null;
 
     const daysOfWeek = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do'];
     const availableColors = ["#e6194B", "#3cb44b", "#ffe119", "#4363d8", "#f58231", "#911eb4", "#42d4f4", "#f032e6", "#bfef45", "#fabed4", "#469990", "#dcbeff", "#9A6324", "#fffac8", "#800000", "#aaffc3", "#808000", "#ffd8b1", "#000075", "#a9a9a9"];
     let activeColors = [availableColors[0]];
     let selectedColor = activeColors[0];
+
+    // ===== MODAL INICIAL: ELEGIR TIPO DE OPERACIÓN =====
+    setupModalTipoOperacion();
 
     // ===== FOTO DE PERFIL =====
     const photoUploader = document.getElementById('photo-uploader');
@@ -39,12 +44,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // ===== VALIDACIONES DE CAMPOS =====
     setupFieldValidations();
     
-    // ===== BOTONES DE ACCIÃ“N =====
+    // ===== BOTONES DE ACCIÓN =====
     const btnCancel = document.getElementById('btn-cancel');
     if (btnCancel) {
         btnCancel.addEventListener('click', () => {
             window.audioSystem.play('select');
-            if (confirm('¿Esta seguro de que desea cancelar? Se perderan todos los datos ingresados.')) {
+            if (confirm('¿Está seguro de que desea cancelar? Se perderán todos los datos ingresados.')) {
                 window.audioSystem.play('negative');
                 window.location.href = document.body.dataset.inicioUrl;
             }
@@ -62,17 +67,201 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // ===== LÃ“GICA DE ÃREA Y PUESTO =====
+    // ===== LÓGICA DE ÁREA Y PUESTO =====
     setupAreaPuestoLogic();
     
-    // ===== LÃ“GICA DEL HORARIO =====
+    // ===== LÓGICA DEL HORARIO =====
     setupScheduleLogic();
     
-    // ===== ENVÃO FINAL =====
+    // ===== ENVÍO FINAL =====
     setupFinalSubmit();
 
     // ========== FUNCIONES AUXILIARES ==========
     
+    function setupModalTipoOperacion() {
+        const modalTipoOperacion = document.getElementById('modal-tipo-operacion');
+        const btnCrearNuevo = document.getElementById('btn-crear-nuevo');
+        const btnAsignarRol = document.getElementById('btn-asignar-rol');
+        const mainFormContainer = document.getElementById('main-form-container');
+
+        if (!modalTipoOperacion || !btnCrearNuevo || !btnAsignarRol) return;
+
+        btnCrearNuevo.addEventListener('mouseenter', () => window.audioSystem.play('hover'));
+        btnAsignarRol.addEventListener('mouseenter', () => window.audioSystem.play('hover'));
+
+        btnCrearNuevo.addEventListener('click', () => {
+            window.audioSystem.play('positive');
+            modoOperacion = 'crear';
+            modalTipoOperacion.classList.remove('show');
+            setTimeout(() => {
+                modalTipoOperacion.style.display = 'none';
+                mainFormContainer.style.display = 'block';
+                configurarModoCrear();
+            }, 300);
+        });
+
+        btnAsignarRol.addEventListener('click', () => {
+            window.audioSystem.play('positive');
+            modoOperacion = 'asignar';
+            modalTipoOperacion.classList.remove('show');
+            setTimeout(() => {
+                modalTipoOperacion.style.display = 'none';
+                abrirModalBuscarEmpleado();
+            }, 300);
+        });
+    }
+
+    function configurarModoCrear() {
+        const tituloPrincipal = document.getElementById('titulo-principal');
+        const seccionDatosPersonales = document.getElementById('seccion-datos-personales');
+        const empleadoBanner = document.getElementById('empleado-seleccionado-banner');
+        const textoBtnListo = document.getElementById('texto-btn-listo');
+        const tituloSeccionLaboral = document.getElementById('titulo-seccion-laboral');
+
+        if (tituloPrincipal) tituloPrincipal.textContent = 'Añadir Nuevo Empleado';
+        if (seccionDatosPersonales) seccionDatosPersonales.style.display = 'block';
+        if (empleadoBanner) empleadoBanner.style.display = 'none';
+        if (textoBtnListo) textoBtnListo.textContent = 'Listo';
+        if (tituloSeccionLaboral) tituloSeccionLaboral.textContent = 'Datos Laborales';
+    }
+
+    function abrirModalBuscarEmpleado() {
+        const modalBuscar = document.getElementById('modal-buscar-empleado');
+        const searchInput = document.getElementById('search-empleado-input');
+        const empleadosEncontrados = document.getElementById('empleados-encontrados');
+        const btnCancelarBusqueda = document.getElementById('btn-cancelar-busqueda');
+
+        if (!modalBuscar) return;
+
+        modalBuscar.style.display = 'flex';
+        searchInput.value = '';
+        empleadosEncontrados.innerHTML = '<p style="text-align:center; color:#666;">Escribe para buscar empleados...</p>';
+
+        searchInput.focus();
+
+        searchInput.addEventListener('input', debounce(async () => {
+            const query = searchInput.value.trim();
+            if (query.length < 2) {
+                empleadosEncontrados.innerHTML = '<p style="text-align:center; color:#666;">Escribe al menos 2 caracteres...</p>';
+                return;
+            }
+            await buscarEmpleados(query);
+        }, 300));
+
+        btnCancelarBusqueda.addEventListener('click', () => {
+            window.audioSystem.play('select');
+            modalBuscar.style.display = 'none';
+            // Volver al modal inicial
+            const modalTipoOperacion = document.getElementById('modal-tipo-operacion');
+            if (modalTipoOperacion) {
+                modalTipoOperacion.style.display = 'flex';
+                setTimeout(() => modalTipoOperacion.classList.add('show'), 10);
+            }
+        });
+    }
+
+    async function buscarEmpleados(query) {
+        const empleadosEncontrados = document.getElementById('empleados-encontrados');
+        try {
+            const url = `${document.body.dataset.apiBuscarEmpleadosUrl}?q=${encodeURIComponent(query)}`;
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.length === 0) {
+                empleadosEncontrados.innerHTML = '<p style="text-align:center; color:#666;">No se encontraron empleados.</p>';
+                return;
+            }
+
+            empleadosEncontrados.innerHTML = '';
+            data.forEach(emp => {
+                const div = document.createElement('div');
+                div.className = 'empleado-item';
+                
+                // Construir roles actuales
+                const rolesHTML = emp.roles_actuales && emp.roles_actuales.length > 0
+                    ? emp.roles_actuales.map(r => `<span class="rol-badge">${r.nombrearea} - ${r.nombrerol}</span>`).join('')
+                    : '<span class="rol-badge">Sin roles</span>';
+                
+                div.innerHTML = `
+                    <div class="empleado-item-foto">
+                        <img src="${emp.imagen || '/static/iconos/default-avatar.png'}" alt="Foto">
+                    </div>
+                    <div class="empleado-item-info">
+                        <h4>${emp.nombre} ${emp.apellido}</h4>
+                        <p><strong>DNI:</strong> ${emp.dni}</p>
+                        <p><strong>Email:</strong> ${emp.email}</p>
+                        <div class="empleado-item-roles">
+                            ${rolesHTML}
+                        </div>
+                    </div>
+                `;
+                div.addEventListener('mouseenter', () => window.audioSystem.play('hover'));
+                div.addEventListener('click', () => {
+                    window.audioSystem.play('positive');
+                    seleccionarEmpleado(emp);
+                });
+                empleadosEncontrados.appendChild(div);
+            });
+        } catch (error) {
+            console.error('Error al buscar empleados:', error);
+            window.audioSystem.play('error');
+            empleadosEncontrados.innerHTML = '<p style="text-align:center; color:red;">Error al buscar.</p>';
+        }
+    }
+
+    function seleccionarEmpleado(emp) {
+        empleadoSeleccionado = emp;
+        const modalBuscar = document.getElementById('modal-buscar-empleado');
+        const mainFormContainer = document.getElementById('main-form-container');
+        
+        modalBuscar.style.display = 'none';
+        mainFormContainer.style.display = 'block';
+
+        configurarModoAsignar(emp);
+    }
+
+    function configurarModoAsignar(emp) {
+        const tituloPrincipal = document.getElementById('titulo-principal');
+        const seccionDatosPersonales = document.getElementById('seccion-datos-personales');
+        const empleadoBanner = document.getElementById('empleado-seleccionado-banner');
+        const bannerFoto = document.getElementById('banner-foto');
+        const bannerNombre = document.getElementById('banner-nombre');
+        const bannerDni = document.getElementById('banner-dni');
+        const bannerEmail = document.getElementById('banner-email');
+        const bannerRolesList = document.getElementById('banner-roles-list');
+        const textoBtnListo = document.getElementById('texto-btn-listo');
+        const tituloSeccionLaboral = document.getElementById('titulo-seccion-laboral');
+        const laboralDataSection = document.getElementById('laboral-data');
+
+        if (tituloPrincipal) tituloPrincipal.textContent = 'Asignar Nuevo Rol';
+        if (seccionDatosPersonales) seccionDatosPersonales.style.display = 'none';
+        if (empleadoBanner) empleadoBanner.style.display = 'block';
+        if (textoBtnListo) textoBtnListo.textContent = 'Asignar Rol';
+        if (tituloSeccionLaboral) tituloSeccionLaboral.textContent = 'Nuevo Rol Laboral';
+        if (laboralDataSection) laboralDataSection.style.display = 'block';
+
+        if (bannerFoto) bannerFoto.src = emp.imagen || '/static/iconos/default-avatar.png';
+        if (bannerNombre) bannerNombre.textContent = `${emp.nombre} ${emp.apellido}`;
+        if (bannerDni) bannerDni.innerHTML = `<i class="fas fa-id-card"></i> DNI: ${emp.dni}`;
+        if (bannerEmail) bannerEmail.innerHTML = `<i class="fas fa-envelope"></i> ${emp.email}`;
+        
+        if (bannerRolesList && emp.roles_actuales) {
+            bannerRolesList.innerHTML = emp.roles_actuales.map(r => 
+                `<div class="rol-actual-badge">
+                    <i class="fas fa-briefcase"></i> ${r.nombrearea} - ${r.nombrerol}
+                </div>`
+            ).join('');
+        }
+    }
+
+    function debounce(func, wait) {
+        let timeout;
+        return function(...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), wait);
+        };
+    }
+
     function setupFieldValidations() {
         const nombreInput = document.getElementById('nombre');
         const apellidoInput = document.getElementById('apellido');
@@ -84,7 +273,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
         function allowOnlyLetters(event) {
             const oldValue = event.target.value;
-            event.target.value = event.target.value.replace(/[^a-zA-ZÃ¡Ã©Ã­Ã³ÃºÃÃ‰ÃÃ“ÃšÃ±Ã‘\s]/g, '');
+            event.target.value = event.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
             if (oldValue !== event.target.value) window.audioSystem.play('negative');
         }
         
@@ -146,7 +335,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const date = new Date(year, month - 1, day);
                     if (date.getDate() !== day || date.getMonth() !== month - 1 || date.getFullYear() !== year) {
                         window.audioSystem.play('error');
-                        alert('Fecha invalida. Por favor ingrese una fecha valida.');
+                        alert('Fecha inválida. Por favor ingrese una fecha válida.');
                         e.target.value = '';
                     }
                 }
@@ -158,11 +347,9 @@ document.addEventListener('DOMContentLoaded', function() {
             emailInput.addEventListener('keydown', (event) => {
                 const value = event.target.value;
                 
-                // Si presiona @ y no hay otro @ en el email
                 if (event.key === '@' && !value.includes('@')) {
                     event.preventDefault();
                     event.target.value = value + '@gmail.com';
-                    // Posicionar el cursor antes de @gmail.com
                     const cursorPos = value.length;
                     event.target.setSelectionRange(cursorPos, cursorPos);
                     window.audioSystem.play('positive');
@@ -172,23 +359,19 @@ document.addEventListener('DOMContentLoaded', function() {
             emailInput.addEventListener('input', (event) => {
                 let value = event.target.value;
                 
-                // Si el usuario escribe @ y no hay nada despuÃ©s o estÃ¡ incompleto
                 if (value.includes('@') && !value.includes('@gmail.com')) {
                     const atIndex = value.indexOf('@');
                     const beforeAt = value.substring(0, atIndex);
                     const afterAt = value.substring(atIndex + 1);
                     
-                    // Si despuÃ©s del @ no hay nada o es el inicio de "gmail.com"
                     if (afterAt === '' || 'gmail.com'.startsWith(afterAt.toLowerCase())) {
                         event.target.value = beforeAt + '@gmail.com';
-                        // Posicionar el cursor antes de @gmail.com
                         event.target.setSelectionRange(beforeAt.length, beforeAt.length);
                         window.audioSystem.play('positive');
                     }
                 }
             });
     
-            // TambiÃ©n mantener la funcionalidad original en el blur
             emailInput.addEventListener('blur', (event) => {
                 let emailValue = event.target.value.trim();
                 if (emailValue && !emailValue.includes('@')) {
@@ -214,7 +397,7 @@ document.addEventListener('DOMContentLoaded', function() {
         btnArea.addEventListener('click', () => {
             window.audioSystem.play('select');
             currentMode = 'area';
-            seleccionarTitulo.textContent = 'Seleccionar Area';
+            seleccionarTitulo.textContent = 'Seleccionar Área';
             searchInput.value = '';
             cargarAreas();
             modalSeleccionar.style.display = 'flex';
@@ -223,7 +406,7 @@ document.addEventListener('DOMContentLoaded', function() {
         btnPuesto.addEventListener('click', () => {
             if (!selectedArea) {
                 window.audioSystem.play('error');
-                alert('Primero debes seleccionar un Area');
+                alert('Primero debes seleccionar un Área');
                 return;
             }
             window.audioSystem.play('select');
@@ -283,7 +466,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     resultsList.appendChild(li);
                 });
             } catch (error) {
-                console.error("Error al cargar Areas:", error);
+                console.error("Error al cargar Áreas:", error);
                 window.audioSystem.play('error');
                 resultsList.innerHTML = '<li>Error al cargar datos</li>';
             }
@@ -299,7 +482,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 resultsList.innerHTML = '';
                 if (filtered.length === 0) {
-                    resultsList.innerHTML = '<li>No hay puestos en esta Area</li>';
+                    resultsList.innerHTML = '<li>No hay puestos en esta Área</li>';
                     return;
                 }
                 
@@ -680,6 +863,13 @@ document.addEventListener('DOMContentLoaded', function() {
         btnListo.addEventListener('click', async () => {
             window.audioSystem.play('select');
             
+            // Si estamos en modo "asignar", usar endpoint diferente
+            if (modoOperacion === 'asignar') {
+                await procesarAsignarRol();
+                return;
+            }
+
+            // Modo "crear" - continuar con lógica original
             let fotoBase64 = null;
             const fotoInput = document.getElementById('photo-input');
             if (fotoInput && fotoInput.files[0]) {
@@ -707,7 +897,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 horario: { scheduleData: scheduleData, dayColorMap: dayColorMap }
             };
     
-            // Validaciones bÃ¡sicas
+            // Validaciones básicas
             if (!data.personal.nombre || !data.personal.apellido || !data.personal.email || !data.personal.dni) {
                 window.audioSystem.play('error');
                 alert('Por favor, completa los campos obligatorios: Nombre, Apellido, DNI y Email.');
@@ -715,14 +905,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             if (!data.area || !data.puesto) {
                 window.audioSystem.play('error');
-                alert('Por favor, selecciona un Area y un Puesto para el empleado.');
+                alert('Por favor, selecciona un Área y un Puesto para el empleado.');
                 return;
             }
             
-            // ===== VALIDACIÃ“N DE HORARIO =====
+            // Validación de horario
             if (Object.keys(dayColorMap).length === 0) {
                 window.audioSystem.play('error');
-                alert('Por favor, asigna al menos un di­a de trabajo para el empleado.');
+                alert('Por favor, asigna al menos un día de trabajo para el empleado.');
                 return;
             }
             
@@ -740,11 +930,11 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (horarioIncompleto) {
                 window.audioSystem.play('error');
-                alert('Por favor, completa todos los horarios de entrada y salida para los di­as asignados.');
+                alert('Por favor, completa todos los horarios de entrada y salida para los días asignados.');
                 return;
             }
             
-            // ===== MODAL DE CONFIRMACIÃ“N =====
+            // Modal de confirmación
             const confirmar = await mostrarModalConfirmacion(data);
             
             if (!confirmar) {
@@ -778,11 +968,90 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (error) {
                 console.error('Error al enviar el formulario:', error);
                 window.audioSystem.play('error');
-                alert('Ocurrio un error de red. Intentalo de nuevo.');
+                alert('Ocurrió un error de red. Inténtalo de nuevo.');
                 btnListo.disabled = false;
                 btnListo.innerHTML = '<i class="fas fa-check"></i> Listo';
             }
         });
+    }
+
+    async function procesarAsignarRol() {
+        const btnListo = document.getElementById('btn-listo');
+
+        if (!selectedArea || !selectedPuesto) {
+            window.audioSystem.play('error');
+            alert('Por favor, selecciona un Área y un Puesto para el nuevo rol.');
+            return;
+        }
+        
+        // Validación de horario
+        if (Object.keys(dayColorMap).length === 0) {
+            window.audioSystem.play('error');
+            alert('Por favor, asigna al menos un día de trabajo para el nuevo rol.');
+            return;
+        }
+        
+        let horarioIncompleto = false;
+        for (const color in scheduleData) {
+            const tramos = scheduleData[color];
+            for (const tramo of tramos) {
+                if (!tramo.start || !tramo.end) {
+                    horarioIncompleto = true;
+                    break;
+                }
+            }
+            if (horarioIncompleto) break;
+        }
+        
+        if (horarioIncompleto) {
+            window.audioSystem.play('error');
+            alert('Por favor, completa todos los horarios de entrada y salida para los días asignados.');
+            return;
+        }
+
+        const data = {
+            empleado_id: empleadoSeleccionado.id,
+            puesto_id: selectedPuesto.id,
+            horario: { scheduleData: scheduleData, dayColorMap: dayColorMap }
+        };
+
+        const confirmar = await mostrarModalConfirmacionAsignar(data);
+        
+        if (!confirmar) {
+            window.audioSystem.play('select');
+            return;
+        }
+
+        btnListo.disabled = true;
+        btnListo.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Asignando...';
+
+        try {
+            const response = await fetch(document.body.dataset.apiAsignarRolUrl, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'X-CSRFToken': getCookie('csrftoken') 
+                },
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            if (response.ok) {
+                window.audioSystem.play('positive');
+                alert(result.message);
+                window.location.href = document.body.dataset.inicioUrl;
+            } else {
+                window.audioSystem.play('error');
+                alert(`Error: ${result.error}`);
+                btnListo.disabled = false;
+                btnListo.innerHTML = '<i class="fas fa-check"></i> Asignar Rol';
+            }
+        } catch (error) {
+            console.error('Error al asignar rol:', error);
+            window.audioSystem.play('error');
+            alert('Ocurrió un error de red. Inténtalo de nuevo.');
+            btnListo.disabled = false;
+            btnListo.innerHTML = '<i class="fas fa-check"></i> Asignar Rol';
+        }
     }
     
     function mostrarModalConfirmacion(data) {
@@ -794,11 +1063,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="modal-confirmacion-content">
                         <div class="modal-confirmacion-header">
                             <i class="fas fa-user-check"></i>
-                            <h2>Confirmar Creacion de Empleado</h2>
+                            <h2>Confirmar Creación de Empleado</h2>
                         </div>
                         <div class="modal-confirmacion-body">
                             <p class="modal-confirmacion-pregunta">
-                                ¿Ests seguro de que deseas crear este empleado con los siguientes datos?
+                                ¿Estás seguro de que deseas crear este empleado con los siguientes datos?
                             </p>
                             <div class="modal-confirmacion-datos">
                                 <div class="dato-item">
@@ -815,7 +1084,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </div>
                                 <div class="dato-item">
                                     <i class="fas fa-briefcase"></i>
-                                    <span><strong>Area:</strong> ${data.area?.nombre || 'N/A'}</span>
+                                    <span><strong>Área:</strong> ${data.area?.nombre || 'N/A'}</span>
                                 </div>
                                 <div class="dato-item">
                                     <i class="fas fa-user-tag"></i>
@@ -823,12 +1092,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </div>
                                 <div class="dato-item">
                                     <i class="fas fa-calendar-check"></i>
-                                    <span><strong>Dias laborales:</strong> ${totalDias} dia(s) asignado(s)</span>
+                                    <span><strong>Días laborales:</strong> ${totalDias} día(s) asignado(s)</span>
                                 </div>
                             </div>
                             <p class="modal-confirmacion-nota">
                                 <i class="fas fa-info-circle"></i>
-                                Se enviara un correo con las credenciales de acceso al email proporcionado.
+                                Se enviará un correo con las credenciales de acceso al email proporcionado.
                             </p>
                         </div>
                         <div class="modal-confirmacion-actions">
@@ -836,7 +1105,96 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <i class="fas fa-times"></i> Cancelar
                             </button>
                             <button class="btn-modal-confirmacion btn-confirmar" id="btn-confirmar-si">
-                                <i class="fas fa-check"></i> Si­, estoy seguro
+                                <i class="fas fa-check"></i> Sí, estoy seguro
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            
+            const modal = document.getElementById('modal-confirmacion-empleado');
+            const btnCancelar = document.getElementById('btn-confirmar-cancelar');
+            const btnConfirmar = document.getElementById('btn-confirmar-si');
+            
+            if (window.audioSystem) window.audioSystem.play('positive');
+            
+            setTimeout(() => {
+                modal.classList.add('show');
+            }, 10);
+            
+            btnCancelar.addEventListener('mouseenter', () => {
+                if (window.audioSystem) window.audioSystem.play('hover');
+            });
+            
+            btnConfirmar.addEventListener('mouseenter', () => {
+                if (window.audioSystem) window.audioSystem.play('hover');
+            });
+            
+            btnCancelar.addEventListener('click', () => {
+                if (window.audioSystem) window.audioSystem.play('negative');
+                cerrarModal(modal, false, resolve);
+            });
+            
+            btnConfirmar.addEventListener('click', () => {
+                if (window.audioSystem) window.audioSystem.play('positive');
+                cerrarModal(modal, true, resolve);
+            });
+            
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    if (window.audioSystem) window.audioSystem.play('select');
+                    cerrarModal(modal, false, resolve);
+                }
+            });
+        });
+    }
+
+    function mostrarModalConfirmacionAsignar(data) {
+        return new Promise((resolve) => {
+            const totalDias = Object.keys(dayColorMap).length;
+            
+            const modalHTML = `
+                <div id="modal-confirmacion-empleado" class="modal-confirmacion-overlay">
+                    <div class="modal-confirmacion-content">
+                        <div class="modal-confirmacion-header">
+                            <i class="fas fa-user-tag"></i>
+                            <h2>Confirmar Asignación de Rol</h2>
+                        </div>
+                        <div class="modal-confirmacion-body">
+                            <p class="modal-confirmacion-pregunta">
+                                ¿Estás seguro de que deseas asignar este nuevo rol?
+                            </p>
+                            <div class="modal-confirmacion-datos">
+                                <div class="dato-item">
+                                    <i class="fas fa-user"></i>
+                                    <span><strong>Empleado:</strong> ${empleadoSeleccionado.nombre} ${empleadoSeleccionado.apellido}</span>
+                                </div>
+                                <div class="dato-item">
+                                    <i class="fas fa-briefcase"></i>
+                                    <span><strong>Nueva Área:</strong> ${selectedArea?.nombre || 'N/A'}</span>
+                                </div>
+                                <div class="dato-item">
+                                    <i class="fas fa-user-tag"></i>
+                                    <span><strong>Nuevo Puesto:</strong> ${selectedPuesto?.nombre || 'N/A'}</span>
+                                </div>
+                                <div class="dato-item">
+                                    <i class="fas fa-calendar-check"></i>
+                                    <span><strong>Días laborales:</strong> ${totalDias} día(s) asignado(s)</span>
+                                </div>
+                            </div>
+                            <p class="modal-confirmacion-nota">
+                                <i class="fas fa-info-circle"></i>
+                                El empleado podrá acceder con sus credenciales actuales y tendrá los permisos del nuevo rol.
+                            </p>
+                        </div>
+                        <div class="modal-confirmacion-actions">
+                            <button class="btn-modal-confirmacion btn-cancelar" id="btn-confirmar-cancelar">
+                                <i class="fas fa-times"></i> Cancelar
+                            </button>
+                            <button class="btn-modal-confirmacion btn-confirmar" id="btn-confirmar-si">
+                                <i class="fas fa-check"></i> Sí, asignar rol
                             </button>
                         </div>
                     </div>

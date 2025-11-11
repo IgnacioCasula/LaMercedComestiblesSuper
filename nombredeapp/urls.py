@@ -54,4 +54,14 @@ urlpatterns = [
     path('api/registrar-entrada/', views.registrar_entrada, name='api_registrar_entrada'),
     path('api/registrar-salida/', views.registrar_salida, name='api_registrar_salida'),
     path('api/estado-asistencia-hoy/', views.estado_asistencia_hoy, name='api_estado_asistencia_hoy'),
+
+    path('logs-actividad/', views.logs_actividad_view, name='logs_actividad'),
+    path('api/logs-actividad/', views.api_logs_actividad, name='api_logs_actividad'),
+    path('api/logs-actividad/<str:log_timestamp>/', views.api_detalle_log, name='api_detalle_log'),
+    path('api/estadisticas-logs/', views.api_estadisticas_logs, name='api_estadisticas_logs'),
+
+    # APIs para asignar roles adicionales a empleados existentes
+    path('api/buscar-empleados/', views.api_buscar_empleados, name='api_buscar_empleados'),
+    path('api/empleados/<int:empleado_id>/roles/', views.api_roles_empleado, name='api_roles_empleado'),
+    path('api/asignar-nuevo-rol/', views.api_asignar_nuevo_rol, name='api_asignar_nuevo_rol'),
 ]

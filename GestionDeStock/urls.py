@@ -24,4 +24,16 @@ urlpatterns = [
     path('api/proveedores/crear/', views.api_crear_proveedor, name='api_crear_proveedor'),
     path('api/proveedores/<int:proveedor_id>/editar/', views.api_editar_proveedor, name='api_editar_proveedor'),
     path('api/proveedores/<int:proveedor_id>/eliminar/', views.api_eliminar_proveedor, name='api_eliminar_proveedor'),
+
+    # API Movimientos
+    path('api/movimientos/', views.api_listar_movimientos, name='api_listar_movimientos'),
+    path('api/movimientos/crear/', views.api_crear_movimiento, name='api_crear_movimiento'),
+    path('api/movimientos/mejorado/', views.api_listar_movimientos_mejorado, name='api_listar_movimientos_mejorado'),
+
+    # API Ventas
+    path('api/ventas/', views.api_listar_ventas, name='api_listar_ventas'),
+    
+    # API Estadísticas y Alertas (NUEVAS)
+    path('api/estadisticas/', views.api_estadisticas_stock, name='api_estadisticas_stock'),
+    path('api/alertas/', views.api_alertas_stock, name='api_alertas_stock'),
 ]
