@@ -7,16 +7,16 @@ class GestorTicket {
         console.log('🔄 Mostrando ticket...');
         const filas = document.querySelectorAll("#tablaBody tr");
         const ticketItems = document.getElementById("ticketItems");
-       
+        
         if (!ticketItems) {
             console.log('❌ ticketItems no encontrado');
             return;
         }
-       
+        
         ticketItems.innerHTML = "";
-       
+        
         let subtotal = 0;
-       
+        
         filas.forEach((fila) => {
             const productoId = fila.getAttribute('data-producto-id');
             const producto = productosData[productoId];
@@ -24,9 +24,9 @@ class GestorTicket {
             const productoNombre = fila.querySelector('.nombre').textContent;
             const precioUnitario = producto.precio;
             const totalLinea = parseInt(cantidad) * precioUnitario;
-           
+            
             subtotal += totalLinea;
-           
+            
             const itemDiv = document.createElement("div");
             itemDiv.className = "receipt-line";
             itemDiv.innerHTML = `
@@ -34,19 +34,19 @@ class GestorTicket {
                 <span>${productoNombre}</span>
                 <span>$${totalLinea}</span>
             `;
-           
+            
             ticketItems.appendChild(itemDiv);
         });
-       
+        
         const recargo = Number(document.getElementById('recargo').value) || 0;
         const total = subtotal + recargo;
         const metodoPago = document.getElementById('metodoPago').value;
-       
+        
         document.getElementById("subtotalTicket").textContent = "$" + subtotal;
         document.getElementById("recargoTicket").textContent = "$" + recargo;
         document.getElementById("totalTicket").textContent = "$" + total;
         document.getElementById("metodoPagoTicket").textContent = metodoPago;
-       
+        
         document.getElementById("ticketModal").style.display = "flex";
         console.log('✅ Ticket mostrado');
     }
@@ -74,7 +74,7 @@ function procesarVentaDesdeTicket() {
     // Cerrar ambos modales
     document.getElementById("confirmModal").style.display = "none";
     document.getElementById("ticketModal").style.display = "none";
-   
+    
     // Usar el GestorVenta para procesar la venta
     if (window.gestorVenta && window.gestorVenta.procesarVenta) {
         window.gestorVenta.procesarVenta();
