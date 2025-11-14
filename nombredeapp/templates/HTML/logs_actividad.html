@@ -17,21 +17,12 @@
                 <i class="fas fa-arrow-left"></i> Volver
             </a>
             <h1><i class="fas fa-clipboard-list"></i> Logs de Actividad del Sistema</h1>
-            <div class="header-stats">
-                <span class="stat-badge">
-                    <i class="fas fa-sync-alt"></i>
-                    Actualización automática: <strong id="auto-update-status">Activa</strong>
-                </span>
-            </div>
         </header>
 
         <!-- TABS -->
         <div class="tabs-container">
             <button class="tab-btn active" data-tab="logs">
                 <i class="fas fa-list"></i> Registros
-            </button>
-            <button class="tab-btn" data-tab="estadisticas">
-                <i class="fas fa-chart-bar"></i> Estadísticas Inteligentes
             </button>
         </div>
 
@@ -89,7 +80,8 @@
                         <i class="fas fa-redo"></i> Limpiar filtros
                     </button>
 
-                    <button class="btn-export" id="export-logs">
+                    <!-- Botón exportar OCULTO (necesario para el JS) -->
+                    <button class="btn-export" id="export-logs" style="display: none !important;">
                         <i class="fas fa-download"></i> Exportar
                     </button>
                 </div>
@@ -116,71 +108,6 @@
                 </button>
             </div>
         </div>
-
-        <!-- TAB: ESTADÍSTICAS -->
-        <div class="tab-content" id="tab-estadisticas">
-            <div class="stats-intro">
-                <h2><i class="fas fa-lightbulb"></i> Análisis Inteligente del Sistema</h2>
-                <p>Estas estadísticas responden preguntas clave sobre el funcionamiento de tu negocio</p>
-            </div>
-
-            <div class="stats-grid">
-                <!-- Gráfico 1: Actividad por Hora -->
-                <div class="stat-card full-width">
-                    <div class="stat-header">
-                        <h3><i class="fas fa-clock"></i> Actividad por Hora del Día</h3>
-                        <span class="stat-question">¿A qué horas hay más actividad en el sistema?</span>
-                    </div>
-                    <canvas id="chart-hora"></canvas>
-                </div>
-
-                <!-- Gráfico 2: Ventas por Usuario -->
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <h3><i class="fas fa-trophy"></i> Rendimiento de Ventas</h3>
-                        <span class="stat-question">¿Quién vende más?</span>
-                    </div>
-                    <canvas id="chart-ventas"></canvas>
-                </div>
-
-                <!-- Gráfico 3: Problemas de Caja -->
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <h3><i class="fas fa-exclamation-triangle"></i> Diferencias en Caja</h3>
-                        <span class="stat-question">¿Qué cajas tienen más problemas?</span>
-                    </div>
-                    <canvas id="chart-caja"></canvas>
-                </div>
-
-                <!-- Gráfico 4: Puntualidad -->
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <h3><i class="fas fa-user-clock"></i> Puntualidad de Empleados</h3>
-                        <span class="stat-question">¿Quiénes llegan tarde más seguido?</span>
-                    </div>
-                    <canvas id="chart-puntualidad"></canvas>
-                </div>
-
-                <!-- Gráfico 5: Tendencia -->
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <h3><i class="fas fa-chart-line"></i> Tendencia de Actividad</h3>
-                        <span class="stat-question">¿La actividad está aumentando?</span>
-                    </div>
-                    <canvas id="chart-tendencia"></canvas>
-                </div>
-
-                <!-- Gráfico 6: Errores -->
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <h3><i class="fas fa-bug"></i> Errores Críticos</h3>
-                        <span class="stat-question">¿Qué tipo de errores tenemos?</span>
-                    </div>
-                    <canvas id="chart-errores"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- MODAL: DETALLE DEL LOG -->
     <div id="modal-detalle" class="modal-overlay">
