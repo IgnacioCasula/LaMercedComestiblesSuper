@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const filterFechaInicio = document.getElementById('filter-fecha-inicio');
     const filterFechaFin = document.getElementById('filter-fecha-fin');
     const resetFiltersBtn = document.getElementById('reset-filters');
-    const exportLogsBtn = document.getElementById('export-logs');
+    const exportLogsBtn = document.getElementById('export-logs'); // Puede ser null si no existe
     const logsContainer = document.getElementById('logs-container');
     const paginationContainer = document.getElementById('pagination-container');
     const currentPageSpan = document.getElementById('current-page');
@@ -165,14 +165,17 @@ document.addEventListener('DOMContentLoaded', function() {
             if (window.audioSystem) window.audioSystem.play('select');
         });
 
-        exportLogsBtn.addEventListener('mouseenter', () => {
-            if (window.audioSystem) window.audioSystem.play('hover');
-        });
+        // ⚠️ CORREGIDO: Solo agregar event listener si el botón existe
+        if (exportLogsBtn) {
+            exportLogsBtn.addEventListener('mouseenter', () => {
+                if (window.audioSystem) window.audioSystem.play('hover');
+            });
 
-        exportLogsBtn.addEventListener('click', () => {
-            exportarLogs();
-            if (window.audioSystem) window.audioSystem.play('select');
-        });
+            exportLogsBtn.addEventListener('click', () => {
+                exportarLogs();
+                if (window.audioSystem) window.audioSystem.play('select');
+            });
+        }
 
         // Paginación
         prevPageBtn.addEventListener('click', () => {
@@ -241,7 +244,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // ===== RENDERIZAR LOGS (SIMPLIFICADO - SIN USER AGENT) =====
+    // ===== RENDERIZAR LOGS =====
     function renderLogs(logs) {
         if (logs.length === 0) {
             logsContainer.innerHTML = `
@@ -427,311 +430,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 30000);
     }
 
-    // ===== ESTADÍSTICAS OPTIMIZADAS =====
-    async function cargarEstadisticas() {
-        try {
-            const response = await fetch('/api/estadisticas-logs/');
-            if (!response.ok) throw new Error('Error al cargar estadísticas');
-
-            const data = await response.json();
-
-            // Renderizar gráficos útiles
-            renderGraficoActividadPorHora(data.actividad_por_hora);
-            renderGraficoVentasPorUsuario(data.ventas_por_usuario);
-            renderGraficoProblemasCaja(data.problemas_caja);
-            renderGraficoPuntualidad(data.puntualidad_empleados);
-            renderGraficoTendencia(data.actividad_diaria);
-            renderGraficoErrores(data.errores_por_tipo);
-
-            // Mostrar resumen
-            mostrarResumen(data.resumen);
-
-        } catch (error) {
-            console.error('Error:', error);
-            if (window.audioSystem) window.audioSystem.play('error');
-        }
-    }
-
-    // 📊 GRÁFICO 1: Actividad por hora del día
-    function renderGraficoActividadPorHora(data) {
-        const ctx = document.getElementById('chart-hora');
-        if (!ctx || data.length === 0) return;
-
-        if (chartHora) chartHora.destroy();
-
-        const labels = data.map(d => d.hora_label);
-        const valores = data.map(d => d.total);
-
-        chartHora = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Actividades por Hora',
-                    data: valores,
-                    borderColor: 'rgba(102, 126, 234, 1)',
-                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                    borderWidth: 3,
-                    fill: true,
-                    tension: 0.4,
-                    pointBackgroundColor: 'rgba(102, 126, 234, 1)',
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 2,
-                    pointRadius: 5
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: '📊 ¿A qué horas hay más actividad?',
-                        font: { size: 16, weight: 'bold' }
-                    },
-                    legend: { display: false }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { stepSize: 1 }
-                    }
-                }
-            }
-        });
-    }
-
-    // 📊 GRÁFICO 2: Rendimiento de ventas por usuario
-    function renderGraficoVentasPorUsuario(data) {
-        const ctx = document.getElementById('chart-ventas');
-        if (!ctx || data.length === 0) return;
-
-        if (chartVentas) chartVentas.destroy();
-
-        const labels = data.map(d => d.usuario);
-        const valores = data.map(d => d.total_vendido);
-
-        chartVentas = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Total Vendido ($)',
-                    data: valores,
-                    backgroundColor: 'rgba(39, 174, 96, 0.8)',
-                    borderColor: 'rgba(39, 174, 96, 1)',
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: '💰 ¿Quién vende más?',
-                        font: { size: 16, weight: 'bold' }
-                    },
-                    legend: { display: false }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function(value) {
-                                return '$' + value.toLocaleString();
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-
-    // 📊 GRÁFICO 3: Problemas de caja
-    function renderGraficoProblemasCaja(data) {
-        const ctx = document.getElementById('chart-caja');
-        if (!ctx || data.length === 0) return;
-
-        if (chartCaja) chartCaja.destroy();
-
-        const labels = data.map(d => d.usuario);
-        const valores = data.map(d => Math.abs(d.diferencia_promedio));
-        const colores = data.map(d => d.diferencia_promedio < 0 ? 'rgba(52, 152, 219, 0.8)' : 'rgba(231, 76, 60, 0.8)');
-
-        chartCaja = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Diferencia Promedio (valor absoluto)',
-                    data: valores,
-                    backgroundColor: colores,
-                    borderColor: colores.map(c => c.replace('0.8', '1')),
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: '⚠️ ¿Qué cajas tienen más diferencias?',
-                        font: { size: 16, weight: 'bold' }
-                    },
-                    legend: { display: false }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function(value) {
-                                return '$' + value.toFixed(2);
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-
-    // 📊 GRÁFICO 4: Puntualidad de empleados
-    function renderGraficoPuntualidad(data) {
-        const ctx = document.getElementById('chart-puntualidad');
-        if (!ctx || data.length === 0) return;
-
-        if (chartPuntualidad) chartPuntualidad.destroy();
-
-        const labels = data.map(d => d.usuario);
-        const valores = data.map(d => d.porcentaje_tardanzas);
-
-        chartPuntualidad = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: '% de Tardanzas',
-                    data: valores,
-                    backgroundColor: 'rgba(230, 126, 34, 0.8)',
-                    borderColor: 'rgba(230, 126, 34, 1)',
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                indexAxis: 'y',
-                plugins: {
-                    title: {
-                        display: true,
-                        text: '⏰ ¿Quiénes llegan tarde más seguido?',
-                        font: { size: 16, weight: 'bold' }
-                    },
-                    legend: { display: false }
-                },
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        max: 100,
-                        ticks: {
-                            callback: function(value) {
-                                return value + '%';
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-
-    // 📊 GRÁFICO 5: Tendencia de actividad
-    function renderGraficoTendencia(data) {
-        const ctx = document.getElementById('chart-tendencia');
-        if (!ctx || data.length === 0) return;
-
-        if (chartTendencia) chartTendencia.destroy();
-
-        const labels = data.map(d => d.fecha_str);
-        const valores = data.map(d => d.total);
-
-        chartTendencia = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Actividades por Día',
-                    data: valores,
-                    borderColor: 'rgba(155, 89, 182, 1)',
-                    backgroundColor: 'rgba(155, 89, 182, 0.1)',
-                    borderWidth: 3,
-                    fill: true,
-                    tension: 0.4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: '📈 ¿La actividad está aumentando o disminuyendo?',
-                        font: { size: 16, weight: 'bold' }
-                    },
-                    legend: { display: false }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { stepSize: 10 }
-                    }
-                }
-            }
-        });
-    }
-
-    // 📊 GRÁFICO 6: Errores por tipo
-    function renderGraficoErrores(data) {
-        const ctx = document.getElementById('chart-errores');
-        if (!ctx || data.length === 0) return;
-
-        if (chartErrores) chartErrores.destroy();
-
-        const labels = data.map(d => d.tipo_actividad);
-        const valores = data.map(d => d.total);
-
-        chartErrores = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: labels,
-                datasets: [{
-                    data: valores,
-                    backgroundColor: [
-                        'rgba(231, 76, 60, 0.8)',
-                        'rgba(230, 126, 34, 0.8)',
-                        'rgba(241, 196, 15, 0.8)',
-                        'rgba(52, 152, 219, 0.8)',
-                        'rgba(155, 89, 182, 0.8)'
-                    ],
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: '🚨 ¿Qué tipo de errores estamos teniendo?',
-                        font: { size: 16, weight: 'bold' }
-                    }
-                }
-            }
-        });
-    }
 
     function mostrarResumen(resumen) {
-        // Aquí puedes agregar cards de resumen si quieres
         console.log('Resumen:', resumen);
     }
 

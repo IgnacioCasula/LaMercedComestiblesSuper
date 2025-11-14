@@ -58,7 +58,6 @@ urlpatterns = [
     path('logs-actividad/', views.logs_actividad_view, name='logs_actividad'),
     path('api/logs-actividad/', views.api_logs_actividad, name='api_logs_actividad'),
     path('api/logs-actividad/<str:log_timestamp>/', views.api_detalle_log, name='api_detalle_log'),
-    path('api/estadisticas-logs/', views.api_estadisticas_logs, name='api_estadisticas_logs'),
 
     # APIs para asignar roles adicionales a empleados existentes
     path('api/buscar-empleados/', views.api_buscar_empleados, name='api_buscar_empleados'),
