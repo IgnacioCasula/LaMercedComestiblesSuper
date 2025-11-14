@@ -7,33 +7,41 @@ from django.contrib import messages
 import json
 from caja.models import Caja, Productos, Ventas, Movimientosdecaja, DetalleDeVentas, Inventarios, Ofertas
 from .forms import VentaForm, RecargoForm
-from .utils import registrar_actividad
 
 def registrar_venta(request):
     """Vista para registrar una nueva venta"""
-   
+    
+    # 🔥 DIAGNÓSTICO MEJORADO
+    print("🔍 INICIANDO VISTA REGISTRAR_VENTA")
+    
     # USAR LA MISMA LÓGICA QUE CAJA/VIEWS.PY (SESSION)
     id_caja = request.session.get('id_caja')
     caja_activa = None
-   
+    
+    print(f"🔍 ID Caja desde session: {id_caja}")
+    
     if id_caja:
         try:
             caja_activa = Caja.objects.get(idcaja=id_caja)
+            print(f"✅ Caja activa encontrada: {caja_activa.nombrecaja}")
         except Caja.DoesNotExist:
-            # Si no existe en BD, limpiar session
+            print("❌ Caja no existe en BD")
             request.session.pop('caja_abierta', None)
             request.session.pop('id_caja', None)
-   
+    
     if not caja_activa:
+        print("❌ No hay caja activa - redirigiendo")
         messages.error(request, '❌ Debe tener una caja activa para registrar ventas')
         return redirect('caja:menu_caja')
-   
+    
     # Obtener productos disponibles en la sucursal
     productos_disponibles = Productos.objects.filter(
         inventarios__sucursal=caja_activa.idsucursal,
         inventarios__cantidad__gt=0
     ).distinct()
-   
+    
+    print(f"🔍 Productos disponibles: {productos_disponibles.count()}")
+    
     # Preparar datos para JavaScript
     productos_json = {}
     for producto in productos_disponibles:
@@ -46,12 +54,16 @@ def registrar_venta(request):
                 'nombre': producto.nombreproductos,
                 'precio': float(producto.precioproducto),
                 'stock': inventario.cantidad,
-                'codigo_barras': producto.codigobarraproducto
+                'codigo_barras': producto.codigobarraproducto,
+                'marca': producto.marcaproducto
             }
-   
+            print(f"  📦 {producto.nombreproductos} - Stock: {inventario.cantidad}")
+    
+    print(f"🔍 Productos JSON preparados: {len(productos_json)} productos")
+    
     venta_form = VentaForm()
     recargo_form = RecargoForm()
-   
+    
     return render(request, 'HTML/registrar_venta.html', {
         'venta_form': venta_form,
         'recargo_form': recargo_form,
@@ -66,26 +78,28 @@ def buscar_producto(request):
     """API para buscar productos"""
     if request.method == 'GET' and 'q' in request.GET:
         query = request.GET.get('q', '').lower()
-       
+        
+        print(f"🔍 API Buscar producto: '{query}'")
+        
         # USAR LA MISMA LÓGICA QUE CAJA/VIEWS.PY (SESSION)
         id_caja = request.session.get('id_caja')
         caja_activa = None
-       
+        
         if id_caja:
             try:
                 caja_activa = Caja.objects.get(idcaja=id_caja)
             except Caja.DoesNotExist:
                 return JsonResponse([], safe=False)
-       
+        
         if not caja_activa:
             return JsonResponse([], safe=False)
-       
+        
         productos = Productos.objects.filter(
             nombreproductos__icontains=query,
             inventarios__sucursal=caja_activa.idsucursal,
             inventarios__cantidad__gt=0
         ).distinct()[:10]
-       
+        
         resultados = []
         for producto in productos:
             inventario = Inventarios.objects.filter(
@@ -100,22 +114,25 @@ def buscar_producto(request):
                     'stock': inventario.cantidad,
                     'codigo_barras': producto.codigobarraproducto
                 })
-       
+        
+        print(f"🔍 API Resultados: {len(resultados)} productos")
         return JsonResponse(resultados, safe=False)
-   
+    
     return JsonResponse([], safe=False)
 
 @csrf_exempt
 def procesar_venta(request):
-    """API para procesar venta via AJAX - CON SOPORTE PARA VENTA RÁPIDA"""
+    """API para procesar venta via AJAX"""
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-           
+            
+            print("🔍 API Procesar venta recibida")
+            
             # USAR LA MISMA LÓGICA QUE CAJA/VIEWS.PY (SESSION)
             id_caja = request.session.get('id_caja')
             caja_activa = None
-           
+            
             if id_caja:
                 try:
                     caja_activa = Caja.objects.get(idcaja=id_caja)
@@ -124,13 +141,13 @@ def procesar_venta(request):
                         'success': False,
                         'error': 'No hay caja activa'
                     })
-           
+            
             if not caja_activa:
                 return JsonResponse({
                     'success': False,
                     'error': 'No hay caja activa'
                 })
-           
+            
             # Obtener oferta por defecto (usar la primera disponible)
             oferta_default = Ofertas.objects.first()
             if not oferta_default:
@@ -150,7 +167,7 @@ def procesar_venta(request):
                         'success': False,
                         'error': 'No hay productos en el sistema'
                     })
-           
+            
             with transaction.atomic():
                 # Crear la venta
                 venta = Ventas(
@@ -164,21 +181,21 @@ def procesar_venta(request):
                     idcaja=caja_activa
                 )
                 venta.save()
-               
-                # Procesar detalles de productos normales
+                
+                # Procesar detalles
                 total_venta = 0
                 for item in data.get('items', []):
                     producto = get_object_or_404(Productos, idproducto=item['producto_id'])
-                   
+                    
                     # Verificar inventario
                     inventario = Inventarios.objects.filter(
                         producto=producto,
                         sucursal=caja_activa.idsucursal
                     ).first()
-                   
+                    
                     if not inventario or inventario.cantidad < item['cantidad']:
                         raise Exception(f'Stock insuficiente para {producto.nombreproductos}')
-                   
+                    
                     # Crear detalle
                     subtotal = item['cantidad'] * producto.precioproducto
                     detalle = DetalleDeVentas(
@@ -189,39 +206,22 @@ def procesar_venta(request):
                         idproducto=producto
                     )
                     detalle.save()
-                   
+                    
                     total_venta += subtotal
-                   
+                    
                     # Actualizar inventario
                     inventario.cantidad -= item['cantidad']
                     inventario.save()
                 
-                # ✅ AGREGAR VENTA RÁPIDA (Frutas/Verduras)
-                venta_rapida_total = data.get('venta_rapida_total', 0) or 0
-                if venta_rapida_total > 0:
-                    total_venta += venta_rapida_total
-                    
-                    # Registrar en detalles usando el primer producto como placeholder
-                    # (Solo para mantener integridad referencial)
-                    producto_placeholder = Productos.objects.first()
-                    if producto_placeholder:
-                        DetalleDeVentas.objects.create(
-                            cantidadvendida=1,
-                            preciounitariodv=venta_rapida_total,
-                            subtotaldv=venta_rapida_total,
-                            idventa=venta,
-                            idproducto=producto_placeholder
-                        )
-               
                 # Aplicar recargo
                 recargo = data.get('recargo', 0) or 0
                 total_venta += recargo
-               
+                
                 # Actualizar venta
                 venta.totalventa = total_venta
                 venta.save()
-               
-                # ✅ REGISTRAR MOVIMIENTO DE CAJA
+                
+                # REGISTRAR MOVIMIENTO DE CAJA
                 try:
                     # Obtener el último saldo de la caja
                     ultimo_movimiento = Movimientosdecaja.objects.filter(
@@ -243,23 +243,10 @@ def procesar_venta(request):
                         idusuarios_id=request.session.get('usuario_id'),
                         idcaja=caja_activa
                     )
-                    
-                    # Registrar actividad en logs
-                    registrar_actividad(
-                        request,
-                        'VENTA',
-                        f'Venta #{venta.idventa} - Total: ${total_venta:.2f}',
-                        detalles={
-                            'venta_id': venta.idventa,
-                            'total': float(total_venta),
-                            'metodo_pago': data.get('metodo_pago'),
-                            'tiene_venta_rapida': venta_rapida_total > 0
-                        }
-                    )
                 except Exception as e:
                     print(f"Error registrando movimiento de caja: {e}")
-                    # No interrumpir la venta por error en el movimiento
 
+                print(f"✅ Venta procesada exitosamente: #{venta.idventa}")
                 return JsonResponse({
                     'success': True,
                     'venta_id': venta.idventa,
@@ -267,12 +254,12 @@ def procesar_venta(request):
                     'fecha': venta.fechaventa.strftime('%d/%m/%Y'),
                     'hora': venta.horaventa.strftime('%H:%M')
                 })
-               
+                
         except Exception as e:
-            print(f"Error procesando venta: {e}")
+            print(f"❌ Error procesando venta: {e}")
             return JsonResponse({
                 'success': False,
                 'error': str(e)
             })
-   
+    
     return JsonResponse({'success': False, 'error': 'Método no permitido'})
