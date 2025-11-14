@@ -1,14 +1,6 @@
 from django.urls import path
 from . import views
 
-from django.urls import path, include
-
-urlpatterns = [
-    # ... otras URLs ...
-    path('ventas/', include('ventas.urls')),  # Esta línea debe estar
-    # ... más URLs ...
-]
-
 urlpatterns = [
     # Rutas de autenticación
     path('', views.login_view, name='login'),

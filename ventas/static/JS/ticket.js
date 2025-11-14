@@ -7,57 +7,46 @@ class GestorTicket {
         console.log('🔄 Mostrando ticket...');
         const filas = document.querySelectorAll("#tablaBody tr");
         const ticketItems = document.getElementById("ticketItems");
-       
+        
         if (!ticketItems) {
             console.log('❌ ticketItems no encontrado');
             return;
         }
-       
+        
         ticketItems.innerHTML = "";
-       
+        
         let subtotal = 0;
-       
+        
         filas.forEach((fila) => {
             const productoId = fila.getAttribute('data-producto-id');
-            const esVentaRapida = fila.getAttribute('data-venta-rapida') === 'true';
+            const producto = productosData[productoId];
             const cantidad = fila.querySelector('.qty-value').textContent;
             const productoNombre = fila.querySelector('.nombre').textContent;
+            const precioUnitario = producto.precio;
+            const totalLinea = parseInt(cantidad) * precioUnitario;
             
-            let precioUnitario, totalLinea;
-            
-            if (esVentaRapida) {
-                // Venta rápida
-                precioUnitario = parseFloat(fila.querySelector('.price').textContent.replace('$', ''));
-                totalLinea = precioUnitario;
-            } else {
-                // Producto normal
-                const producto = productosData[productoId];
-                precioUnitario = producto.precio;
-                totalLinea = parseInt(cantidad) * precioUnitario;
-            }
-           
             subtotal += totalLinea;
-           
+            
             const itemDiv = document.createElement("div");
             itemDiv.className = "receipt-line";
             itemDiv.innerHTML = `
                 <span>${cantidad}</span>
                 <span>${productoNombre}</span>
-                <span>$${totalLinea.toFixed(2)}</span>
+                <span>$${totalLinea}</span>
             `;
-           
+            
             ticketItems.appendChild(itemDiv);
         });
-       
+        
         const recargo = Number(document.getElementById('recargo').value) || 0;
         const total = subtotal + recargo;
         const metodoPago = document.getElementById('metodoPago').value;
-       
-        document.getElementById("subtotalTicket").textContent = "$" + subtotal.toFixed(2);
-        document.getElementById("recargoTicket").textContent = "$" + recargo.toFixed(2);
-        document.getElementById("totalTicket").textContent = "$" + total.toFixed(2);
+        
+        document.getElementById("subtotalTicket").textContent = "$" + subtotal;
+        document.getElementById("recargoTicket").textContent = "$" + recargo;
+        document.getElementById("totalTicket").textContent = "$" + total;
         document.getElementById("metodoPagoTicket").textContent = metodoPago;
-       
+        
         document.getElementById("ticketModal").style.display = "flex";
         console.log('✅ Ticket mostrado');
     }
@@ -65,28 +54,34 @@ class GestorTicket {
 
 // ===== FUNCIONES GLOBALES =====
 
-function imprimirYNuevaVenta() {
-    console.log('🖨️ Imprimiendo y creando nueva venta...');
-    
-    // Aquí puedes agregar lógica de impresión real si es necesario
-    window.print();
-    
-    // Cerrar modal después de un breve delay
-    setTimeout(() => {
-        document.getElementById("ticketModal").style.display = "none";
-        
-        // Limpiar para nueva venta
-        if (window.gestorVenta) {
-            window.gestorVenta.cancelarTodo();
-        }
-        
-        console.log('✅ Listo para nueva venta');
-    }, 500);
-}
-
 function cerrarTicket() {
     console.log('❌ Cerrando ticket...');
     document.getElementById("ticketModal").style.display = "none";
+}
+
+function confirmarImpresion() {
+    console.log('🖨️ Abriendo modal de confirmación...');
+    document.getElementById("confirmModal").style.display = "flex";
+}
+
+function cerrarConfirmacion() {
+    document.getElementById("confirmModal").style.display = "none";
+    console.log('❌ Confirmación cancelada');
+}
+
+function procesarVentaDesdeTicket() {
+    console.log('✅ Procesando venta desde ticket...');
+    // Cerrar ambos modales
+    document.getElementById("confirmModal").style.display = "none";
+    document.getElementById("ticketModal").style.display = "none";
+    
+    // Usar el GestorVenta para procesar la venta
+    if (window.gestorVenta && window.gestorVenta.procesarVenta) {
+        window.gestorVenta.procesarVenta();
+    } else {
+        console.error('❌ GestorVenta no disponible:', window.gestorVenta);
+        alert('❌ Error: Sistema de ventas no disponible. Recarga la página.');
+    }
 }
 
 // Inicializar

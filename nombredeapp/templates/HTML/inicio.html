@@ -314,8 +314,7 @@
                         document.getElementById('caja-no-abierta-modal').showModal();
                         if (window.audioSystem) window.audioSystem.play('negative');
                     } else {
-                        // ✅ REDIRIGIR A LA PÁGINA DE REGISTRAR VENTA
-                        window.location.href = '{% url "ventas:registrar_venta" %}';
+                        window.location.href = '/ventas/registrar/';
                     }
                 });
             }
