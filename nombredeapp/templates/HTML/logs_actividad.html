@@ -1,0 +1,130 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logs de Actividad</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'CSS/logs_actividad.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <header class="page-header">
+            <a href="{% url 'inicio' %}" class="back-btn">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+            <h1><i class="fas fa-clipboard-list"></i> Logs de Actividad del Sistema</h1>
+        </header>
+
+        <!-- TABS -->
+        <div class="tabs-container">
+            <button class="tab-btn active" data-tab="logs">
+                <i class="fas fa-list"></i> Registros
+            </button>
+        </div>
+
+        <!-- TAB: LOGS -->
+        <div class="tab-content active" id="tab-logs">
+            <!-- FILTROS -->
+            <div class="filters-section">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="search-input" placeholder="Buscar por usuario, descripción, área...">
+                    <button class="clear-search" id="clear-search" style="display: none;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="filters-row">
+                    <div class="filter-group">
+                        <label><i class="fas fa-filter"></i> Tipo:</label>
+                        <select id="filter-tipo" class="filter-select">
+                            <option value="all">Todos</option>
+                            <option value="LOGIN">Inicio de Sesión</option>
+                            <option value="LOGOUT">Cierre de Sesión</option>
+                            <option value="ENTRADA">Registro Entrada</option>
+                            <option value="SALIDA">Registro Salida</option>
+                            <option value="APERTURA_CAJA">Apertura Caja</option>
+                            <option value="CIERRE_CAJA">Cierre Caja</option>
+                            <option value="VENTA">Venta</option>
+                            <option value="CREAR_EMPLEADO">Crear Empleado</option>
+                            <option value="EDITAR_EMPLEADO">Editar Empleado</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label><i class="fas fa-exclamation-circle"></i> Nivel:</label>
+                        <select id="filter-nivel" class="filter-select">
+                            <option value="all">Todos</option>
+                            <option value="INFO">Información</option>
+                            <option value="WARNING">Advertencia</option>
+                            <option value="ERROR">Error</option>
+                            <option value="CRITICAL">Crítico</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label><i class="fas fa-calendar-day"></i> Desde:</label>
+                        <input type="date" id="filter-fecha-inicio" class="filter-input">
+                    </div>
+
+                    <div class="filter-group">
+                        <label><i class="fas fa-calendar-day"></i> Hasta:</label>
+                        <input type="date" id="filter-fecha-fin" class="filter-input">
+                    </div>
+
+                    <button class="btn-reset-filters" id="reset-filters">
+                        <i class="fas fa-redo"></i> Limpiar filtros
+                    </button>
+
+                    <!-- Botón exportar OCULTO (necesario para el JS) -->
+                    <button class="btn-export" id="export-logs" style="display: none !important;">
+                        <i class="fas fa-download"></i> Exportar
+                    </button>
+                </div>
+            </div>
+
+            <!-- LISTA DE LOGS -->
+            <div id="logs-container" class="logs-container">
+                <div class="loading-spinner">
+                    <i class="fas fa-spinner fa-spin"></i> Cargando logs...
+                </div>
+            </div>
+
+            <!-- PAGINACIÓN -->
+            <div class="pagination-container" id="pagination-container" style="display: none;">
+                <button class="pagination-btn" id="prev-page" disabled>
+                    <i class="fas fa-chevron-left"></i> Anterior
+                </button>
+                <div class="pagination-info">
+                    Página <span id="current-page">1</span> de <span id="total-pages">1</span>
+                    <span class="total-items">(<span id="total-logs">0</span> registros)</span>
+                </div>
+                <button class="pagination-btn" id="next-page">
+                    Siguiente <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+
+    <!-- MODAL: DETALLE DEL LOG -->
+    <div id="modal-detalle" class="modal-overlay">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2><i class="fas fa-info-circle"></i> Detalle de la Actividad</h2>
+                <button class="modal-close" id="close-detalle">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="detalle-content">
+                <!-- Contenido dinámico -->
+            </div>
+        </div>
+    </div>
+
+    <script src="{% static 'JS/audio-system.js' %}"></script>
+    <script src="{% static 'JS/logs_actividad.js' %}"></script>
+</body>
+</html>

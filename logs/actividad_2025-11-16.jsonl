@@ -1,0 +1,1 @@
+{"timestamp": "2025-11-16T19:15:39.930964", "fecha": "2025-11-16", "hora": "19:15:39", "tipo_actividad": "LOGIN", "nivel": "INFO", "usuario_id": 1, "nombre_usuario": "admin", "area": "Administración", "puesto": "Administrador", "descripcion": "Usuario admin inició sesión", "detalles": {"usuario_id": 1}, "ip_address": "127.0.0.1"}

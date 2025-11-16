@@ -1,0 +1,77 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="{% static 'CSS/menucaja.css' %}">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <title>Menu de Caja</title>
+</head>
+<body>
+  <div class="MenuCaja">
+    <div class="grisarriba"></div>
+    <div class="EncabezadoMenuCaja">
+      <div class="EncabezadoUsuario">
+        <p>👤 Cajero: {{ usuario_nombre }}</p>
+      </div>
+
+      <div class="EncabezadoMontoIni">
+        {% if open_caja %}
+          <p>💰 Monto Inicial: ${{ open_caja.montoinicialcaja|floatformat:2 }}</p>
+        {% else %}
+          <p>💰 Monto Inicial: <em>Sin apertura</em></p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="MenuCajaCuerpo">
+      <div class="AperturaBoton">
+        {% if not open_caja %}
+          <a href="{% url 'caja:apertura_caja' %}" id="boton-apertura" class="botonapertura" data-allowed="true">Apertura de Caja</a>
+        {% else %}
+          <a href="#" id="boton-apertura" class="botonapertura" data-allowed="false" data-message="Ya hay una apertura activa. Debe cerrar la caja antes de abrir otra.">Apertura de Caja</a>
+        {% endif %}
+      </div>
+
+      <div class="CierreBoton">
+        {% if open_caja %}
+          <a href="{% url 'caja:cierre_caja' %}" id="boton-cierre" class="botoncierre" data-allowed="true">Cierre de Caja</a>
+        {% else %}
+          <button id="boton-cierre" class="botoncierre" data-allowed="false" data-message="Debe abrir la caja antes de poder cerrarla.">Cierre de Caja</button>
+        {% endif %}
+      </div>
+
+      <div class="VentaBoton">
+        {% if open_caja %}
+          <a href="#" id="boton-venta" class="botonventa">Registrar Venta</a>
+        {% else %}
+          <button id="boton-venta" class="botonventa disabled" onclick="alert('Debe abrir la caja antes de registrar ventas.')">Registrar Venta</button>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="Final">
+      <div class="BotonCerrarSesion">
+        <a href="{% url 'logout' %}" id="botoncerrar" class="botoncerrar">Cerrar Sesion</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="menu-notification" style="position:fixed; right:20px; bottom:20px; z-index:9999; display:none;"></div>
+
+  {% if messages %}
+    <div id="messages-container" style="position:fixed; top:20px; right:20px; z-index:9999;">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <script src="{% static 'JS/menu_caja.js' %}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

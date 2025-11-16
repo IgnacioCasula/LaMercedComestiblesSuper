@@ -1,0 +1,122 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f7f6;
+    color: #333;
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1000px;
+    margin: auto;
+    background: #fff;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+header {
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 20px;
+    margin-bottom: 30px;
+    text-align: center;
+    position: relative;
+}
+
+.back-button {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    text-decoration: none;
+    color: #007bff;
+    font-weight: bold;
+}
+
+header h1 {
+    margin: 0;
+    color: #333;
+}
+
+.profile-card {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    margin-bottom: 40px;
+    background-color: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.profile-image img {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #007bff;
+}
+
+.profile-info h2 {
+    margin: 0 0 10px 0;
+}
+
+.profile-info p {
+    margin: 5px 0;
+    color: #555;
+}
+
+.roles-info ul {
+    list-style-type: none;
+    padding-left: 0;
+    margin-top: 5px;
+}
+
+.roles-info li {
+    background-color: #e2eafc;
+    color: #3f51b5;
+    padding: 5px 10px;
+    border-radius: 15px;
+    display: inline-block;
+    margin: 3px;
+    font-size: 0.9em;
+}
+
+.attendance-history h2 {
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+thead th {
+    background-color: #007bff;
+    color: white;
+}
+
+tbody tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+tbody tr:hover {
+    background-color: #e9ecef;
+}
+
+.no-record {
+    color: #888;
+    font-style: italic;
+}
+
+.status-punctual {
+    color: #28a745;
+    font-weight: bold;
+}

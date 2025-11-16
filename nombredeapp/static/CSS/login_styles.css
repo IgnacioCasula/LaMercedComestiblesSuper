@@ -1,0 +1,377 @@
+/* ===== RESET TOTAL ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* ===== BODY Y FONDO ===== */
+html, body {
+    width: 100%;
+    height: 100%;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* Efectos de fondo */
+body::before,
+body::after {
+    content: '';
+    position: fixed;
+    border-radius: 50%;
+    opacity: 0.2;
+    filter: blur(80px);
+    pointer-events: none;
+    animation: float 20s ease-in-out infinite;
+    z-index: 0;
+}
+
+body::before {
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(168, 213, 226, 0.8) 0%, transparent 70%);
+    top: -150px;
+    left: -150px;
+}
+
+body::after {
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(227, 168, 228, 0.8) 0%, transparent 70%);
+    bottom: -200px;
+    right: -200px;
+    animation-delay: -10s;
+}
+
+@keyframes float {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(40px, -40px) scale(1.1); }
+}
+
+/* ===== CONTENEDOR PRINCIPAL ===== */
+.login-bg {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+/* ===== TARJETA DE LOGIN ===== */
+.login-card {
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 40px;
+    width: 100%;
+    max-width: 450px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    border-top: 4px solid #667eea;
+    position: relative;
+    z-index: 10;
+    animation: slideUp 0.6s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===== TÍTULOS ===== */
+.login-card h2 {
+    font-size: 28px;
+    color: #2c3e50;
+    font-weight: 700;
+    margin: 0 0 16px 0;
+    text-align: center;
+}
+
+/* ===== PÁRRAFOS ===== */
+.login-card p {
+    color: #6c757d;
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 0 0 20px 0;
+    text-align: center;
+}
+
+/* ===== MENSAJES DE ERROR/ÉXITO ===== */
+.msgs {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 20px 0;
+}
+
+.msgs li {
+    padding: 14px 16px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    animation: slideIn 0.4s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.msgs li.error {
+    background: linear-gradient(135deg, #fee 0%, #fdd 100%);
+    color: #c62828;
+    border-left: 4px solid #d32f2f;
+}
+
+.msgs li.success {
+    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+    color: #2e7d32;
+    border-left: 4px solid #388e3c;
+}
+
+/* ===== ADVERTENCIAS ===== */
+.warn {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    color: #856404;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border-left: 4px solid #ffc107;
+    margin: 0 0 20px 0;
+    font-size: 14px;
+}
+
+/* ===== FORMULARIOS ===== */
+.login-card form {
+    margin: 0;
+    padding: 0;
+}
+
+/* ===== LABELS ===== */
+.login-card label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #495057;
+    margin: 0 0 8px 0;
+}
+
+/* ===== INPUTS ===== */
+.login-card input[type="text"],
+.login-card input[type="password"],
+.login-card input[type="email"] {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    font-size: 15px;
+    background: #fff;
+    color: #2c3e50;
+    font-family: inherit;
+    transition: all 0.3s ease;
+    margin: 0 0 20px 0;
+    display: block;
+}
+
+.login-card input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.login-card input::placeholder {
+    color: #adb5bd;
+}
+
+/* Input de código especial */
+.login-card input[maxlength="5"] {
+    text-align: center;
+    font-size: 28px;
+    letter-spacing: 10px;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    padding: 20px;
+}
+
+/* ===== SELECTS ===== */
+.login-card select {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    font-size: 15px;
+    background: #fff;
+    color: #2c3e50;
+    font-family: inherit;
+    cursor: pointer;
+    margin: 0 0 20px 0;
+    min-height: 50px;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 15px center;
+    padding-right: 45px;
+}
+
+.login-card select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+/* ===== BOTONES PRINCIPALES ===== */
+.login-card button[type="submit"] {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    margin: 8px 0 0 0;
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.login-card button[type="submit"]::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.login-card button[type="submit"]:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(102, 126, 234, 0.5);
+}
+
+.login-card button[type="submit"]:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+.login-card button[type="submit"]:active {
+    transform: translateY(0);
+}
+
+/* ===== BOTÓN TIPO LINK ===== */
+.login-card button.link-btn {
+    background: none !important;
+    border: none !important;
+    color: #667eea !important;
+    text-decoration: underline;
+    padding: 12px 0 !important;
+    font-size: 14px;
+    box-shadow: none !important;
+    margin: 15px 0 0 0 !important;
+}
+
+.login-card button.link-btn::before {
+    display: none;
+}
+
+.login-card button.link-btn:hover {
+    color: #764ba2 !important;
+    text-decoration: none;
+    background: rgba(102, 126, 234, 0.1) !important;
+    transform: none !important;
+}
+
+/* ===== INPUTS OCULTOS ===== */
+.login-card input[type="hidden"] {
+    display: none;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 500px) {
+    body {
+        padding: 10px;
+    }
+
+    .login-bg {
+        padding: 15px;
+    }
+
+    .login-card {
+        padding: 30px 24px;
+    }
+
+    .login-card h2 {
+        font-size: 24px;
+    }
+
+    .login-card input[maxlength="5"] {
+        font-size: 22px;
+        letter-spacing: 6px;
+    }
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 4px;
+}
+
+/* ===== ACCESIBILIDAD ===== */
+*:focus-visible {
+    outline: 3px solid rgba(102, 126, 234, 0.4);
+    outline-offset: 2px;
+}
+
+/* ===== COMPATIBILIDAD ===== */
+@supports not (backdrop-filter: blur(20px)) {
+    .login-card {
+        background: rgba(255, 255, 255, 0.95);
+    }
+}
+
+.action-btn.registrar-asistencia {
+    background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+}
+
+.action-btn.registrar-asistencia.salida {
+    background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+}
+
+.action-btn.registrar-asistencia.completado {
+    background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* ===== FIN ===== */
