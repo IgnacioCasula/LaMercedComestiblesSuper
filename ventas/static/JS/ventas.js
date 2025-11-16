@@ -1,28 +1,16 @@
     class GestorVenta {
         constructor() {
-            const productosData = [
-        
-            {"nombre": "Leche Entera La Serenísima (1L)", "precio": 1450, "marca": "La Serenísima", "codigo_barra": 7790080080004, "categoria": "Lácteos"},
-            {"nombre": "Yogur Bebible Sancor Frutilla (900g)", "precio": 2300, "marca": "Sancor", "codigo_barra": 7790070014022, "categoria": "Lácteos"},
-            {"nombre": "Queso Cremoso Ilolay (250g)", "precio": 4800, "marca": "Ilolay", "codigo_barra": 7791850100251, "categoria": "Lácteos"},
-        
-        
-            {"nombre": "Aceite de Girasol Cocinero (900ml)", "precio": 2800, "marca": "Cocinero", "codigo_barra": 7790750275000, "categoria": "Almacén"},
-            {"nombre": "Fideos Spaghetti Lucchetti (500g)", "precio": 1300, "marca": "Lucchetti", "codigo_barra": 7790382000030, "categoria": "Almacén"},
-            {"nombre": "Arroz Largo Fino Gallo (1kg)", "precio": 1950, "marca": "Gallo", "codigo_barra": 7790070502018, "categoria": "Almacén"},
-            {"nombre": "Azúcar Ledesma (1kg)", "precio": 1200, "marca": "Ledesma", "codigo_barra": 7790150000010, "categoria": "Almacén"},
-        
-
-            {"nombre": "Gaseosa Coca-Cola (1.5L)", "precio": 3100, "marca": "Coca-Cola", "codigo_barra": 7790070773663, "categoria": "Bebidas"},
-            {"nombre": "Cerveza Quilmes Clásica (Lata 473ml)", "precio": 1800, "marca": "Quilmes", "codigo_barra": 7790400012146, "categoria": "Bebidas"},
-        
-    
-            {"nombre": "Jabón en Polvo Ala (800g)", "precio": 3900, "marca": "Ala", "codigo_barra": 7791290022306, "categoria": "Limpieza"},
-            {"nombre": "Papel Higiénico Higienol (4 rollos)", "precio": 2700, "marca": "Higienol", "codigo_barra": 7790510000520, "categoria": "Limpieza"},
-        ]
-            this.catalogo = productosData;
+            // ✅ USAR PRODUCTOS DE LA BASE DE DATOS (pasados desde Django)
+            // productosData viene del template como: { "1": {...}, "2": {...} }
+            if (typeof productosData !== 'undefined' && productosData) {
+                this.catalogo = productosData;
+                console.log('✅ GestorVenta creado con', Object.keys(this.catalogo).length, 'productos desde BD');
+            } else {
+                // Fallback si no hay datos (no debería pasar)
+                this.catalogo = {};
+                console.warn('⚠️ No se encontraron productos desde la BD. Usando catálogo vacío.');
+            }
             this.initEventListeners();
-            console.log('✅ GestorVenta creado con', Object.keys(this.catalogo).length, 'productos');
         }
 
         initEventListeners() {
@@ -71,26 +59,81 @@
 
         agregarProducto() {
             const input = document.getElementById("productoInput");
-            let nombre = input.value.trim();
+            let inputValue = input.value.trim();
             
-            // ✅ Limpiar nombre - remover cualquier precio que pueda venir
-            if (nombre.includes('$')) {
-                nombre = nombre.split('$')[0].trim();
-            }
-            
-            if (!nombre) return;
+            if (!inputValue) return;
 
-            // Buscar producto por nombre exacto
-            const productoEntry = Object.entries(this.catalogo).find(([id, producto]) =>
-                producto.nombre.toLowerCase() === nombre.toLowerCase()
+            console.log('🔍 Buscando producto con input:', inputValue);
+            console.log('📦 Catálogo disponible:', Object.keys(this.catalogo).length, 'productos');
+
+            // ✅ Limpiar nombre - el datalist viene como "Nombre - $Precio"
+            let nombreBuscado = inputValue;
+            
+            // Si viene del datalist con formato "Nombre - $Precio"
+            const matchDatalist = inputValue.match(/^(.+?)\s*-\s*\$/);
+            if (matchDatalist) {
+                nombreBuscado = matchDatalist[1].trim();
+                console.log('📝 Nombre extraído del datalist:', nombreBuscado);
+            } else if (inputValue.includes('$')) {
+                // Si solo tiene $, remover todo después del $
+                nombreBuscado = inputValue.split('$')[0].trim();
+                console.log('📝 Nombre limpiado (tiene $):', nombreBuscado);
+            }
+
+            // Buscar producto por nombre exacto primero
+            let productoEntry = Object.entries(this.catalogo).find(([id, producto]) =>
+                producto.nombre.toLowerCase() === nombreBuscado.toLowerCase()
             );
-    debugger;
+
+            // Si no se encuentra, buscar por coincidencia parcial
             if (!productoEntry) {
+                console.log('⚠️ No se encontró por nombre exacto, buscando por coincidencia parcial...');
+                productoEntry = Object.entries(this.catalogo).find(([id, producto]) =>
+                    producto.nombre.toLowerCase().includes(nombreBuscado.toLowerCase()) ||
+                    nombreBuscado.toLowerCase().includes(producto.nombre.toLowerCase())
+                );
+            }
+
+            // También verificar si hay una opción seleccionada del datalist con data-id
+            if (!productoEntry) {
+                const selectedOption = document.querySelector(`#productosLista option[value="${inputValue}"]`);
+                if (selectedOption) {
+                    const dataId = selectedOption.getAttribute('data-id');
+                    if (dataId && this.catalogo[dataId]) {
+                        productoEntry = [dataId, this.catalogo[dataId]];
+                        console.log('✅ Producto encontrado por data-id del datalist:', dataId);
+                    }
+                }
+            }
+
+            if (!productoEntry) {
+                console.error('❌ Producto no encontrado. Input original:', inputValue);
+                console.error('❌ Nombre buscado:', nombreBuscado);
+                console.error('❌ Productos en catálogo:', Object.keys(this.catalogo).map(id => this.catalogo[id].nombre));
                 alert("❌ El producto no existe o no tiene stock.");
                 return;
             }
 
             const [productoId, producto] = productoEntry;
+            
+            // ✅ DEBUG: Verificar que el producto tenga todas las propiedades
+            console.log('🔍 Producto encontrado:', {
+                id: productoId,
+                nombre: producto.nombre,
+                precio: producto.precio,
+                codigo_barras: producto.codigo_barras,
+                stock: producto.stock,
+                marca: producto.marca,
+                producto_completo: producto
+            });
+            
+            // ✅ Validar que el producto tenga las propiedades necesarias
+            if (!producto.nombre || !producto.precio) {
+                console.error('❌ Producto incompleto:', producto);
+                alert("❌ Error: El producto no tiene todos los datos necesarios.");
+                return;
+            }
+            
             const tablaBody = document.getElementById("tablaBody");
 
             let filaExistente = Array.from(tablaBody.querySelectorAll("tr")).find(r =>
@@ -231,25 +274,45 @@
             const vistaPrevia = document.getElementById('vistaPreviaProducto');
             if (!vistaPrevia) return;
             
+            // Validar que el producto tenga las propiedades necesarias
+            if (!producto) {
+                console.error('❌ Producto no definido en mostrarVistaPrevia');
+                vistaPrevia.innerHTML = `
+                    <div class="text-center text-muted">
+                        <i>Seleccione un producto para ver detalles</i>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Obtener valores con fallbacks para evitar undefined
+            const codigoBarras = producto.codigo_barras || producto.codigobarraproducto || 'N/A';
+            const stock = producto.stock !== undefined ? producto.stock : 'N/A';
+            const marca = producto.marca || producto.marcaproducto || 'N/A';
+            const nombre = producto.nombre || producto.nombreproductos || 'Producto sin nombre';
+            const precio = producto.precio || producto.precioproducto || 0;
+            
             // Ruta de la imagen (basada en código de barras)
-            const rutaImagen = `/static/productos/img/${producto.codigo_barras}.jpg`;
+            const rutaImagen = codigoBarras !== 'N/A' ? `/static/productos/img/${codigoBarras}.jpg` : '';
             
             vistaPrevia.innerHTML = `
                 <div class="vista-previa-card">
+                    ${rutaImagen ? `
                     <div class="text-center mb-3">
                         <img src="${rutaImagen}"
-                            alt="${producto.nombre}"
+                            alt="${nombre}"
                             class="img-producto-preview"
                             onerror="this.style.display='none'">
                     </div>
-                    <h6 class="text-center mb-2">${producto.nombre}</h6>
+                    ` : ''}
+                    <h6 class="text-center mb-2">${nombre}</h6>
                     <div class="text-center mb-2">
-                        <strong class="text-success">$${producto.precio.toFixed(2)}</strong>
+                        <strong class="text-success">$${precio.toFixed(2)}</strong>
                     </div>
                     <div class="small">
-                        <div><strong>Código:</strong> ${producto.codigo_barras}</div>
-                        <div><strong>Stock:</strong> ${producto.stock} unidades</div>
-                        <div><strong>Marca:</strong> ${producto.marca || 'N/A'}</div>
+                        <div><strong>Código:</strong> ${codigoBarras}</div>
+                        <div><strong>Stock:</strong> ${stock} ${stock !== 'N/A' ? 'unidades' : ''}</div>
+                        <div><strong>Marca:</strong> ${marca}</div>
                     </div>
                 </div>
             `;
@@ -293,13 +356,28 @@
                 const result = await response.json();
                 
                 if (result.success) {
+                    // ✅ GUARDAR DATOS DE LA VENTA ANTES DE LIMPIAR
+                    const datosVenta = this.obtenerDatosVenta(filas, recargo, metodo_pago);
+                    
                     alert(`✅ Venta registrada exitosamente\nN° Venta: ${result.venta_id}\nTotal: $${result.total.toFixed(2)}`);
+                    
+                    // Actualizar número de venta en el ticket
+                    const numeroVentaElement = document.getElementById('numeroVenta');
+                    if (numeroVentaElement) {
+                        numeroVentaElement.textContent = result.venta_id.toString().padStart(4, '0');
+                    }
+                    
+                    // Actualizar ticket con los datos guardados
+                    this.actualizarTicketConDatos(datosVenta, result);
+                    
+                    // Limpiar después de actualizar el ticket
                     this.cancelarTodo();
-                    document.getElementById('numeroVenta').textContent = result.venta_id.toString().padStart(4, '0');
                     document.getElementById('recargo').value = '0';
                     
-                    // ✅ GENERAR PDF AUTOMÁTICAMENTE
-                    this.generarPDF(result);
+                    // ✅ GENERAR PDF AUTOMÁTICAMENTE (con un pequeño delay para asegurar renderizado)
+                    setTimeout(() => {
+                        this.generarPDF(result);
+                    }, 200);
                     
                 } else {
                     alert('❌ Error al procesar la venta: ' + result.error);
@@ -309,48 +387,256 @@
             }
         }
 
+        // ✅ OBTENER DATOS DE LA VENTA ANTES DE LIMPIAR
+        obtenerDatosVenta(filas, recargo, metodo_pago) {
+            const items = [];
+            let subtotal = 0;
+            
+            filas.forEach(fila => {
+                try {
+                    const productoId = fila.getAttribute('data-producto-id');
+                    if (!productoId) {
+                        console.warn('⚠️ Fila sin data-producto-id, saltando...');
+                        return;
+                    }
+                    
+                    // Obtener cantidad
+                    const qtyElement = fila.querySelector('.qty-value');
+                    if (!qtyElement) {
+                        console.error('❌ No se encontró .qty-value en la fila');
+                        return;
+                    }
+                    const cantidad = parseInt(qtyElement.textContent) || 0;
+                    
+                    // Obtener nombre (el td.nombre contiene el texto, pero puede tener botones)
+                    const nombreElement = fila.querySelector('.nombre');
+                    if (!nombreElement) {
+                        console.error('❌ No se encontró .nombre en la fila');
+                        return;
+                    }
+                    // Obtener solo el texto, excluyendo botones
+                    const productoNombre = nombreElement.cloneNode(true);
+                    const botones = productoNombre.querySelectorAll('button');
+                    botones.forEach(btn => btn.remove());
+                    const nombreTexto = productoNombre.textContent.trim();
+                    
+                    // Obtener precio (la clase es "price", no "precio")
+                    const priceElement = fila.querySelector('.price');
+                    if (!priceElement) {
+                        console.error('❌ No se encontró .price en la fila');
+                        return;
+                    }
+                    const precioUnitario = parseFloat(priceElement.textContent.replace('$', '').replace(',', '').trim()) || 0;
+                    
+                    const totalLinea = cantidad * precioUnitario;
+                    
+                    items.push({
+                        productoId: productoId,
+                        nombre: nombreTexto,
+                        cantidad: cantidad,
+                        precioUnitario: precioUnitario,
+                        totalLinea: totalLinea
+                    });
+                    
+                    subtotal += totalLinea;
+                } catch (error) {
+                    console.error('❌ Error al procesar fila:', error);
+                }
+            });
+            
+            return {
+                items: items,
+                subtotal: subtotal,
+                recargo: recargo,
+                total: subtotal + recargo,
+                metodo_pago: metodo_pago
+            };
+        }
+
+        // ✅ ACTUALIZAR TICKET CON DATOS GUARDADOS
+        actualizarTicketConDatos(datosVenta, resultadoVenta) {
+            const ticketItems = document.getElementById("ticketItems");
+            if (!ticketItems) {
+                console.error('❌ ticketItems no encontrado');
+                return;
+            }
+            
+            ticketItems.innerHTML = "";
+            
+            // Agregar cada item al ticket
+            datosVenta.items.forEach(item => {
+                const itemDiv = document.createElement("div");
+                itemDiv.className = "receipt-line";
+                itemDiv.innerHTML = `
+                    <span>${item.cantidad}</span>
+                    <span>${item.nombre}</span>
+                    <span>$${item.totalLinea.toFixed(2)}</span>
+                `;
+                ticketItems.appendChild(itemDiv);
+            });
+            
+            // Actualizar totales (verificar que los elementos existan)
+            const subtotalTicket = document.getElementById("subtotalTicket");
+            const recargoTicket = document.getElementById("recargoTicket");
+            const totalTicket = document.getElementById("totalTicket");
+            const metodoPagoTicket = document.getElementById("metodoPagoTicket");
+            
+            if (subtotalTicket) {
+                subtotalTicket.textContent = "$" + datosVenta.subtotal.toFixed(2);
+            }
+            if (recargoTicket) {
+                recargoTicket.textContent = "$" + datosVenta.recargo.toFixed(2);
+            }
+            if (totalTicket) {
+                totalTicket.textContent = "$" + datosVenta.total.toFixed(2);
+            }
+            if (metodoPagoTicket) {
+                metodoPagoTicket.textContent = datosVenta.metodo_pago;
+            }
+            
+            // Actualizar fecha si está disponible
+            if (resultadoVenta.fecha) {
+                const fechaElement = document.getElementById('fechaTicket');
+                if (fechaElement) {
+                    fechaElement.textContent = resultadoVenta.fecha;
+                }
+            }
+        }
+
         // ✅ FUNCIÓN GENERAR PDF AUTOMÁTICO
         generarPDF(resultadoVenta) {
             console.log('📄 Generando PDF...');
             
             // Verificar que las librerías estén cargadas
-            if (typeof jspdf === 'undefined' || typeof html2canvas === 'undefined') {
+            if (typeof window.jspdf === 'undefined' || typeof window.html2canvas === 'undefined') {
                 console.error('❌ Librerías PDF no disponibles');
+                console.log('jspdf disponible:', typeof window.jspdf !== 'undefined');
+                console.log('html2canvas disponible:', typeof window.html2canvas !== 'undefined');
                 return;
             }
 
             const { jsPDF } = window.jspdf;
             
-            // Capturar el contenido del ticket
+            // Asegurar que el modal del ticket esté visible y tenga los datos
             const ticketElement = document.getElementById('ticketModal');
+            if (!ticketElement) {
+                console.error('❌ No se encontró el elemento ticketModal');
+                return;
+            }
             
-            html2canvas(ticketElement, {
+            // Verificar que el ticket tenga contenido
+            const ticketItems = document.getElementById('ticketItems');
+            if (!ticketItems || ticketItems.children.length === 0) {
+                console.error('❌ El ticket no tiene items. Asegúrate de actualizar el ticket antes de generar el PDF.');
+                return;
+            }
+            
+            // Guardar estado original del modal
+            const originalDisplay = ticketElement.style.display;
+            const originalVisibility = ticketElement.style.visibility;
+            const originalPosition = ticketElement.style.position;
+            const originalLeft = ticketElement.style.left;
+            const originalTop = ticketElement.style.top;
+            const originalZIndex = ticketElement.style.zIndex;
+            
+            // Asegurar que el modal esté visible y posicionado correctamente para html2canvas
+            ticketElement.style.display = 'block';
+            ticketElement.style.visibility = 'visible';
+            ticketElement.style.position = 'absolute';
+            ticketElement.style.left = '-9999px'; // Mover fuera de la vista pero visible para html2canvas
+            ticketElement.style.top = '0';
+            ticketElement.style.zIndex = '9999';
+            
+            // Esperar un momento para que se renderice completamente
+            setTimeout(() => {
+                this.generarPDFDesdeModal(resultadoVenta, jsPDF, ticketElement, {
+                    display: originalDisplay,
+                    visibility: originalVisibility,
+                    position: originalPosition,
+                    left: originalLeft,
+                    top: originalTop,
+                    zIndex: originalZIndex
+                });
+            }, 300);
+        }
+
+        generarPDFDesdeModal(resultadoVenta, jsPDF, ticketElement, originalStyles) {
+            window.html2canvas(ticketElement, {
                 scale: 2,
                 useCORS: true,
-                logging: false
+                logging: false,
+                backgroundColor: '#ffffff',
+                allowTaint: true,
+                removeContainer: false,
+                imageTimeout: 15000,
+                onclone: (clonedDoc) => {
+                    // Asegurar que el clon también esté visible
+                    const clonedElement = clonedDoc.getElementById('ticketModal');
+                    if (clonedElement) {
+                        clonedElement.style.display = 'block';
+                        clonedElement.style.visibility = 'visible';
+                    }
+                }
             }).then(canvas => {
-                const imgData = canvas.toDataURL('image/png');
-                const pdf = new jsPDF('p', 'mm', 'a4');
-                const imgWidth = 190;
-                const pageHeight = 280;
-                const imgHeight = canvas.height * imgWidth / canvas.width;
-                let heightLeft = imgHeight;
-                let position = 10;
+                try {
+                    // Verificar que el canvas sea válido
+                    if (!canvas || canvas.width === 0 || canvas.height === 0) {
+                        throw new Error('Canvas inválido o vacío');
+                    }
+                    
+                    const imgData = canvas.toDataURL('image/png', 1.0);
+                    
+                    // Verificar que la imagen sea válida
+                    if (!imgData || imgData === 'data:,') {
+                        throw new Error('No se pudo generar la imagen del canvas');
+                    }
+                    
+                    const pdf = new jsPDF('p', 'mm', 'a4');
+                    const imgWidth = 190;
+                    const pageHeight = 280;
+                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                    let heightLeft = imgHeight;
+                    let position = 10;
 
-                pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-                heightLeft -= pageHeight;
-
-                while (heightLeft >= 0) {
-                    position = heightLeft - imgHeight + 10;
-                    pdf.addPage();
                     pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
                     heightLeft -= pageHeight;
-                }
 
-                // Descargar automáticamente
-                pdf.save(`ticket_venta_${resultadoVenta.venta_id}.pdf`);
+                    while (heightLeft >= 0) {
+                        position = heightLeft - imgHeight + 10;
+                        pdf.addPage();
+                        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+                        heightLeft -= pageHeight;
+                    }
+
+                    // Descargar automáticamente
+                    pdf.save(`ticket_venta_${resultadoVenta.venta_id}.pdf`);
+                    
+                    console.log('✅ PDF generado y descargado automáticamente');
+                } catch (error) {
+                    console.error('❌ Error al procesar el canvas:', error);
+                    throw error;
+                } finally {
+                    // Restaurar estilos originales del modal
+                    ticketElement.style.display = originalStyles.display || 'none';
+                    ticketElement.style.visibility = originalStyles.visibility || '';
+                    ticketElement.style.position = originalStyles.position || '';
+                    ticketElement.style.left = originalStyles.left || '';
+                    ticketElement.style.top = originalStyles.top || '';
+                    ticketElement.style.zIndex = originalStyles.zIndex || '';
+                }
+            }).catch(error => {
+                console.error('❌ Error al generar PDF:', error);
+                console.error('Detalles del error:', error.message, error.stack);
                 
-                console.log('✅ PDF generado y descargado automáticamente');
+                // Restaurar estilos originales del modal
+                ticketElement.style.display = originalStyles.display || 'none';
+                ticketElement.style.visibility = originalStyles.visibility || '';
+                ticketElement.style.position = originalStyles.position || '';
+                ticketElement.style.left = originalStyles.left || '';
+                ticketElement.style.top = originalStyles.top || '';
+                ticketElement.style.zIndex = originalStyles.zIndex || '';
+                
+                alert('❌ Error al generar el PDF: ' + error.message + '\nVer consola para más detalles.');
             });
         }
 

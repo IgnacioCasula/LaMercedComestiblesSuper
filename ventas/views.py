@@ -41,6 +41,27 @@ def registrar_venta(request):
     ).distinct()
     
     print(f"🔍 Productos disponibles: {productos_disponibles.count()}")
+    print(f"🔍 Sucursal activa: {caja_activa.idsucursal.nombresucursal} (ID: {caja_activa.idsucursal.idsucursal})")
+    
+    # DEBUG: Verificar "Yogur Natural" específicamente
+    yogur_natural = Productos.objects.filter(nombreproductos__icontains="Yogur Natural").first()
+    if yogur_natural:
+        inventario_yogur = Inventarios.objects.filter(
+            producto=yogur_natural,
+            sucursal=caja_activa.idsucursal
+        ).first()
+        print(f"🔍 Yogur Natural encontrado - ID: {yogur_natural.idproducto}, Stock en sucursal: {inventario_yogur.cantidad if inventario_yogur else 0}")
+    
+    # DEBUG: Verificar "Yogur Bebible Sancor Frutilla"
+    yogur_frutilla = Productos.objects.filter(nombreproductos__icontains="Yogur Bebible Sancor Frutilla").first()
+    if yogur_frutilla:
+        inventario_frutilla = Inventarios.objects.filter(
+            producto=yogur_frutilla,
+            sucursal=caja_activa.idsucursal
+        ).first()
+        print(f"🔍 Yogur Bebible Sancor Frutilla encontrado - ID: {yogur_frutilla.idproducto}, Stock en sucursal: {inventario_frutilla.cantidad if inventario_frutilla else 0}")
+    else:
+        print(f"⚠️  Yogur Bebible Sancor Frutilla NO existe en la base de datos")
     
     # Preparar datos para JavaScript
     productos_json = {}
@@ -53,13 +74,18 @@ def registrar_venta(request):
             productos_json[str(producto.idproducto)] = {
                 'nombre': producto.nombreproductos,
                 'precio': float(producto.precioproducto),
-                'stock': inventario.cantidad,
-                'codigo_barras': producto.codigobarraproducto,
-                'marca': producto.marcaproducto
+                'stock': inventario.cantidad if inventario else 0,
+                'codigo_barras': producto.codigobarraproducto if producto.codigobarraproducto else None,
+                'marca': producto.marcaproducto if producto.marcaproducto else 'N/A'
             }
-            print(f"  📦 {producto.nombreproductos} - Stock: {inventario.cantidad}")
+            print(f"  📦 {producto.nombreproductos} - Stock: {inventario.cantidad}, Código: {producto.codigobarraproducto}, Marca: {producto.marcaproducto}")
     
     print(f"🔍 Productos JSON preparados: {len(productos_json)} productos")
+    
+    # Debug: mostrar nombres de productos
+    print("📋 Productos que se pasarán al template:")
+    for prod_id, prod_data in productos_json.items():
+        print(f"  - {prod_data['nombre']} (ID: {prod_id})")
     
     venta_form = VentaForm()
     recargo_form = RecargoForm()
@@ -67,7 +93,8 @@ def registrar_venta(request):
     return render(request, 'HTML/registrar_venta.html', {
         'venta_form': venta_form,
         'recargo_form': recargo_form,
-        'productos_json': json.dumps(productos_json),
+        'productos_json': json.dumps(productos_json),  # Para JavaScript
+        'productos_dict': productos_json,  # Para el template (datalist)
         'caja_activa': caja_activa,
         'sucursal': caja_activa.idsucursal,
         'today': timezone.now(),
