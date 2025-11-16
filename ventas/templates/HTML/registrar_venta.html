@@ -10,11 +10,11 @@
 </head>
 <body>
 
-<!-- ===== FACTURACIÓN ===== -->
+<!-- ===== REGISTRAR VENTA ===== -->
 <div id="ventas" class="container py-4">
   <div class="frame">
     <div class="d-flex align-items-center gap-2 mb-2">
-      <span class="pill">🧾 Facturación - Comestibles la Merced</span>
+      <span class="pill">🧾 Registrar Venta - Comestibles la Merced</span>
       <span class="pill">Cajero: {{ usuario_nombre }}</span>
       <span class="pill">Sucursal: {{ sucursal.nombresucursal }}</span>
       <span class="pill">Caja: {{ caja_activa.nombrecaja }}</span>
@@ -51,20 +51,9 @@
           <input id="productoInput" class="inpt" placeholder="Nombre del Producto"
                  list="productosLista" autocomplete="off">
           <datalist id="productosLista">
-              <option value="Gaseosa Coca-Cola (1.5L)">
-            <option value="Leche Entera La Serenísima (1L)">
-            <option value="Yogur Bebible Sancor Frutilla (900g)">
-            <option value="Queso Cremoso Ilolay (250g)">
-            <option value="Aceite de Girasol Cocinero (900ml)">
-            <option value="Fideos Spaghetti Lucchetti (500g)">
-            <option value="Arroz Largo Fino Gallo (1kg)">
-            <option value="Azúcar Ledesma (1kg)">
-            <option value="Cerveza Quilmes Clásica (Lata 473ml)">
-            <option value="Jabón en Polvo Ala (800g)">
-            <option value="Papel Higiénico Higienol (4 rollos)">
-
-            
-            </option>
+            {% for producto_id, producto_data in productos_dict.items %}
+              <option value="{{ producto_data.nombre }} - ${{ producto_data.precio }}" data-id="{{ producto_id }}">
+            {% endfor %}
           </datalist>
           <button class="btn-purple px-3" id="btnAgregarProducto">+</button>
         </div>
@@ -82,7 +71,6 @@
           <option value="EFECTIVO">EFECTIVO</option>
           <option value="TARJETA DEBITO">TARJETA DÉBITO</option>
           <option value="TARJETA CREDITO">TARJETA CRÉDITO</option>
-          <option value="TRANSFERENCIA">TRANSFERENCIA</option>
         </select>
        
         <div class="label mt-3"><span class="pill">Resumen</span></div>
@@ -93,13 +81,9 @@
         </div>
 
         <div class="actions mt-3">
-          <button class="btn-green" id="btnEmitirTicket">Emitir Ticket</button>
-          <button class="btn-red" id="btnCancelarTodo">Limpiar Lista de Productos</button>
-        </div>
-
-        <!-- BOTÓN VOLVER -->
-        <div class="text-center mt-3">
-          <a href="{% url 'inicio' %}" class="btn-purple w-100">Volver al inicio</a>
+          <button class="btn-green w-100" id="btnEmitirTicket">Emitir Ticket</button>
+          <button class="btn-red w-100" id="btnCancelarTodo">Limpiar Lista de Productos</button>
+          <a href="{% url 'inicio' %}" class="btn-purple w-100 text-center">Volver al inicio</a>
         </div>
       </aside>
     </div>
