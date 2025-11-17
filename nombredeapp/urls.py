@@ -63,4 +63,13 @@ urlpatterns = [
     path('api/buscar-empleados/', views.api_buscar_empleados, name='api_buscar_empleados'),
     path('api/empleados/<int:empleado_id>/roles/', views.api_roles_empleado, name='api_roles_empleado'),
     path('api/asignar-nuevo-rol/', views.api_asignar_nuevo_rol, name='api_asignar_nuevo_rol'),
-]
+    
+    # Vista principal de nóminas
+    path('gestion-nominas/', views.gestion_nominas_view, name='gestion_nominas'),
+    
+    # APIs de nóminas
+    path('api/nominas/lista/', views.api_nominas_lista, name='api_nominas_lista'),
+    path('api/nominas/detalle/<int:empleado_id>/', views.api_nominas_detalle, name='api_nominas_detalle'),
+    path('api/nominas/registrar-pago/', views.api_nominas_registrar_pago, name='api_nominas_registrar_pago'),
+    path('api/nominas/registrar-descuento/', views.api_nominas_registrar_descuento, name='api_nominas_registrar_descuento'),
+    ]

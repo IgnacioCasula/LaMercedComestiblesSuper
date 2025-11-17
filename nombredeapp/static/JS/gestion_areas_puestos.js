@@ -1,14 +1,13 @@
-// Variables globales (fuera del DOMContentLoaded para acceso global)
+// Variables globales
 let areasData = [];
 let currentFilter = 'all';
 let currentAreaId = null;
 let currentPuestoId = null;
 let currentMode = 'crear';
 
-// Elementos del DOM (se inicializarán en DOMContentLoaded)
 let searchInput, filterBtns, areasContainer, btnCrearArea, modalArea, modalPuesto;
 
-// ===== FUNCIONES GLOBALES (accesibles desde HTML) =====
+// ===== FUNCIONES GLOBALES =====
 window.editarArea = function(areaId) {
     console.log('Editando área:', areaId);
     if (window.audioSystem) window.audioSystem.play('select');
@@ -31,7 +30,6 @@ window.editarPuesto = function(areaId, puestoId) {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Iniciando gestión de áreas y puestos...');
     
-    // Inicializar elementos del DOM
     searchInput = document.getElementById('search-input');
     filterBtns = document.querySelectorAll('.filter-btn');
     areasContainer = document.getElementById('areas-container');
@@ -39,14 +37,12 @@ document.addEventListener('DOMContentLoaded', function() {
     modalArea = document.getElementById('modal-area');
     modalPuesto = document.getElementById('modal-puesto');
 
-    // Verificar que los elementos existen
     if (!searchInput || !areasContainer || !btnCrearArea || !modalArea || !modalPuesto) {
         console.error('Error: No se encontraron elementos necesarios en el DOM');
         return;
     }
 
     console.log('Elementos del DOM encontrados correctamente');
-    
     init();
 });
 
@@ -57,7 +53,6 @@ function init() {
 }
 
 function setupEventListeners() {
-    // Búsqueda
     if (searchInput) {
         searchInput.addEventListener('input', debounce(() => {
             renderAreas();
@@ -65,7 +60,6 @@ function setupEventListeners() {
         }, 300));
     }
 
-    // Filtros
     if (filterBtns) {
         filterBtns.forEach(btn => {
             btn.addEventListener('mouseenter', () => {
@@ -81,7 +75,6 @@ function setupEventListeners() {
         });
     }
 
-    // Botón crear área
     if (btnCrearArea) {
         btnCrearArea.addEventListener('mouseenter', () => {
             if (window.audioSystem) window.audioSystem.play('hover');
@@ -92,7 +85,6 @@ function setupEventListeners() {
         });
     }
 
-    // Modal Área
     const btnAreaCancelar = document.getElementById('btn-area-cancelar');
     const btnAreaGuardar = document.getElementById('btn-area-guardar');
     
@@ -107,7 +99,6 @@ function setupEventListeners() {
         btnAreaGuardar.addEventListener('click', guardarArea);
     }
 
-    // Modal Puesto
     const btnPuestoCancelar = document.getElementById('btn-puesto-cancelar');
     const btnPuestoGuardar = document.getElementById('btn-puesto-guardar');
     
@@ -122,7 +113,6 @@ function setupEventListeners() {
         btnPuestoGuardar.addEventListener('click', guardarPuesto);
     }
 
-    // Agregar sonidos a checkboxes de permisos
     document.querySelectorAll('input[name="permiso"]').forEach(checkbox => {
         checkbox.addEventListener('change', () => {
             if (window.audioSystem) window.audioSystem.play('select');
@@ -151,12 +141,10 @@ async function cargarAreas() {
         
         areasData = await response.json();
         
-        // Procesar los datos para extraer el salario de cada puesto
         areasData.forEach(area => {
             area.puestos.forEach(puesto => {
-                // Si el salario no viene en el objeto, lo extraemos de la API específica
                 if (!puesto.salario || puesto.salario === 0) {
-                    puesto.salario = 0; // Valor por defecto
+                    puesto.salario = 0;
                 }
             });
         });
@@ -248,7 +236,7 @@ function renderAreas() {
                                 <div style="margin: 8px 0;">
                                     <strong style="color: #28a745;">
                                         <i class="fas fa-dollar-sign"></i> 
-                                        Salario: $${formatNumber(puesto.salario || 0)}
+                                        Salario: $${formatNumber(puesto.salario || 0)}/hora
                                     </strong>
                                 </div>
                                 <div class="puesto-permisos">
@@ -275,7 +263,6 @@ function renderAreas() {
         </div>
     `).join('');
 
-    // Agregar sonidos a los botones recién creados
     document.querySelectorAll('.icon-btn, .btn-add-puesto').forEach(btn => {
         btn.addEventListener('mouseenter', () => {
             if (window.audioSystem) window.audioSystem.play('hover');
@@ -435,7 +422,7 @@ async function guardarPuesto() {
     }
 
     if (!salario || parseFloat(salario) < 0) {
-        errorMsg.textContent = 'Debes ingresar un salario válido';
+        errorMsg.textContent = 'Debes ingresar un salario válido por hora';
         if (window.audioSystem) window.audioSystem.play('error');
         return;
     }
@@ -473,7 +460,7 @@ async function guardarPuesto() {
             await cargarAreas();
             
             if (currentMode === 'editar' && data.empleados_actualizados > 0) {
-                alert(`Puesto actualizado correctamente.\n${data.empleados_actualizados} empleado(s) han recibido el nuevo salario automáticamente.`);
+                alert(`Puesto actualizado correctamente.\n${data.empleados_actualizados} empleado(s) han recibido el nuevo salario por hora automáticamente.`);
             }
         } else {
             errorMsg.textContent = data.error || 'Error al guardar el puesto';
@@ -496,8 +483,6 @@ function getPermisoIcon(permiso) {
     const iconos = {
         'caja': 'fa-cash-register',
         'stock': 'fa-boxes',
-        'crear_empleado': 'fa-user-plus',
-        'asistencias': 'fa-clock',
         'registrar_venta': 'fa-receipt'
     };
     return iconos[permiso] || 'fa-check';
@@ -507,8 +492,6 @@ function getPermisoNombre(permiso) {
     const nombres = {
         'caja': 'Caja',
         'stock': 'Stock',
-        'crear_empleado': 'Crear Empleados',
-        'asistencias': 'Asistencias',
         'registrar_venta': 'Registrar Venta'
     };
     return nombres[permiso] || permiso;
