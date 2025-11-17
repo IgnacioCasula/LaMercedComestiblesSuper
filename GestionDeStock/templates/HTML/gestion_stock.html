@@ -1,0 +1,1897 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Stock - La Merced Comestibles</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ===== RESET Y BASE ===== */
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            font-family: 'Roboto', sans-serif; 
+        }
+
+        :root {
+            --primary: #667eea;
+            --primary-dark: #764ba2;
+            --secondary: #6c757d;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+            --info: #17a2b8;
+            --light: #f8f9fa;
+            --dark: #2c3e50;
+            --bg: #f5f6fa;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.15);
+        }
+
+        body { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: var(--dark);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before,
+        body::after {
+            content: '';
+            position: fixed;
+            border-radius: 50%;
+            opacity: 0.1;
+            filter: blur(80px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::before {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, #a8d5e2 0%, transparent 70%);
+            top: -150px;
+            left: -150px;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        body::after {
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, #e3a8e4 0%, transparent 70%);
+            bottom: -200px;
+            right: -200px;
+            animation: float 25s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(30px, -30px) scale(1.1); }
+        }
+
+        /* ===== CONTAINER ===== */
+        .container { 
+            display: flex; 
+            flex-direction: column; 
+            min-height: 100vh;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ===== HEADER ===== */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            box-shadow: var(--shadow-lg);
+            border-bottom: 3px solid var(--primary);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo h1 { 
+            display: flex; 
+            align-items: center; 
+            font-size: 1.5rem; 
+            font-weight: 700;
+            color: var(--dark);
+            gap: 12px;
+        }
+
+        .logo h1 i {
+            color: var(--primary);
+            font-size: 2rem;
+        }
+
+        .logo span { 
+            color: var(--secondary);
+            font-weight: 400;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .user-info i {
+            color: var(--primary);
+            font-size: 2rem;
+        }
+
+        .back-btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, var(--secondary) 0%, #5a6268 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            border: none;
+        }
+
+        .back-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        .main-content { 
+            display: flex; 
+            flex: 1;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar { 
+            width: 260px;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            height: fit-content;
+            position: sticky;
+            top: 100px;
+        }
+
+        .nav-menu ul { 
+            list-style: none;
+            padding: 20px 0;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 16px 25px;
+            cursor: pointer;
+            color: var(--dark);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-left: 4px solid transparent;
+            font-weight: 500;
+        }
+
+        .nav-item:hover {
+            background: linear-gradient(90deg, rgba(102, 126, 234, 0.1) 0%, transparent 100%);
+            border-left-color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: linear-gradient(90deg, rgba(102, 126, 234, 0.15) 0%, transparent 100%);
+            border-left-color: var(--primary);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .nav-item i {
+            font-size: 1.5rem;
+        }
+
+        /* ===== CONTENT ===== */
+        .content { 
+            flex: 1;
+            overflow: auto;
+        }
+
+        .section { 
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .section.active { 
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section h2 {
+            margin: 0 0 25px;
+            color: var(--dark);
+            font-size: 2rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 25px;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .section h2 i {
+            color: var(--primary);
+        }
+
+        /* ===== DASHBOARD CARDS ===== */
+        .dashboard-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            display: flex;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: var(--shadow);
+            gap: 20px;
+            align-items: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-left: 5px solid;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .card-primary { border-color: var(--primary); }
+        .card-success { border-color: var(--success); }
+        .card-info { border-color: var(--info); }
+        .card-danger { border-color: var(--danger); }
+
+        .card-icon {
+            width: 70px;
+            height: 70px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+        }
+
+        .card-primary .card-icon {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+        }
+
+        .card-success .card-icon {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+        }
+
+        .card-info .card-icon {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            color: white;
+        }
+
+        .card-danger .card-icon {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+        }
+
+        .card-info h3 { 
+            font-size: 1rem;
+            color: var(--secondary);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .card-info p { 
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin: 0;
+        }
+
+        /* ===== SECTION HEADER ===== */
+        .section-header { 
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .search-box { 
+            position: relative;
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border-radius: 12px;
+            padding: 0 20px;
+            box-shadow: var(--shadow);
+            min-width: 300px;
+        }
+
+        .search-box input {
+            padding: 14px 45px 14px 15px;
+            border: none;
+            background: transparent;
+            width: 100%;
+            font-size: 15px;
+            outline: none;
+        }
+
+        .search-box i { 
+            position: absolute;
+            right: 20px;
+            color: var(--secondary);
+        }
+
+        /* ===== TABLES ===== */
+        .table-container { 
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .data-table { 
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 900px;
+        }
+
+        .data-table th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            padding: 18px;
+            text-align: left;
+            font-weight: 600;
+            color: white;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .data-table td { 
+            padding: 16px 18px;
+            border-bottom: 1px solid #f1f1f1;
+            color: var(--dark);
+        }
+
+        .data-table tr:hover { 
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .product-image { 
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .stock-bajo { 
+            color: var(--danger);
+            font-weight: 700;
+        }
+
+        .stock-optimo { 
+            color: var(--success);
+            font-weight: 700;
+        }
+
+        .stock-critico { 
+            color: var(--danger);
+            font-weight: 700;
+            background-color: rgba(220, 53, 69, 0.1);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .loading-cell {
+            text-align: center;
+            padding: 40px !important;
+        }
+
+        .loading-spinner {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            color: var(--primary);
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .loading-spinner i {
+            font-size: 2rem;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* ===== BUTTONS ===== */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 15px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, var(--secondary) 0%, #5a6268 100%);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success) 0%, #20c997 100%);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger) 0%, #c82333 100%);
+            color: white;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, var(--warning) 0%, #e0a800 100%);
+            color: var(--dark);
+        }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            color: var(--secondary);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-size: 1.2rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-icon:hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: var(--primary);
+        }
+
+        .btn-icon.delete {
+            color: var(--danger);
+        }
+
+        .btn-icon.delete:hover {
+            background: rgba(220, 53, 69, 0.1);
+        }
+
+        /* ===== BADGES ===== */
+        .badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .badge-warning {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            color: #856404;
+            border: 1px solid var(--warning);
+        }
+
+        .badge-info {
+            background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+            color: #0c5460;
+            border: 1px solid var(--info);
+        }
+
+        .badge-success {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            color: #155724;
+            border: 1px solid var(--success);
+        }
+
+        .badge-danger {
+            background: linear-gradient(135deg, #f8d7da 0%, #f1b0b7 100%);
+            color: #721c24;
+            border: 1px solid var(--danger);
+        }
+
+        /* ===== EMPTY STATE ===== */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--secondary);
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            color: var(--primary);
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 10px;
+            color: var(--dark);
+        }
+
+        .empty-state p {
+            margin-bottom: 20px;
+        }
+
+        /* ===== MODAL ===== */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+        }
+
+        .modal-header {
+            padding: 20px 25px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            padding: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--dark);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        .modal-footer {
+            padding: 20px 25px;
+            background: #f8f9fa;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        /* ===== NOTIFICACIONES ===== */
+        .notificacion {
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            z-index: 1100;
+            transform: translateX(400px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            max-width: 350px;
+        }
+
+        .notificacion.mostrar {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .notificacion-contenido {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }
+
+        .notificacion.success {
+            border-left: 4px solid var(--success);
+        }
+
+        .notificacion.error {
+            border-left: 4px solid var(--danger);
+        }
+
+        .notificacion.info {
+            border-left: 4px solid var(--info);
+        }
+
+        .notificacion.warning {
+            border-left: 4px solid var(--warning);
+        }
+
+        .notificacion-cerrar {
+            background: none;
+            border: none;
+            color: var(--secondary);
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .sidebar { 
+                width: 100%;
+                position: static;
+            }
+            
+            .header {
+                flex-wrap: wrap;
+                height: auto;
+                padding: 15px 20px;
+                gap: 15px;
+            }
+            
+            .logo h1 {
+                font-size: 1.2rem;
+            }
+            
+            .search-box { 
+                width: 100%;
+                min-width: auto;
+            }
+            
+            .data-table { 
+                font-size: 0.85rem;
+            }
+            
+            .data-table th,
+            .data-table td { 
+                padding: 10px 8px;
+            }
+
+            .section-header {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .form-row {
+                flex-direction: column;
+                gap: 0;
+            }
+        }
+
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <h1>
+                    <i class="fas fa-warehouse"></i>
+                    La Merced <span>Comestibles</span>
+                </h1>
+            </div>
+            <div class="user-info">
+                <i class="fas fa-user-circle"></i>
+                <span>Administrador</span>
+            </div>
+            <a href="http://127.0.0.1:8000/inicio/" class="back-btn">
+                <i class="fas fa-arrow-left"></i>
+                Volver al Inicio
+            </a>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <nav class="nav-menu">
+                    <ul>
+                        <li class="nav-item active" data-section="dashboard">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Dashboard</span>
+                        </li>
+                        <li class="nav-item" data-section="productos">
+                            <i class="fas fa-boxes"></i>
+                            <span>Productos</span>
+                        </li>
+                        <li class="nav-item" data-section="categorias">
+                            <i class="fas fa-tags"></i>
+                            <span>Categorías</span>
+                        </li>
+                        <li class="nav-item" data-section="proveedores">
+                            <i class="fas fa-truck"></i>
+                            <span>Proveedores</span>
+                        </li>
+                    </ul>
+                </nav>
+            </aside>
+
+            <!-- Content Area -->
+            <main class="content">
+                <!-- Dashboard Section -->
+                <section id="dashboard" class="section active">
+                    <h2><i class="fas fa-chart-line"></i> Dashboard de Stock</h2>
+                    
+                    <!-- Cards -->
+                    <div class="dashboard-cards">
+                        <div class="card card-primary">
+                            <div class="card-icon">
+                                <i class="fas fa-boxes"></i>
+                            </div>
+                            <div class="card-info">
+                                <h3>Total Productos</h3>
+                                <p id="total-productos">0</p>
+                            </div>
+                        </div>
+                        <div class="card card-success">
+                            <div class="card-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="card-info">
+                                <h3>Stock Óptimo</h3>
+                                <p id="stock-optimo">0</p>
+                            </div>
+                        </div>
+                        <div class="card card-info">
+                            <div class="card-icon">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div class="card-info">
+                                <h3>Stock Bajo</h3>
+                                <p id="stock-bajo">0</p>
+                            </div>
+                        </div>
+                        <div class="card card-danger">
+                            <div class="card-icon">
+                                <i class="fas fa-times-circle"></i>
+                            </div>
+                            <div class="card-info">
+                                <h3>Sin Stock</h3>
+                                <p id="sin-stock">0</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Productos Section -->
+                <section id="productos" class="section">
+                    <h2><i class="fas fa-boxes"></i> Gestión de Productos</h2>
+                    
+                    <div class="section-header">
+                        <div class="search-box">
+                            <input type="text" placeholder="Buscar productos..." id="searchProductos">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <button class="btn btn-primary" id="btnNuevoProducto">
+                            <i class="fas fa-plus"></i>
+                            Nuevo Producto
+                        </button>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Imagen</th>
+                                    <th>Nombre</th>
+                                    <th>Categoría</th>
+                                    <th>Stock</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productos-content">
+                                <!-- Los productos se cargarán aquí dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Categorías Section -->
+                <section id="categorias" class="section">
+                    <h2><i class="fas fa-tags"></i> Gestión de Categorías</h2>
+                    
+                    <div class="section-header">
+                        <div class="search-box">
+                            <input type="text" placeholder="Buscar categorías..." id="searchCategorias">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <button class="btn btn-primary" id="btnNuevaCategoria">
+                            <i class="fas fa-plus"></i>
+                            Nueva Categoría
+                        </button>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nombre</th>
+                                    <th>Descripción</th>
+                                    <th>Productos</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="categorias-content">
+                                <!-- Las categorías se cargarán aquí dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Proveedores Section -->
+                <section id="proveedores" class="section">
+                    <h2><i class="fas fa-truck"></i> Gestión de Proveedores</h2>
+                    
+                    <div class="section-header">
+                        <div class="search-box">
+                            <input type="text" placeholder="Buscar proveedores..." id="searchProveedores">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <button class="btn btn-primary" id="btnNuevoProveedor">
+                            <i class="fas fa-plus"></i>
+                            Nuevo Proveedor
+                        </button>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nombre</th>
+                                    <th>Contacto</th>
+                                    <th>Teléfono</th>
+                                    <th>Productos</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="proveedores-content">
+                                <!-- Los proveedores se cargarán aquí dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal para Productos -->
+    <div class="modal" id="modalProducto">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalProductoTitulo">Nuevo Producto</h3>
+                <button class="modal-close" id="modalProductoCerrar">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="formProducto">
+                    <input type="hidden" id="productoId">
+                    <div class="form-group">
+                        <label for="productoNombre">Nombre</label>
+                        <input type="text" id="productoNombre" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="productoCategoria">Categoría</label>
+                        <select id="productoCategoria" class="form-control" required>
+                            <option value="">Seleccione una categoría</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="productoStock">Stock Actual</label>
+                            <input type="number" id="productoStock" class="form-control" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="productoStockMinimo">Stock Mínimo</label>
+                            <input type="number" id="productoStockMinimo" class="form-control" min="0" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="productoProveedor">Proveedor</label>
+                        <select id="productoProveedor" class="form-control" required>
+                            <option value="">Seleccione un proveedor</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="productoImagen">URL de Imagen</label>
+                        <input type="text" id="productoImagen" class="form-control" placeholder="https://...">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modalProductoCancelar">Cancelar</button>
+                <button class="btn btn-primary" id="modalProductoGuardar">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Categorías -->
+    <div class="modal" id="modalCategoria">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalCategoriaTitulo">Nueva Categoría</h3>
+                <button class="modal-close" id="modalCategoriaCerrar">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="formCategoria">
+                    <input type="hidden" id="categoriaId">
+                    <div class="form-group">
+                        <label for="categoriaNombre">Nombre</label>
+                        <input type="text" id="categoriaNombre" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="categoriaDescripcion">Descripción</label>
+                        <textarea id="categoriaDescripcion" class="form-control" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modalCategoriaCancelar">Cancelar</button>
+                <button class="btn btn-primary" id="modalCategoriaGuardar">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Proveedores -->
+    <div class="modal" id="modalProveedor">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalProveedorTitulo">Nuevo Proveedor</h3>
+                <button class="modal-close" id="modalProveedorCerrar">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="formProveedor">
+                    <input type="hidden" id="proveedorId">
+                    <div class="form-group">
+                        <label for="proveedorNombre">Nombre</label>
+                        <input type="text" id="proveedorNombre" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="proveedorContacto">Persona de Contacto</label>
+                        <input type="text" id="proveedorContacto" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="proveedorTelefono">Teléfono</label>
+                        <input type="tel" id="proveedorTelefono" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="proveedorEmail">Email</label>
+                        <input type="email" id="proveedorEmail" class="form-control">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modalProveedorCancelar">Cancelar</button>
+                <button class="btn btn-primary" id="modalProveedorGuardar">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Datos de ejemplo para simular la aplicación
+        let productos = JSON.parse(localStorage.getItem('productos')) || [
+            { id: 1, nombre: "Arroz Integral", categoria: "Granos", stock: 45, stockMinimo: 20, imagen: "https://via.placeholder.com/50", proveedor: 1 },
+            { id: 2, nombre: "Aceite de Oliva", categoria: "Aceites", stock: 12, stockMinimo: 15, imagen: "https://via.placeholder.com/50", proveedor: 2 },
+            { id: 3, nombre: "Azúcar Morena", categoria: "Endulzantes", stock: 8, stockMinimo: 10, imagen: "https://via.placeholder.com/50", proveedor: 1 },
+            { id: 4, nombre: "Harina de Trigo", categoria: "Harinas", stock: 32, stockMinimo: 25, imagen: "https://via.placeholder.com/50", proveedor: 3 },
+            { id: 5, nombre: "Leche Deslactosada", categoria: "Lácteos", stock: 5, stockMinimo: 15, imagen: "https://via.placeholder.com/50", proveedor: 2 }
+        ];
+
+        let categorias = JSON.parse(localStorage.getItem('categorias')) || [
+            { id: 1, nombre: "Granos", descripcion: "Productos de grano" },
+            { id: 2, nombre: "Aceites", descripcion: "Aceites comestibles" },
+            { id: 3, nombre: "Endulzantes", descripcion: "Productos para endulzar" },
+            { id: 4, nombre: "Harinas", descripcion: "Harinas de diferentes tipos" },
+            { id: 5, nombre: "Lácteos", descripcion: "Productos lácteos" }
+        ];
+
+        let proveedores = JSON.parse(localStorage.getItem('proveedores')) || [
+            { id: 1, nombre: "Distribuidora Alimentos S.A.", contacto: "Juan Pérez", telefono: "+34 600 123 456", email: "juan@alimentos.com" },
+            { id: 2, nombre: "Importaciones Delicias", contacto: "María García", telefono: "+34 600 654 321", email: "maria@delicias.com" },
+            { id: 3, nombre: "Suministros Naturales", contacto: "Carlos López", telefono: "+34 600 789 012", email: "carlos@naturales.com" }
+        ];
+
+        // Guardar datos en localStorage
+        function guardarDatos() {
+            localStorage.setItem('productos', JSON.stringify(productos));
+            localStorage.setItem('categorias', JSON.stringify(categorias));
+            localStorage.setItem('proveedores', JSON.stringify(proveedores));
+        }
+
+        // Navegación entre secciones
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                // Remover clase active de todos los items
+                document.querySelectorAll('.nav-item').forEach(nav => {
+                    nav.classList.remove('active');
+                });
+                
+                // Agregar clase active al item clickeado
+                this.classList.add('active');
+                
+                // Ocultar todas las secciones
+                document.querySelectorAll('.section').forEach(section => {
+                    section.classList.remove('active');
+                });
+                
+                // Mostrar la sección correspondiente
+                const sectionId = this.getAttribute('data-section');
+                document.getElementById(sectionId).classList.add('active');
+                
+                // Cargar datos de la sección si es necesario
+                if (sectionId === 'productos') {
+                    cargarProductos();
+                } else if (sectionId === 'categorias') {
+                    cargarCategorias();
+                } else if (sectionId === 'proveedores') {
+                    cargarProveedores();
+                }
+            });
+        });
+
+        // Funcionalidad de búsqueda
+        document.getElementById('searchProductos')?.addEventListener('input', function(e) {
+            filtrarProductos(e.target.value);
+        });
+
+        document.getElementById('searchCategorias')?.addEventListener('input', function(e) {
+            filtrarCategorias(e.target.value);
+        });
+
+        document.getElementById('searchProveedores')?.addEventListener('input', function(e) {
+            filtrarProveedores(e.target.value);
+        });
+
+        // Botones para abrir modales
+        document.getElementById('btnNuevoProducto').addEventListener('click', () => abrirModalProducto());
+        document.getElementById('btnNuevaCategoria').addEventListener('click', () => abrirModalCategoria());
+        document.getElementById('btnNuevoProveedor').addEventListener('click', () => abrirModalProveedor());
+
+        // Cerrar modales
+        document.getElementById('modalProductoCerrar').addEventListener('click', () => cerrarModalProducto());
+        document.getElementById('modalProductoCancelar').addEventListener('click', () => cerrarModalProducto());
+        document.getElementById('modalCategoriaCerrar').addEventListener('click', () => cerrarModalCategoria());
+        document.getElementById('modalCategoriaCancelar').addEventListener('click', () => cerrarModalCategoria());
+        document.getElementById('modalProveedorCerrar').addEventListener('click', () => cerrarModalProveedor());
+        document.getElementById('modalProveedorCancelar').addEventListener('click', () => cerrarModalProveedor());
+
+        // Guardar en modales
+        document.getElementById('modalProductoGuardar').addEventListener('click', () => guardarProducto());
+        document.getElementById('modalCategoriaGuardar').addEventListener('click', () => guardarCategoria());
+        document.getElementById('modalProveedorGuardar').addEventListener('click', () => guardarProveedor());
+
+        // Cargar datos del dashboard
+        function cargarDashboard() {
+            // Calcular estadísticas
+            const totalProductos = productos.length;
+            const stockOptimo = productos.filter(p => p.stock > p.stockMinimo * 1.2).length;
+            const stockBajo = productos.filter(p => p.stock <= p.stockMinimo && p.stock > 0).length;
+            const sinStock = productos.filter(p => p.stock === 0).length;
+            
+            // Actualizar UI
+            document.getElementById('total-productos').textContent = totalProductos;
+            document.getElementById('stock-optimo').textContent = stockOptimo;
+            document.getElementById('stock-bajo').textContent = stockBajo;
+            document.getElementById('sin-stock').textContent = sinStock;
+        }
+
+        // Cargar productos
+        function cargarProductos() {
+            const tbody = document.getElementById('productos-content');
+            tbody.innerHTML = '';
+            
+            if (productos.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="empty-state">
+                            <i class="fas fa-box-open"></i>
+                            <h3>No hay productos</h3>
+                            <p>Agrega tu primer producto para comenzar</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            productos.forEach(producto => {
+                const estado = producto.stock === 0 ? 
+                    '<span class="badge badge-danger">Sin Stock</span>' : 
+                    producto.stock <= producto.stockMinimo ? 
+                    '<span class="badge badge-warning">Stock Bajo</span>' : 
+                    '<span class="badge badge-success">Óptimo</span>';
+                
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td>${producto.id}</td>
+                    <td><img src="${producto.imagen}" alt="${producto.nombre}" class="product-image"></td>
+                    <td>${producto.nombre}</td>
+                    <td>${producto.categoria}</td>
+                    <td>${producto.stock}</td>
+                    <td>${estado}</td>
+                    <td>
+                        <button class="btn-icon editar-producto" data-id="${producto.id}" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-icon delete eliminar-producto" data-id="${producto.id}" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(fila);
+            });
+
+            // Agregar eventos a los botones de editar y eliminar
+            document.querySelectorAll('.editar-producto').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    abrirModalProducto(id);
+                });
+            });
+
+            document.querySelectorAll('.eliminar-producto').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    eliminarProducto(id);
+                });
+            });
+        }
+
+        // Cargar categorías
+        function cargarCategorias() {
+            const tbody = document.getElementById('categorias-content');
+            tbody.innerHTML = '';
+            
+            if (categorias.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="empty-state">
+                            <i class="fas fa-tags"></i>
+                            <h3>No hay categorías</h3>
+                            <p>Agrega tu primera categoría para comenzar</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            categorias.forEach(categoria => {
+                const productosEnCategoria = productos.filter(p => p.categoria === categoria.nombre).length;
+                
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td>${categoria.id}</td>
+                    <td>${categoria.nombre}</td>
+                    <td>${categoria.descripcion}</td>
+                    <td>${productosEnCategoria}</td>
+                    <td>
+                        <button class="btn-icon editar-categoria" data-id="${categoria.id}" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-icon delete eliminar-categoria" data-id="${categoria.id}" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(fila);
+            });
+
+            // Agregar eventos a los botones de editar y eliminar
+            document.querySelectorAll('.editar-categoria').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    abrirModalCategoria(id);
+                });
+            });
+
+            document.querySelectorAll('.eliminar-categoria').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    eliminarCategoria(id);
+                });
+            });
+        }
+
+        // Cargar proveedores
+        function cargarProveedores() {
+            const tbody = document.getElementById('proveedores-content');
+            tbody.innerHTML = '';
+            
+            if (proveedores.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <i class="fas fa-truck"></i>
+                            <h3>No hay proveedores</h3>
+                            <p>Agrega tu primer proveedor para comenzar</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            proveedores.forEach(proveedor => {
+                const productosDelProveedor = productos.filter(p => p.proveedor === proveedor.id).length;
+                
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td>${proveedor.id}</td>
+                    <td>${proveedor.nombre}</td>
+                    <td>${proveedor.contacto}</td>
+                    <td>${proveedor.telefono}</td>
+                    <td>${productosDelProveedor}</td>
+                    <td>
+                        <button class="btn-icon editar-proveedor" data-id="${proveedor.id}" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-icon delete eliminar-proveedor" data-id="${proveedor.id}" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(fila);
+            });
+
+            // Agregar eventos a los botones de editar y eliminar
+            document.querySelectorAll('.editar-proveedor').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    abrirModalProveedor(id);
+                });
+            });
+
+            document.querySelectorAll('.eliminar-proveedor').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    eliminarProveedor(id);
+                });
+            });
+        }
+
+        // Funciones de filtrado
+        function filtrarProductos(termino) {
+            const productosFiltrados = productos.filter(p => 
+                p.nombre.toLowerCase().includes(termino.toLowerCase()) || 
+                p.categoria.toLowerCase().includes(termino.toLowerCase())
+            );
+            
+            const tbody = document.getElementById('productos-content');
+            tbody.innerHTML = '';
+            
+            if (productosFiltrados.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="empty-state">
+                            <i class="fas fa-search"></i>
+                            <h3>No se encontraron productos</h3>
+                            <p>Intenta con otro término de búsqueda</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            productosFiltrados.forEach(producto => {
+                const estado = producto.stock === 0 ? 
+                    '<span class="badge badge-danger">Sin Stock</span>' : 
+                    producto.stock <= producto.stockMinimo ? 
+                    '<span class="badge badge-warning">Stock Bajo</span>' : 
+                    '<span class="badge badge-success">Óptimo</span>';
+                
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td>${producto.id}</td>
+                    <td><img src="${producto.imagen}" alt="${producto.nombre}" class="product-image"></td>
+                    <td>${producto.nombre}</td>
+                    <td>${producto.categoria}</td>
+                    <td>${producto.stock}</td>
+                    <td>${estado}</td>
+                    <td>
+                        <button class="btn-icon editar-producto" data-id="${producto.id}" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-icon delete eliminar-producto" data-id="${producto.id}" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(fila);
+            });
+
+            // Reagregar eventos a los botones
+            document.querySelectorAll('.editar-producto').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    abrirModalProducto(id);
+                });
+            });
+
+            document.querySelectorAll('.eliminar-producto').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    eliminarProducto(id);
+                });
+            });
+        }
+
+        function filtrarCategorias(termino) {
+            const categoriasFiltradas = categorias.filter(c => 
+                c.nombre.toLowerCase().includes(termino.toLowerCase()) || 
+                c.descripcion.toLowerCase().includes(termino.toLowerCase())
+            );
+            
+            const tbody = document.getElementById('categorias-content');
+            tbody.innerHTML = '';
+            
+            if (categoriasFiltradas.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="empty-state">
+                            <i class="fas fa-search"></i>
+                            <h3>No se encontraron categorías</h3>
+                            <p>Intenta con otro término de búsqueda</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            categoriasFiltradas.forEach(categoria => {
+                const productosEnCategoria = productos.filter(p => p.categoria === categoria.nombre).length;
+                
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td>${categoria.id}</td>
+                    <td>${categoria.nombre}</td>
+                    <td>${categoria.descripcion}</td>
+                    <td>${productosEnCategoria}</td>
+                    <td>
+                        <button class="btn-icon editar-categoria" data-id="${categoria.id}" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-icon delete eliminar-categoria" data-id="${categoria.id}" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(fila);
+            });
+
+            // Reagregar eventos a los botones
+            document.querySelectorAll('.editar-categoria').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    abrirModalCategoria(id);
+                });
+            });
+
+            document.querySelectorAll('.eliminar-categoria').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    eliminarCategoria(id);
+                });
+            });
+        }
+
+        function filtrarProveedores(termino) {
+            const proveedoresFiltrados = proveedores.filter(p => 
+                p.nombre.toLowerCase().includes(termino.toLowerCase()) || 
+                p.contacto.toLowerCase().includes(termino.toLowerCase())
+            );
+            
+            const tbody = document.getElementById('proveedores-content');
+            tbody.innerHTML = '';
+            
+            if (proveedoresFiltrados.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <i class="fas fa-search"></i>
+                            <h3>No se encontraron proveedores</h3>
+                            <p>Intenta con otro término de búsqueda</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            proveedoresFiltrados.forEach(proveedor => {
+                const productosDelProveedor = productos.filter(p => p.proveedor === proveedor.id).length;
+                
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td>${proveedor.id}</td>
+                    <td>${proveedor.nombre}</td>
+                    <td>${proveedor.contacto}</td>
+                    <td>${proveedor.telefono}</td>
+                    <td>${productosDelProveedor}</td>
+                    <td>
+                        <button class="btn-icon editar-proveedor" data-id="${proveedor.id}" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-icon delete eliminar-proveedor" data-id="${proveedor.id}" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(fila);
+            });
+
+            // Reagregar eventos a los botones
+            document.querySelectorAll('.editar-proveedor').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    abrirModalProveedor(id);
+                });
+            });
+
+            document.querySelectorAll('.eliminar-proveedor').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    eliminarProveedor(id);
+                });
+            });
+        }
+
+        // Funciones para abrir modales
+        function abrirModalProducto(id = null) {
+            const modal = document.getElementById('modalProducto');
+            const titulo = document.getElementById('modalProductoTitulo');
+            const form = document.getElementById('formProducto');
+            
+            // Llenar select de categorías
+            const selectCategoria = document.getElementById('productoCategoria');
+            selectCategoria.innerHTML = '<option value="">Seleccione una categoría</option>';
+            categorias.forEach(cat => {
+                selectCategoria.innerHTML += `<option value="${cat.nombre}">${cat.nombre}</option>`;
+            });
+            
+            // Llenar select de proveedores
+            const selectProveedor = document.getElementById('productoProveedor');
+            selectProveedor.innerHTML = '<option value="">Seleccione un proveedor</option>';
+            proveedores.forEach(prov => {
+                selectProveedor.innerHTML += `<option value="${prov.id}">${prov.nombre}</option>`;
+            });
+            
+            if (id) {
+                // Modo edición
+                titulo.textContent = 'Editar Producto';
+                const producto = productos.find(p => p.id === id);
+                document.getElementById('productoId').value = producto.id;
+                document.getElementById('productoNombre').value = producto.nombre;
+                document.getElementById('productoCategoria').value = producto.categoria;
+                document.getElementById('productoStock').value = producto.stock;
+                document.getElementById('productoStockMinimo').value = producto.stockMinimo;
+                document.getElementById('productoProveedor').value = producto.proveedor;
+                document.getElementById('productoImagen').value = producto.imagen;
+            } else {
+                // Modo nuevo
+                titulo.textContent = 'Nuevo Producto';
+                form.reset();
+                document.getElementById('productoId').value = '';
+            }
+            
+            modal.classList.add('active');
+        }
+
+        function abrirModalCategoria(id = null) {
+            const modal = document.getElementById('modalCategoria');
+            const titulo = document.getElementById('modalCategoriaTitulo');
+            const form = document.getElementById('formCategoria');
+            
+            if (id) {
+                // Modo edición
+                titulo.textContent = 'Editar Categoría';
+                const categoria = categorias.find(c => c.id === id);
+                document.getElementById('categoriaId').value = categoria.id;
+                document.getElementById('categoriaNombre').value = categoria.nombre;
+                document.getElementById('categoriaDescripcion').value = categoria.descripcion;
+            } else {
+                // Modo nuevo
+                titulo.textContent = 'Nueva Categoría';
+                form.reset();
+                document.getElementById('categoriaId').value = '';
+            }
+            
+            modal.classList.add('active');
+        }
+
+        function abrirModalProveedor(id = null) {
+            const modal = document.getElementById('modalProveedor');
+            const titulo = document.getElementById('modalProveedorTitulo');
+            const form = document.getElementById('formProveedor');
+            
+            if (id) {
+                // Modo edición
+                titulo.textContent = 'Editar Proveedor';
+                const proveedor = proveedores.find(p => p.id === id);
+                document.getElementById('proveedorId').value = proveedor.id;
+                document.getElementById('proveedorNombre').value = proveedor.nombre;
+                document.getElementById('proveedorContacto').value = proveedor.contacto;
+                document.getElementById('proveedorTelefono').value = proveedor.telefono;
+                document.getElementById('proveedorEmail').value = proveedor.email || '';
+            } else {
+                // Modo nuevo
+                titulo.textContent = 'Nuevo Proveedor';
+                form.reset();
+                document.getElementById('proveedorId').value = '';
+            }
+            
+            modal.classList.add('active');
+        }
+
+        // Funciones para cerrar modales
+        function cerrarModalProducto() {
+            document.getElementById('modalProducto').classList.remove('active');
+        }
+
+        function cerrarModalCategoria() {
+            document.getElementById('modalCategoria').classList.remove('active');
+        }
+
+        function cerrarModalProveedor() {
+            document.getElementById('modalProveedor').classList.remove('active');
+        }
+
+        // Funciones para guardar datos
+        function guardarProducto() {
+            const id = document.getElementById('productoId').value;
+            const nombre = document.getElementById('productoNombre').value;
+            const categoria = document.getElementById('productoCategoria').value;
+            const stock = parseInt(document.getElementById('productoStock').value);
+            const stockMinimo = parseInt(document.getElementById('productoStockMinimo').value);
+            const proveedor = parseInt(document.getElementById('productoProveedor').value);
+            const imagen = document.getElementById('productoImagen').value || 'https://via.placeholder.com/50';
+            
+            if (!nombre || !categoria || isNaN(stock) || isNaN(stockMinimo) || !proveedor) {
+                mostrarMensaje('Por favor, complete todos los campos obligatorios', 'error');
+                return;
+            }
+            
+            if (id) {
+                // Actualizar producto existente
+                const index = productos.findIndex(p => p.id === parseInt(id));
+                productos[index] = { 
+                    id: parseInt(id), 
+                    nombre, 
+                    categoria, 
+                    stock, 
+                    stockMinimo, 
+                    proveedor, 
+                    imagen 
+                };
+                mostrarMensaje('Producto actualizado correctamente', 'success');
+            } else {
+                // Crear nuevo producto
+                const nuevoId = productos.length > 0 ? Math.max(...productos.map(p => p.id)) + 1 : 1;
+                productos.push({ 
+                    id: nuevoId, 
+                    nombre, 
+                    categoria, 
+                    stock, 
+                    stockMinimo, 
+                    proveedor, 
+                    imagen 
+                });
+                mostrarMensaje('Producto creado correctamente', 'success');
+            }
+            
+            guardarDatos();
+            cerrarModalProducto();
+            cargarProductos();
+            cargarDashboard();
+        }
+
+        function guardarCategoria() {
+            const id = document.getElementById('categoriaId').value;
+            const nombre = document.getElementById('categoriaNombre').value;
+            const descripcion = document.getElementById('categoriaDescripcion').value;
+            
+            if (!nombre) {
+                mostrarMensaje('Por favor, complete el nombre de la categoría', 'error');
+                return;
+            }
+            
+            if (id) {
+                // Actualizar categoría existente
+                const index = categorias.findIndex(c => c.id === parseInt(id));
+                categorias[index] = { 
+                    id: parseInt(id), 
+                    nombre, 
+                    descripcion 
+                };
+                mostrarMensaje('Categoría actualizada correctamente', 'success');
+            } else {
+                // Crear nueva categoría
+                const nuevoId = categorias.length > 0 ? Math.max(...categorias.map(c => c.id)) + 1 : 1;
+                categorias.push({ 
+                    id: nuevoId, 
+                    nombre, 
+                    descripcion 
+                });
+                mostrarMensaje('Categoría creada correctamente', 'success');
+            }
+            
+            guardarDatos();
+            cerrarModalCategoria();
+            cargarCategorias();
+        }
+
+        function guardarProveedor() {
+            const id = document.getElementById('proveedorId').value;
+            const nombre = document.getElementById('proveedorNombre').value;
+            const contacto = document.getElementById('proveedorContacto').value;
+            const telefono = document.getElementById('proveedorTelefono').value;
+            const email = document.getElementById('proveedorEmail').value;
+            
+            if (!nombre || !contacto || !telefono) {
+                mostrarMensaje('Por favor, complete todos los campos obligatorios', 'error');
+                return;
+            }
+            
+            if (id) {
+                // Actualizar proveedor existente
+                const index = proveedores.findIndex(p => p.id === parseInt(id));
+                proveedores[index] = { 
+                    id: parseInt(id), 
+                    nombre, 
+                    contacto, 
+                    telefono, 
+                    email 
+                };
+                mostrarMensaje('Proveedor actualizado correctamente', 'success');
+            } else {
+                // Crear nuevo proveedor
+                const nuevoId = proveedores.length > 0 ? Math.max(...proveedores.map(p => p.id)) + 1 : 1;
+                proveedores.push({ 
+                    id: nuevoId, 
+                    nombre, 
+                    contacto, 
+                    telefono, 
+                    email 
+                });
+                mostrarMensaje('Proveedor creado correctamente', 'success');
+            }
+            
+            guardarDatos();
+            cerrarModalProveedor();
+            cargarProveedores();
+        }
+
+        // Funciones para eliminar elementos
+        function eliminarProducto(id) {
+            if (confirm('¿Está seguro de que desea eliminar este producto?')) {
+                productos = productos.filter(p => p.id !== id);
+                guardarDatos();
+                cargarProductos();
+                cargarDashboard();
+                mostrarMensaje('Producto eliminado correctamente', 'success');
+            }
+        }
+
+        function eliminarCategoria(id) {
+            const categoria = categorias.find(c => c.id === id);
+            const productosEnCategoria = productos.filter(p => p.categoria === categoria.nombre);
+            
+            if (productosEnCategoria.length > 0) {
+                mostrarMensaje('No se puede eliminar la categoría porque tiene productos asociados', 'error');
+                return;
+            }
+            
+            if (confirm('¿Está seguro de que desea eliminar esta categoría?')) {
+                categorias = categorias.filter(c => c.id !== id);
+                guardarDatos();
+                cargarCategorias();
+                mostrarMensaje('Categoría eliminada correctamente', 'success');
+            }
+        }
+
+        function eliminarProveedor(id) {
+            const productosDelProveedor = productos.filter(p => p.proveedor === id);
+            
+            if (productosDelProveedor.length > 0) {
+                mostrarMensaje('No se puede eliminar el proveedor porque tiene productos asociados', 'error');
+                return;
+            }
+            
+            if (confirm('¿Está seguro de que desea eliminar este proveedor?')) {
+                proveedores = proveedores.filter(p => p.id !== id);
+                guardarDatos();
+                cargarProveedores();
+                mostrarMensaje('Proveedor eliminado correctamente', 'success');
+            }
+        }
+
+        // Función para mostrar mensajes
+        function mostrarMensaje(mensaje, tipo = 'info') {
+            // Crear elemento de notificación
+            const notificacion = document.createElement('div');
+            notificacion.className = `notificacion ${tipo}`;
+            
+            let icono = 'info-circle';
+            if (tipo === 'success') icono = 'check-circle';
+            if (tipo === 'error') icono = 'exclamation-circle';
+            if (tipo === 'warning') icono = 'exclamation-triangle';
+            
+            notificacion.innerHTML = `
+                <div class="notificacion-contenido">
+                    <i class="fas fa-${icono}"></i>
+                    <span>${mensaje}</span>
+                </div>
+                <button class="notificacion-cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            // Agregar al DOM
+            document.body.appendChild(notificacion);
+            
+            // Mostrar con animación
+            setTimeout(() => {
+                notificacion.classList.add('mostrar');
+            }, 100);
+            
+            // Auto-eliminar después de 5 segundos
+            setTimeout(() => {
+                notificacion.classList.remove('mostrar');
+                setTimeout(() => {
+                    if (notificacion.parentNode) {
+                        notificacion.parentNode.removeChild(notificacion);
+                    }
+                }, 300);
+            }, 5000);
+            
+            // Cerrar al hacer clic en el botón
+            notificacion.querySelector('.notificacion-cerrar').addEventListener('click', function() {
+                notificacion.classList.remove('mostrar');
+                setTimeout(() => {
+                    if (notificacion.parentNode) {
+                        notificacion.parentNode.removeChild(notificacion);
+                    }
+                }, 300);
+            });
+        }
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', function() {
+            cargarDashboard();
+            cargarProductos();
+        });
+    </script>
+</body>
+</html>
