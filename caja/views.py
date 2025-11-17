@@ -10,41 +10,49 @@ from .utils import registrar_actividad
 
 def obtener_o_crear_sucursal_sistema():
     """
-    Crea o devuelve una sucursal del sistema para usuarios sin sucursal asignada.
+    Crea o devuelve la sucursal central para usuarios sin sucursal asignada.
     Esta función se asegura de que siempre exista una sucursal por defecto.
     """
     try:
-        # Intentar obtener la sucursal del sistema
-        sucursal = Sucursales.objects.filter(nombresucursal='Sistema').first()
+        # PRIMERO intentar obtener la sucursal "Sucursal Central" (la del comando productos)
+        sucursal = Sucursales.objects.filter(nombresucursal='Sucursal Central').first()
         
         if not sucursal:
-            # Crear ubicación por defecto si no existe
-            codigo_postal = Codigopostal.objects.first()
+            # Si no existe, intentar obtener "Sistema" (para compatibilidad con versiones anteriores)
+            sucursal = Sucursales.objects.filter(nombresucursal='Sistema').first()
+            
+        if not sucursal:
+            # Si no existe ninguna, crear la sucursal central con los mismos datos del comando productos
+            codigo_postal = Codigopostal.objects.filter(codigopostal=5000).first()
             if not codigo_postal:
                 codigo_postal = Codigopostal.objects.create(
-                    codigopostal=0,
-                    nombrelocalidad='Sistema'
+                    codigopostal=5000,
+                    nombrelocalidad='Córdoba Capital'
                 )
             
-            ubicacion = Ubicaciones.objects.first()
+            ubicacion = Ubicaciones.objects.filter(
+                ciudad='Córdoba', 
+                nombrecalle='Av. Colón 1000'
+            ).first()
             if not ubicacion:
                 ubicacion = Ubicaciones.objects.create(
-                    ciudad='Sistema',
-                    nombrecalle='Sistema',
-                    barrio='Sistema',
+                    ciudad='Córdoba',
+                    nombrecalle='Av. Colón 1000',
+                    barrio='Centro',
                     idcodigopostal=codigo_postal
                 )
             
-            # Crear sucursal del sistema
+            # Crear sucursal central (igual que en productos.py)
             sucursal = Sucursales.objects.create(
-                nombresucursal='Sistema',
-                telefonosucursal=0,
+                nombresucursal='Sucursal Central',
+                telefonosucursal=3511234567,
                 idubicacion=ubicacion
             )
+            print(f"✅ Sucursal Central creada: {sucursal.idsucursal}")
         
         return sucursal
     except Exception as e:
-        print(f"Error al crear/obtener sucursal del sistema: {e}")
+        print(f"Error al crear/obtener sucursal central: {e}")
         # Si todo falla, intentar devolver cualquier sucursal existente
         return Sucursales.objects.first()
 
