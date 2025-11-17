@@ -35,7 +35,10 @@ def ver_asistencias(request):
 
 
 def calendar_events(request):
-    """API que genera eventos para el calendario"""
+    """
+    ⭐ API que genera eventos para el calendario.
+    AHORA SINCRONIZADO CON FECHA DE INICIO DEL EMPLEADO.
+    """
     usuario_id = request.session.get('usuario_id')
     start_str = request.GET.get('start')
     end_str = request.GET.get('end')
@@ -47,6 +50,14 @@ def calendar_events(request):
         empleado = Empleados.objects.get(idusuarios_id=usuario_id)
     except Empleados.DoesNotExist:
         return JsonResponse([], safe=False)
+    
+    # ⭐ OBTENER FECHA DE INICIO DEL EMPLEADO
+    fecha_inicio_empleado = empleado.fechacontratado
+    if not fecha_inicio_empleado:
+        print(f"⚠️ Empleado {empleado.idusuarios.nombreusuario} sin fecha de inicio")
+        return JsonResponse([], safe=False)
+    
+    print(f"📅 Fecha de inicio del empleado: {fecha_inicio_empleado}")
     
     try:
         start_date = datetime.fromisoformat(start_str.split('T')[0]).date()
@@ -76,6 +87,13 @@ def calendar_events(request):
     
     for day_offset in range(total_days):
         current_date = start_date + timedelta(days=day_offset)
+        
+        # ⭐ VALIDACIÓN CRÍTICA: Verificar si el día está dentro del rango permitido
+        if current_date < fecha_inicio_empleado:
+            # Este día está ANTES de la fecha de inicio = no mostrar nada
+            print(f"⏸️ Día {current_date} anterior a fecha de inicio, saltando...")
+            continue
+        
         dia_semana_actual = current_date.weekday()
         semana_del_mes_actual = get_week_of_month(current_date)
         
@@ -135,7 +153,6 @@ def calendar_events(request):
                     datetime.combine(current_date, mejor_asistencia.horaentrada)
                 )
                 
-                # CORRECCIÓN: Solo usar hora de salida si realmente existe
                 if mejor_asistencia.horasalida:
                     hora_salida_real = timezone.make_aware(
                         datetime.combine(current_date, mejor_asistencia.horasalida)
@@ -143,24 +160,22 @@ def calendar_events(request):
                     if mejor_asistencia.horasalida < mejor_asistencia.horaentrada:
                         hora_salida_real += timedelta(days=1)
                 else:
-                    # Si no hay salida, usar la hora actual si es hoy y está en turno
-                    # O usar la hora programada de fin si es día pasado
                     if current_date == timezone.localdate() and ahora < turno_fin:
-                        hora_salida_real = ahora  # Está en turno AHORA
+                        hora_salida_real = ahora
                     else:
-                        hora_salida_real = turno_fin  # Usar hora programada
+                        hora_salida_real = turno_fin
                 
                 # Calcular diferencia en MINUTOS
                 diff_minutos = (hora_entrada_real - turno_inicio).total_seconds() / 60
                 
-                # Clasificación mejorada
-                if diff_minutos <= -10:  # 10+ minutos antes
+                # Clasificación
+                if diff_minutos <= -10:
                     estado, className = ("Temprano", "event-temprano")
-                elif -10 < diff_minutos <= 5:  # Entre -10 y +5 minutos
+                elif -10 < diff_minutos <= 5:
                     estado, className = ("Justo", "event-justo")
-                elif 5 < diff_minutos <= 60:  # Entre +5 minutos y +1 hora
+                elif 5 < diff_minutos <= 60:
                     estado, className = ("Tarde", "event-tarde")
-                else:  # Más de 1 hora tarde
+                else:
                     estado, className = ("Muy Tarde", "event-ausente")
 
                 events.append({
@@ -176,7 +191,7 @@ def calendar_events(request):
                         'entrada_programada': turno.hora_inicio.strftime('%H:%M'),
                         'salida_programada': turno.hora_fin.strftime('%H:%M'),
                         'diferencia_minutos': round(diff_minutos, 1),
-                        'en_turno': not mejor_asistencia.horasalida  # Flag para saber si está en turno
+                        'en_turno': not mejor_asistencia.horasalida
                     }
                 })
             else:
@@ -224,7 +239,6 @@ def calendar_events(request):
                     if asistencia.horasalida < asistencia.horaentrada:
                         end_time += timedelta(days=1)
                 else:
-                    # Si es hoy y no tiene salida, usar hora actual
                     if current_date == timezone.localdate():
                         end_time = ahora
                     else:
@@ -246,4 +260,5 @@ def calendar_events(request):
                     }
                 })
     
+    print(f"✅ Generados {len(events)} eventos para el calendario")
     return JsonResponse(events, safe=False)

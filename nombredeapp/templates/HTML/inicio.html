@@ -45,6 +45,10 @@
                         <i class="fas fa-list tool-icon"></i>
                         <span>Lista de empleados</span>
                     </a>
+                    <a href="{% url 'gestion_nominas' %}" class="tool-button">
+                        <i class="fas fa-money-bill-wave tool-icon"></i>
+                        <span>Gestión de Nóminas</span>
+                    </a>
                     <a href="{% url 'logs_actividad' %}" class="tool-button">
                         <i class="fas fa-clipboard-list tool-icon"></i>
                         <span>Logs de Actividad</span>
@@ -299,7 +303,6 @@
             }
 
             if (btnCajaStatus) {
-                // Actualizar cada 5 segundos
                 setInterval(actualizarEstadoCaja, 5000);
             }
 
@@ -325,7 +328,7 @@
                 document.getElementById('caja-no-abierta-modal').close();
             });
 
-            // Modal caja abierta (no puede cerrar sesión)
+            // Modal caja abierta
             document.getElementById('caja-abierta-ok')?.addEventListener('click', () => {
                 if (window.audioSystem) window.audioSystem.play('select');
                 document.getElementById('caja-abierta-modal').close();
@@ -347,7 +350,6 @@
                     event.preventDefault();
                     if (window.audioSystem) window.audioSystem.play('select');
                     
-                    // Verificar si la caja está abierta antes de permitir cerrar sesión
                     if (state.cajaAbierta) {
                         document.getElementById('caja-abierta-modal').showModal();
                         if (window.audioSystem) window.audioSystem.play('negative');

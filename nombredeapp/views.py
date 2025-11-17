@@ -38,7 +38,6 @@ def _verificar_y_restaurar_sesion_gracia(request):
         )
         
         if grace_cookie:
-            # Parsear cookie: formato "usuario_id|timestamp_iso"
             parts = grace_cookie.split('|')
             if len(parts) == 2:
                 usuario_id, expira_str = parts
@@ -49,11 +48,9 @@ def _verificar_y_restaurar_sesion_gracia(request):
                     
                     ahora = timezone.now()
                     
-                    # Verificar si aún está dentro del período de gracia
                     if ahora < expira:
                         print(f"✅ Usuario {usuario_id} dentro del período de gracia")
                         
-                        # ELIMINAR el registro de salida de hoy
                         try:
                             empleado = Empleados.objects.get(idusuarios_id=usuario_id)
                             hoy = timezone.localdate()
@@ -61,11 +58,10 @@ def _verificar_y_restaurar_sesion_gracia(request):
                             asistencia = Asistencias.objects.filter(
                                 idempleado=empleado,
                                 fechaasistencia=hoy,
-                                horasalida__isnull=False  # Que tenga salida registrada
+                                horasalida__isnull=False
                             ).order_by('-horasalida').first()
                             
                             if asistencia:
-                                # Eliminar la hora de salida
                                 asistencia.horasalida = None
                                 asistencia.save()
                                 print(f"✅ Salida eliminada para usuario {usuario_id}")
@@ -84,14 +80,50 @@ def _verificar_y_restaurar_sesion_gracia(request):
     return None
 
 
+def _debe_tomar_asistencia(empleado):
+    """
+    ⭐ FUNCIÓN CRÍTICA: Verifica si un empleado debe registrar asistencia HOY.
+    
+    Retorna True solo si:
+    1. Tiene fecha de contratación definida
+    2. La fecha actual es >= a su fecha de inicio
+    
+    Retorna False si:
+    - No tiene fecha de contratación
+    - Aún no ha llegado su fecha de inicio
+    """
+    hoy = timezone.localdate()
+    fecha_contratado = empleado.fechacontratado
+    
+    if not fecha_contratado:
+        # Sin fecha de contratación = no puede registrar asistencia
+        print(f"⚠️ Empleado {empleado.idusuarios.nombreusuario} sin fecha de contratación")
+        return False
+    
+    # Solo puede registrar si YA pasó su fecha de inicio
+    puede_registrar = hoy >= fecha_contratado
+    
+    if not puede_registrar:
+        print(f"📅 Empleado {empleado.idusuarios.nombreusuario} aún no inicia (fecha: {fecha_contratado})")
+    
+    return puede_registrar
+
+
 def _registrar_entrada_automatica(usuario_id):
     """
     Registra automáticamente la entrada de un empleado al hacer login.
-    Retorna True si se registró, False si ya tenía entrada.
+    ⭐ AHORA SINCRONIZADO CON FECHA DE INICIO
     """
     try:
         empleado = Empleados.objects.get(idusuarios_id=usuario_id)
         hoy = timezone.localdate()
+        
+        # ⭐ VALIDACIÓN CRÍTICA: Verificar fecha de inicio
+        if not _debe_tomar_asistencia(empleado):
+            fecha_inicio = empleado.fechacontratado
+            if fecha_inicio:
+                print(f"ℹ️ Empleado {empleado.idusuarios.nombreusuario} inicia el {fecha_inicio.strftime('%d/%m/%Y')}")
+            return False
         
         # Verificar si ya tiene entrada hoy
         asistencia_hoy = Asistencias.objects.filter(
@@ -100,7 +132,6 @@ def _registrar_entrada_automatica(usuario_id):
         ).first()
         
         if asistencia_hoy:
-            # Ya tiene entrada registrada hoy
             return False
         
         # Obtener el rol actual del usuario
@@ -112,7 +143,7 @@ def _registrar_entrada_automatica(usuario_id):
             idempleado=empleado,
             fechaasistencia=hoy,
             horaentrada=hora_actual,
-            horasalida=None,  # Sin salida todavía
+            horasalida=None,
             rol=rol
         )
         
@@ -120,7 +151,6 @@ def _registrar_entrada_automatica(usuario_id):
         return True
         
     except Empleados.DoesNotExist:
-        # Si no es empleado (ej: admin sin registro), no hacer nada
         return False
     except Exception as e:
         print(f"❌ Error registrando entrada automática: {e}")
@@ -130,13 +160,11 @@ def _registrar_entrada_automatica(usuario_id):
 def _registrar_salida_automatica(usuario_id):
     """
     Registra automáticamente la salida de un empleado al hacer logout.
-    Retorna True si se registró, False si no había entrada o ya tenía salida.
     """
     try:
         empleado = Empleados.objects.get(idusuarios_id=usuario_id)
         hoy = timezone.localdate()
         
-        # Buscar la asistencia de hoy sin salida registrada
         asistencia = Asistencias.objects.filter(
             idempleado=empleado,
             fechaasistencia=hoy,
@@ -144,10 +172,8 @@ def _registrar_salida_automatica(usuario_id):
         ).first()
         
         if not asistencia:
-            # No hay entrada registrada hoy o ya registró su salida
             return False
         
-        # Registrar hora de salida
         hora_actual = timezone.localtime().time()
         asistencia.horasalida = hora_actual
         asistencia.save()
@@ -201,7 +227,7 @@ def _verificar_estado_empleado(request: HttpRequest) -> tuple[bool, str]:
 
 @require_http_methods(['POST'])
 def registrar_entrada(request):
-    """Registra la entrada de un empleado"""
+    """Registra la entrada de un empleado - MANUAL"""
     usuario_id = request.session.get('usuario_id')
     if not usuario_id:
         return JsonResponse({'error': 'No autenticado'}, status=401)
@@ -209,7 +235,18 @@ def registrar_entrada(request):
     try:
         empleado = Empleados.objects.get(idusuarios_id=usuario_id)
         
-        # Verificar si ya tiene entrada hoy
+        # ⭐ VALIDACIÓN: Verificar fecha de inicio
+        if not _debe_tomar_asistencia(empleado):
+            fecha_inicio = empleado.fechacontratado
+            if fecha_inicio:
+                return JsonResponse({
+                    'error': f'Tu fecha de inicio es el {fecha_inicio.strftime("%d/%m/%Y")}. Aún no puedes registrar asistencia.'
+                }, status=400)
+            else:
+                return JsonResponse({
+                    'error': 'No tienes una fecha de inicio configurada. Contacta con Recursos Humanos.'
+                }, status=400)
+        
         hoy = timezone.localdate()
         asistencia_hoy = Asistencias.objects.filter(
             idempleado=empleado,
@@ -223,10 +260,8 @@ def registrar_entrada(request):
                 'hora_entrada': asistencia_hoy.horaentrada.strftime('%H:%M')
             }, status=400)
         
-        # Obtener el rol actual del usuario
         rol = Roles.objects.filter(usuxroles__idusuarios_id=usuario_id).first()
         
-        # Crear registro de asistencia
         hora_actual = timezone.localtime().time()
         asistencia = Asistencias.objects.create(
             idempleado=empleado,
@@ -258,7 +293,6 @@ def registrar_salida(request):
     try:
         empleado = Empleados.objects.get(idusuarios_id=usuario_id)
         
-        # Buscar la asistencia de hoy sin salida registrada
         hoy = timezone.localdate()
         asistencia = Asistencias.objects.filter(
             idempleado=empleado,
@@ -271,12 +305,10 @@ def registrar_salida(request):
                 'error': 'No hay entrada registrada hoy o ya registraste tu salida'
             }, status=400)
         
-        # Registrar hora de salida
         hora_actual = timezone.localtime().time()
         asistencia.horasalida = hora_actual
         asistencia.save()
         
-        # Calcular horas trabajadas
         entrada_dt = datetime.combine(hoy, asistencia.horaentrada)
         salida_dt = datetime.combine(hoy, hora_actual)
         horas_trabajadas = (salida_dt - entrada_dt).total_seconds() / 3600
@@ -328,7 +360,6 @@ def estado_asistencia_hoy(request):
         return JsonResponse({'error': 'Empleado no encontrado'}, status=404)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-
 
 def _get_session_dict(request: HttpRequest, key: str, default: dict) -> dict:
     data = request.session.get(key)
@@ -616,10 +647,22 @@ def inicio_view(request: HttpRequest) -> HttpResponse:
         for rol in roles_usuario
     ) or roles_usuario.count() > 2
     
-    # Extraer permisos de todos los roles del usuario
+    # ⭐ NUEVO: Si el usuario tiene rol_id, solo extraer permisos de ESE rol
+    # Si no tiene rol_id (solo un rol), extraer permisos de todos los roles
     permisos_usuario = set()
     
-    for rol in roles_usuario:
+    if rol_id:
+        # Usuario con múltiples roles - solo mostrar permisos del rol actual
+        rol_actual = Roles.objects.filter(idroles=rol_id).first()
+        if rol_actual:
+            roles_a_revisar = [rol_actual]
+        else:
+            roles_a_revisar = []
+    else:
+        # Usuario con un solo rol - mostrar todos los permisos
+        roles_a_revisar = roles_usuario
+    
+    for rol in roles_a_revisar:
         nombre_rol_lower = rol.nombrerol.lower()
         descripcion_rol_lower = (rol.descripcionrol or '').lower()
         
@@ -672,7 +715,7 @@ def inicio_view(request: HttpRequest) -> HttpResponse:
     if rol_id:
         rol_obj = Roles.objects.filter(idroles=rol_id).first()
         if rol_obj:
-            rol_actual = rol_obj.nombrerol
+            rol_actual = f"{rol_obj.nombrearea} - {rol_obj.nombrerol}"
     
     context = {
         'nombre_usuario': nombre_usuario,
@@ -1065,7 +1108,10 @@ def api_puestos_por_area_con_permisos(request, area_id):
 
 @transaction.atomic
 def api_registrar_empleado_actualizado(request):
-    """Registra un nuevo empleado con permisos basados en su puesto."""
+    """
+    ⭐ Registra un nuevo empleado con fecha de inicio.
+    LA FECHA DE INICIO ES OBLIGATORIA Y SINCRONIZADA CON ASISTENCIAS.
+    """
     if request.method != 'POST':
         return JsonResponse({'error': 'Método no permitido'}, status=405)
 
@@ -1081,16 +1127,42 @@ def api_registrar_empleado_actualizado(request):
         email = personal_data.get('email', '').strip()
         dni = personal_data.get('dni')
         foto_base64 = personal_data.get('foto')
+        fecha_inicio = data.get('fecha_inicio', '').strip()
 
+        print(f"🔍 DEBUG - Datos recibidos:")
+        print(f"  - Nombre: {nombre}")
+        print(f"  - Apellido: {apellido}")
+        print(f"  - Email: {email}")
+        print(f"  - DNI: {dni}")
+        print(f"  - Fecha inicio: '{fecha_inicio}'")
+
+        # Validaciones básicas
         if not all([nombre, apellido, email, dni]):
             return JsonResponse({'error': 'Faltan datos personales obligatorios.'}, status=400)
+        
+        # ⭐ VALIDACIÓN CRÍTICA: Fecha de inicio OBLIGATORIA
+        if not fecha_inicio:
+            print("❌ ERROR: Fecha de inicio vacía")
+            return JsonResponse({
+                'error': '⚠️ La fecha de inicio es obligatoria. Esta fecha determina desde cuándo el empleado podrá registrar asistencias.'
+            }, status=400)
+        
+        # Validar formato de fecha
+        try:
+            fecha_inicio_obj = datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
+            print(f"✅ Fecha parseada correctamente: {fecha_inicio_obj}")
+        except ValueError as e:
+            print(f"❌ ERROR: Formato de fecha inválido: {e}")
+            return JsonResponse({'error': 'Formato de fecha inválido. Use YYYY-MM-DD'}, status=400)
 
+        # Validar unicidad
         if Usuarios.objects.filter(emailusuario__iexact=email).exists():
             return JsonResponse({'error': 'El correo electrónico ya está en uso.'}, status=400)
         
         if Usuarios.objects.filter(dniusuario=dni).exists():
             return JsonResponse({'error': 'El DNI ya está registrado.'}, status=400)
 
+        # Generar username
         username = (nombre.split(' ')[0] + apellido.replace(' ', '')).lower()
         temp_username = username
         counter = 1
@@ -1101,6 +1173,7 @@ def api_registrar_empleado_actualizado(request):
         
         password = ''.join(random.choices(string.digits, k=5))
 
+        # Crear usuario
         nuevo_usuario = Usuarios.objects.create(
             nombreusuario=username,
             apellidousuario=apellido,
@@ -1112,6 +1185,7 @@ def api_registrar_empleado_actualizado(request):
             imagenusuario=foto_base64
         )
 
+        # Obtener salario del puesto
         puesto_seleccionado = data.get('puesto', {}) or {}
         puesto_id = puesto_seleccionado.get('id')
         
@@ -1128,14 +1202,18 @@ def api_registrar_empleado_actualizado(request):
             except Roles.DoesNotExist:
                 pass
         
+        # ⭐ CREAR EMPLEADO CON FECHA DE INICIO
         nuevo_empleado = Empleados.objects.create(
             idusuarios=nuevo_usuario,
             cargoempleado=puesto_seleccionado.get('nombre', 'Sin Puesto'),
             salarioempleado=salario_puesto,
-            fechacontratado=timezone.now().date(),
+            fechacontratado=fecha_inicio_obj,  # ⭐ FECHA DE INICIO
             estado='Trabajando'
         )
+        
+        print(f"✅ Empleado creado con fecha de inicio: {fecha_inicio_obj}")
 
+        # Asignar rol y horarios
         if puesto_id:
             rol_puesto = Roles.objects.get(idroles=puesto_id)
             UsuxRoles.objects.create(idusuarios=nuevo_usuario, idroles=rol_puesto)
@@ -1179,6 +1257,7 @@ def api_registrar_empleado_actualizado(request):
                                     hora_fin=tramo['end']
                                 )
 
+        # Registrar actividad y enviar email
         try:
             registrar_actividad(
                 request,
@@ -1186,12 +1265,14 @@ def api_registrar_empleado_actualizado(request):
                 f'Creación de empleado: {nombre} {apellido}',
                 detalles={
                     'empleado_id': nuevo_empleado.idempleado,
-                    'puesto': puesto_seleccionado.get('nombre')
+                    'puesto': puesto_seleccionado.get('nombre'),
+                    'fecha_inicio': fecha_inicio
                 }
             )
+            
             send_mail(
                 subject='¡Bienvenido! Tus credenciales de acceso',
-                message=f"Hola {nombre},\n\n¡Te damos la bienvenida al sistema! A continuación encontrarás tus datos para iniciar sesión:\n\nNombre de Usuario: {username}\nContraseña Temporal: {password}\n\nTe recomendamos cambiar tu contraseña después de tu primer inicio de sesión.\n\nSaludos,\nEl equipo de La Merced.",
+                message=f"Hola {nombre},\n\n¡Te damos la bienvenida al sistema! A continuación encontrarás tus datos para iniciar sesión:\n\nNombre de Usuario: {username}\nContraseña Temporal: {password}\n\n📅 Tu fecha de inicio es: {fecha_inicio_obj.strftime('%d/%m/%Y')}\n\n⚠️ IMPORTANTE: Solo podrás registrar asistencias a partir de esta fecha.\n\nTe recomendamos cambiar tu contraseña después de tu primer inicio de sesión.\n\nSaludos,\nEl equipo de La Merced.",
                 from_email=None,
                 recipient_list=[email],
                 fail_silently=True,
@@ -1202,12 +1283,15 @@ def api_registrar_empleado_actualizado(request):
         return JsonResponse({
             'message': f'¡Empleado {nombre} {apellido} creado exitosamente!',
             'username': username,
-            'salario': salario_puesto
+            'salario': salario_puesto,
+            'fecha_inicio': fecha_inicio_obj.strftime('%d/%m/%Y')
         }, status=201)
 
     except Exception as e:
+        print(f"❌ ERROR FATAL en api_registrar_empleado_actualizado: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return JsonResponse({'error': f'Ocurrió un error inesperado: {str(e)}'}, status=500)
-
 
 def lista_empleados_view(request: HttpRequest) -> HttpResponse:
     """Vista para la lista de empleados."""
@@ -1849,9 +1933,19 @@ def api_asignar_nuevo_rol(request: HttpRequest) -> JsonResponse:
         empleado_id = data.get('empleado_id')
         puesto_id = data.get('puesto_id')
         horario_data = data.get('horario', {})
+        fecha_inicio = data.get('fecha_inicio', '').strip()  # ⭐ NUEVO
         
         if not empleado_id or not puesto_id:
             return JsonResponse({'error': 'Faltan datos obligatorios'}, status=400)
+        
+        # ⭐ NUEVO: Validar fecha de inicio
+        if not fecha_inicio:
+            return JsonResponse({'error': 'La fecha de inicio es obligatoria.'}, status=400)
+        
+        try:
+            fecha_inicio_obj = datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
+        except ValueError:
+            return JsonResponse({'error': 'Formato de fecha inválido.'}, status=400)
         
         # Verificar que el empleado existe
         empleado = Empleados.objects.select_related('idusuarios').get(idempleado=empleado_id)
@@ -1923,7 +2017,8 @@ def api_asignar_nuevo_rol(request: HttpRequest) -> JsonResponse:
                 'empleado_id': empleado.idempleado,
                 'rol_id': nuevo_rol.idroles,
                 'rol_nombre': nuevo_rol.nombrerol,
-                'area': nuevo_rol.nombrearea
+                'area': nuevo_rol.nombrearea,
+                'fecha_inicio': fecha_inicio
             }
         )
         
@@ -1937,7 +2032,8 @@ def api_asignar_nuevo_rol(request: HttpRequest) -> JsonResponse:
                 'id': nuevo_rol.idroles,
                 'nombre': nuevo_rol.nombrerol,
                 'area': nuevo_rol.nombrearea
-            }
+            },
+            'fecha_inicio': fecha_inicio
         }, status=201)
         
     except Empleados.DoesNotExist:
@@ -1947,6 +2043,394 @@ def api_asignar_nuevo_rol(request: HttpRequest) -> JsonResponse:
     except Exception as e:
         return JsonResponse({'error': f'Error al asignar rol: {str(e)}'}, status=500)
 
-
 # También agregar import al inicio del archivo:
 from django.db.models import Q
+
+# ==========================================
+# GESTIÓN DE NÓMINAS Y PAGOS
+# ==========================================
+
+def gestion_nominas_view(request: HttpRequest) -> HttpResponse:
+    """Vista para gestión de nóminas (solo administradores o encargados de nómina)."""
+    if not _verificar_autenticacion(request):
+        messages.error(request, 'Acceso denegado. Por favor, inicia sesión.')
+        return redirect('login')
+    
+    es_valido, mensaje_error = _verificar_estado_empleado(request)
+    if not es_valido:
+        request.session.flush()
+        messages.error(request, mensaje_error)
+        return redirect('login')
+    
+    usuario_id = request.session.get('usuario_id')
+    usuario = Usuarios.objects.filter(idusuarios=usuario_id).first()
+    
+    if not usuario:
+        messages.error(request, 'Acceso denegado. Por favor, inicia sesión.')
+        return redirect('login')
+    
+    roles_usuario = list(
+        Roles.objects.filter(usuxroles__idusuarios_id=usuario_id).values_list('nombrerol', flat=True)
+    )
+    
+    # Verificar que tenga permisos de nómina
+    tiene_permiso = any(
+        'administrador' in rol.lower() or 
+        'recursos humanos' in rol.lower() or
+        'nómina' in rol.lower() or
+        'nomina' in rol.lower()
+        for rol in roles_usuario
+    )
+    
+    if not tiene_permiso:
+        messages.error(request, 'No tienes permisos para acceder a esta página.')
+        return redirect('inicio')
+    
+    return render(request, 'HTML/gestion_nominas.html')
+
+
+@require_http_methods(['GET'])
+def api_nominas_lista(request: HttpRequest) -> JsonResponse:
+    """API para obtener lista de empleados con sus datos de nómina."""
+    usuario_id = request.session.get('usuario_id')
+    if not usuario_id:
+        return JsonResponse({'error': 'No autenticado'}, status=401)
+    
+    # Verificar permisos
+    roles_usuario = list(
+        Roles.objects.filter(usuxroles__idusuarios_id=usuario_id).values_list('nombrerol', flat=True)
+    )
+    
+    tiene_permiso = any(
+        'administrador' in rol.lower() or 
+        'recursos humanos' in rol.lower() or
+        'nómina' in rol.lower() or
+        'nomina' in rol.lower()
+        for rol in roles_usuario
+    )
+    
+    if not tiene_permiso:
+        return JsonResponse({'error': 'Sin permisos'}, status=403)
+    
+    try:
+        from datetime import datetime, timedelta
+        from django.db.models import Sum, Q
+        
+        # Obtener parámetros de fecha
+        fecha_inicio_str = request.GET.get('fecha_inicio')
+        fecha_fin_str = request.GET.get('fecha_fin')
+        
+        if fecha_inicio_str and fecha_fin_str:
+            fecha_inicio = datetime.strptime(fecha_inicio_str, '%Y-%m-%d').date()
+            fecha_fin = datetime.strptime(fecha_fin_str, '%Y-%m-%d').date()
+        else:
+            # Por defecto, mes actual
+            hoy = timezone.now().date()
+            fecha_inicio = hoy.replace(day=1)
+            if hoy.month == 12:
+                fecha_fin = hoy.replace(month=12, day=31)
+            else:
+                fecha_fin = (hoy.replace(month=hoy.month + 1, day=1) - timedelta(days=1))
+        
+        # Obtener todos los empleados activos
+        empleados = Empleados.objects.filter(
+            estado='Trabajando'
+        ).select_related('idusuarios').order_by('idusuarios__nombreusuario')
+        
+        empleados_data = []
+        total_horas = 0
+        total_salarios = 0
+        total_pendiente = 0
+        
+        for empleado in empleados:
+            usuario = empleado.idusuarios
+            
+            # Obtener todos los roles/puestos del empleado
+            roles = Roles.objects.filter(usuxroles__idusuarios=usuario)
+            puestos = [rol.nombrerol for rol in roles]
+            areas = list(set([rol.nombrearea for rol in roles]))
+            
+            # Calcular salario por hora (del empleado directamente)
+            salario_por_hora = empleado.salarioempleado if empleado.salarioempleado else 0
+            
+            # Obtener asistencias del período
+            asistencias = Asistencias.objects.filter(
+                idempleado=empleado,
+                fechaasistencia__range=[fecha_inicio, fecha_fin]
+            )
+            
+            # Calcular horas trabajadas
+            horas_trabajadas = 0
+            for asistencia in asistencias:
+                if asistencia.horaentrada and asistencia.horasalida:
+                    entrada_dt = datetime.combine(asistencia.fechaasistencia, asistencia.horaentrada)
+                    salida_dt = datetime.combine(asistencia.fechaasistencia, asistencia.horasalida)
+                    horas = (salida_dt - entrada_dt).total_seconds() / 3600
+                    horas_trabajadas += max(0, horas)
+            
+            # Calcular devengado (simple: horas * salario)
+            total_devengado = horas_trabajadas * salario_por_hora
+            
+            # Por ahora, sin descuentos ni pagos (se puede implementar después)
+            descuentos = 0
+            total_pagado = 0
+            saldo_pendiente = total_devengado - descuentos - total_pagado
+            
+            empleados_data.append({
+                'id': empleado.idempleado,
+                'nombre': usuario.nombreusuario,
+                'apellido': usuario.apellidousuario,
+                'dni': usuario.dniusuario,
+                'imagen': usuario.imagenusuario,
+                'puestos': puestos,
+                'areas': areas,
+                'horas_trabajadas': round(horas_trabajadas, 2),
+                'total_devengado': round(total_devengado, 2),
+                'descuentos': round(descuentos, 2),
+                'total_pagado': round(total_pagado, 2),
+                'saldo_pendiente': round(saldo_pendiente, 2)
+            })
+            
+            total_horas += horas_trabajadas
+            total_salarios += total_devengado
+            total_pendiente += saldo_pendiente
+        
+        return JsonResponse({
+            'empleados': empleados_data,
+            'estadisticas': {
+                'total_empleados': len(empleados_data),
+                'total_horas': round(total_horas, 2),
+                'total_salarios': round(total_salarios, 2),
+                'total_pendiente': round(total_pendiente, 2)
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error en api_nominas_lista: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@require_http_methods(['GET'])
+def api_nominas_detalle(request: HttpRequest, empleado_id: int) -> JsonResponse:
+    """API para obtener detalle completo de nómina de un empleado."""
+    usuario_id = request.session.get('usuario_id')
+    if not usuario_id:
+        return JsonResponse({'error': 'No autenticado'}, status=401)
+    
+    try:
+        from datetime import datetime, timedelta
+        
+        empleado = Empleados.objects.select_related('idusuarios').get(idempleado=empleado_id)
+        usuario = empleado.idusuarios
+        
+        # Obtener parámetros de fecha
+        fecha_inicio_str = request.GET.get('fecha_inicio')
+        fecha_fin_str = request.GET.get('fecha_fin')
+        
+        if fecha_inicio_str and fecha_fin_str:
+            fecha_inicio = datetime.strptime(fecha_inicio_str, '%Y-%m-%d').date()
+            fecha_fin = datetime.strptime(fecha_fin_str, '%Y-%m-%d').date()
+        else:
+            hoy = timezone.now().date()
+            fecha_inicio = hoy.replace(day=1)
+            if hoy.month == 12:
+                fecha_fin = hoy.replace(month=12, day=31)
+            else:
+                fecha_fin = (hoy.replace(month=hoy.month + 1, day=1) - timedelta(days=1))
+        
+        # Obtener roles
+        roles = Roles.objects.filter(usuxroles__idusuarios=usuario)
+        puestos = [rol.nombrerol for rol in roles]
+        
+        # Salario por hora
+        salario_por_hora = empleado.salarioempleado if empleado.salarioempleado else 0
+        
+        # Obtener asistencias
+        asistencias = Asistencias.objects.filter(
+            idempleado=empleado,
+            fechaasistencia__range=[fecha_inicio, fecha_fin]
+        ).order_by('-fechaasistencia')
+        
+        asistencias_data = []
+        horas_trabajadas = 0
+        
+        for asistencia in asistencias:
+            horas_dia = 0
+            salida_text = None
+            
+            if asistencia.horaentrada and asistencia.horasalida:
+                entrada_dt = datetime.combine(asistencia.fechaasistencia, asistencia.horaentrada)
+                salida_dt = datetime.combine(asistencia.fechaasistencia, asistencia.horasalida)
+                horas_dia = (salida_dt - entrada_dt).total_seconds() / 3600
+                horas_trabajadas += max(0, horas_dia)
+                salida_text = asistencia.horasalida.strftime('%H:%M')
+            
+            asistencias_data.append({
+                'fecha': asistencia.fechaasistencia.strftime('%d/%m/%Y'),
+                'puesto': asistencia.rol.nombrerol if asistencia.rol else 'N/A',
+                'entrada': asistencia.horaentrada.strftime('%H:%M') if asistencia.horaentrada else '-',
+                'salida': salida_text,
+                'horas': round(horas_dia, 2)
+            })
+        
+        total_devengado = horas_trabajadas * salario_por_hora
+        descuentos = 0
+        total_pagado = 0
+        saldo_pendiente = total_devengado - descuentos - total_pagado
+        
+        return JsonResponse({
+            'id': empleado.idempleado,
+            'nombre': usuario.nombreusuario,
+            'apellido': usuario.apellidousuario,
+            'dni': usuario.dniusuario,
+            'puestos': puestos,
+            'horas_trabajadas': round(horas_trabajadas, 2),
+            'total_devengado': round(total_devengado, 2),
+            'descuentos': round(descuentos, 2),
+            'total_pagado': round(total_pagado, 2),
+            'saldo_pendiente': round(saldo_pendiente, 2),
+            'asistencias': asistencias_data,
+            'movimientos': []  # Sin movimientos por ahora
+        })
+        
+    except Empleados.DoesNotExist:
+        return JsonResponse({'error': 'Empleado no encontrado'}, status=404)
+    except Exception as e:
+        print(f"Error en api_nominas_detalle: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@require_http_methods(['POST'])
+@transaction.atomic
+def api_nominas_registrar_pago(request: HttpRequest) -> JsonResponse:
+    """API para registrar un pago a un empleado."""
+    usuario_id = request.session.get('usuario_id')
+    if not usuario_id:
+        return JsonResponse({'error': 'No autenticado'}, status=401)
+    
+    try:
+        data = json.loads(request.body)
+        
+        empleado_id = data.get('empleado_id')
+        monto = float(data.get('monto', 0))
+        metodo = data.get('metodo', 'Efectivo')
+        observacion = data.get('observacion', '')
+        
+        if not empleado_id or monto <= 0:
+            return JsonResponse({'error': 'Datos inválidos'}, status=400)
+        
+        # Verificar que el empleado existe
+        empleado = Empleados.objects.get(idempleado=empleado_id)
+        
+        # Registrar movimiento
+        from django.db import connection
+        cursor = connection.cursor()
+        
+        cursor.execute("""
+            INSERT INTO movimientos_nomina 
+            (empleado_id, tipo, monto, concepto, observacion, fecha, usuario_registro_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, [
+            empleado_id,
+            'Pago',
+            monto,
+            f'Pago - {metodo}',
+            observacion,
+            timezone.now().date(),
+            usuario_id
+        ])
+        
+        connection.commit()
+        
+        # Registrar actividad
+        registrar_actividad(
+            request,
+            'PAGO_NOMINA',
+            f'Pago de ${monto} a {empleado.idusuarios.nombreusuario}',
+            detalles={
+                'empleado_id': empleado_id,
+                'monto': monto,
+                'metodo': metodo
+            }
+        )
+        
+        return JsonResponse({
+            'message': 'Pago registrado correctamente',
+            'monto': monto
+        })
+        
+    except Empleados.DoesNotExist:
+        return JsonResponse({'error': 'Empleado no encontrado'}, status=404)
+    except Exception as e:
+        print(f"Error en api_nominas_registrar_pago: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@require_http_methods(['POST'])
+@transaction.atomic
+def api_nominas_registrar_descuento(request: HttpRequest) -> JsonResponse:
+    """API para registrar un descuento a un empleado."""
+    usuario_id = request.session.get('usuario_id')
+    if not usuario_id:
+        return JsonResponse({'error': 'No autenticado'}, status=401)
+    
+    try:
+        data = json.loads(request.body)
+        
+        empleado_id = data.get('empleado_id')
+        monto = float(data.get('monto', 0))
+        concepto = data.get('concepto', '').strip()
+        observacion = data.get('observacion', '')
+        
+        if not empleado_id or monto <= 0 or not concepto:
+            return JsonResponse({'error': 'Datos inválidos'}, status=400)
+        
+        # Verificar que el empleado existe
+        empleado = Empleados.objects.get(idempleado=empleado_id)
+        
+        # Registrar movimiento
+        from django.db import connection
+        cursor = connection.cursor()
+        
+        cursor.execute("""
+            INSERT INTO movimientos_nomina 
+            (empleado_id, tipo, monto, concepto, observacion, fecha, usuario_registro_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, [
+            empleado_id,
+            'Descuento',
+            monto,
+            concepto,
+            observacion,
+            timezone.now().date(),
+            usuario_id
+        ])
+        
+        connection.commit()
+        
+        # Registrar actividad
+        registrar_actividad(
+            request,
+            'DESCUENTO_NOMINA',
+            f'Descuento de ${monto} a {empleado.idusuarios.nombreusuario} - {concepto}',
+            detalles={
+                'empleado_id': empleado_id,
+                'monto': monto,
+                'concepto': concepto
+            }
+        )
+        
+        return JsonResponse({
+            'message': 'Descuento registrado correctamente',
+            'monto': monto
+        })
+        
+    except Empleados.DoesNotExist:
+        return JsonResponse({'error': 'Empleado no encontrado'}, status=404)
+    except Exception as e:
+        print(f"Error en api_nominas_registrar_descuento: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)

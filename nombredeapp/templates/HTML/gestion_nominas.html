@@ -1,0 +1,170 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Nóminas</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'CSS/gestion_nominas.css' %}">
+</head>
+<body>
+    <div class="container">
+        <header class="page-header">
+            <h1><i class="fas fa-money-bill-wave"></i> Gestión de Nóminas y Pagos</h1>
+            <div class="header-actions">
+                <a href="{% url 'inicio' %}" class="back-btn">
+                    <i class="fas fa-arrow-left"></i> Volver
+                </a>
+            </div>
+        </header>
+
+        <div class="filters-section">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="search-input" placeholder="Buscar empleado por nombre, DNI...">
+            </div>
+            
+            <div class="filters-row">
+                <div class="filter-group">
+                    <label>Estado de Pago:</label>
+                    <select id="filter-estado" class="filter-select">
+                        <option value="all">Todos</option>
+                        <option value="pendiente">Con Saldo Pendiente</option>
+                        <option value="pagado">Al Día</option>
+                        <option value="adelanto">Con Adelanto</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>Área:</label>
+                    <select id="filter-area" class="filter-select">
+                        <option value="all">Todas las áreas</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>Período:</label>
+                    <select id="filter-periodo" class="filter-select">
+                        <option value="mes_actual">Mes Actual</option>
+                        <option value="mes_anterior">Mes Anterior</option>
+                        <option value="ultimos_30">Últimos 30 días</option>
+                        <option value="personalizado">Personalizado</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="fecha-personalizada" class="fecha-personalizada" style="display: none;">
+                <input type="date" id="fecha-inicio" class="form-control">
+                <span>hasta</span>
+                <input type="date" id="fecha-fin" class="form-control">
+                <button class="btn btn-primary btn-sm" id="btn-aplicar-fechas">Aplicar</button>
+            </div>
+        </div>
+
+        <div class="stats-cards">
+            <div class="stat-card stat-total">
+                <div class="stat-icon"><i class="fas fa-users"></i></div>
+                <div class="stat-info">
+                    <h3 id="stat-empleados">0</h3>
+                    <p>Empleados Activos</p>
+                </div>
+            </div>
+            <div class="stat-card stat-horas">
+                <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                <div class="stat-info">
+                    <h3 id="stat-horas">0</h3>
+                    <p>Horas Totales</p>
+                </div>
+            </div>
+            <div class="stat-card stat-salarios">
+                <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
+                <div class="stat-info">
+                    <h3 id="stat-salarios">$0</h3>
+                    <p>Total a Pagar</p>
+                </div>
+            </div>
+            <div class="stat-card stat-pendiente">
+                <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="stat-info">
+                    <h3 id="stat-pendiente">$0</h3>
+                    <p>Saldo Pendiente</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <div class="table-header">
+                <div class="table-title">
+                    <i class="fas fa-list"></i> Lista de Empleados
+                </div>
+            </div>
+
+            <div id="empleados-container" class="empleados-container">
+                <div class="loading-spinner">
+                    <i class="fas fa-spinner fa-spin"></i> Cargando datos...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: DETALLE EMPLEADO -->
+    <div id="modal-detalle" class="modal-overlay">
+        <div class="modal-content modal-xlarge">
+            <h2 id="modal-detalle-titulo">
+                <i class="fas fa-user"></i> <span>Detalle de Empleado</span>
+            </h2>
+
+            <div class="modal-body-grid">
+                <div class="info-section">
+                    <h3><i class="fas fa-id-card"></i> Información Personal</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Nombre Completo:</label>
+                            <span id="detalle-nombre">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>DNI:</label>
+                            <span id="detalle-dni">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Puesto(s):</label>
+                            <div id="detalle-puestos">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <h3><i class="fas fa-calculator"></i> Resumen Financiero</h3>
+                    <div class="resumen-financiero">
+                        <div class="resumen-item positivo">
+                            <label>Horas Trabajadas:</label>
+                            <span id="detalle-horas">0h</span>
+                        </div>
+                        <div class="resumen-item positivo">
+                            <label>Total Devengado:</label>
+                            <span id="detalle-devengado">$0</span>
+                        </div>
+                        <div class="resumen-item total">
+                            <label>SALDO PENDIENTE:</label>
+                            <span id="detalle-pendiente">$0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h3><i class="fas fa-calendar-check"></i> Historial de Asistencias (Período Seleccionado)</h3>
+                <div id="historial-asistencias" class="historial-container"></div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-light" id="btn-detalle-cerrar">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{% static 'JS/audio-system.js' %}"></script>
+    <script src="{% static 'JS/gestion_nominas.js' %}"></script>
+</body>
+</html>

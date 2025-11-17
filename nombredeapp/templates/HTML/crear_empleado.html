@@ -139,6 +139,18 @@
     <div id="laboral-data" class="laboral-data">
         <div class="section">
             <h2 class="section-title">💼 <span id="titulo-seccion-laboral">Datos Laborales</span></h2>
+            
+            <!-- ⭐ NUEVO CAMPO: FECHA DE INICIO -->
+            <div class="fecha-inicio-container">
+                <div class="form-group">
+                    <label for="fecha_inicio_trabajo">
+                        <i class="fas fa-calendar-alt"></i> Fecha de Inicio: 
+                        <span class="required">*</span>
+                    </label>
+                    <input type="date" id="fecha_inicio_trabajo" required>
+                </div>
+            </div>
+
             <div class="area-puesto">
                 <div class="form-group" style="flex-grow: 1;">
                     <label>Área: <span class="required">*</span></label>
@@ -197,5 +209,74 @@
 <script src="{% static 'JS/audio-system.js' %}"></script>
 <!-- LUEGO CARGAR EL SCRIPT PRINCIPAL -->
 <script src="{% static 'JS/crear_empleado.js' %}"></script>
+
+<style>
+/* ===== ESTILOS PARA FECHA DE INICIO ===== */
+.fecha-inicio-container {
+    margin-bottom: 25px;
+}
+
+.fecha-inicio-container .form-group {
+    margin: 0;
+}
+
+.fecha-inicio-container label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    color: #495057;
+}
+
+.fecha-inicio-container label i {
+    color: #667eea;
+    font-size: 1em;
+}
+
+.fecha-inicio-container input[type="date"] {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    background-color: #ffffff;
+    font-size: 14px;
+    color: #495057;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.fecha-inicio-container input[type="date"]:hover {
+    border-color: #667eea;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+}
+
+.fecha-inicio-container input[type="date"]:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    background-color: #fff;
+}
+
+/* Estilos para navegadores específicos */
+.fecha-inicio-container input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 4px;
+    transition: all 0.2s ease;
+}
+
+.fecha-inicio-container input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    background-color: rgba(102, 126, 234, 0.1);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .fecha-inicio-container label {
+        font-size: 13px;
+    }
+}
+</style>
 </body>
 </html>

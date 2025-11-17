@@ -82,6 +82,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const modalTipoOperacion = document.getElementById('modal-tipo-operacion');
         const btnCrearNuevo = document.getElementById('btn-crear-nuevo');
         const btnAsignarRol = document.getElementById('btn-asignar-rol');
+        const btnVolverInicio = document.getElementById('btn-volver-inicio-modal');
         const mainFormContainer = document.getElementById('main-form-container');
 
         if (!modalTipoOperacion || !btnCrearNuevo || !btnAsignarRol) return;
@@ -109,6 +110,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 abrirModalBuscarEmpleado();
             }, 300);
         });
+
+        if (btnVolverInicio) {
+            btnVolverInicio.addEventListener('mouseenter', () => window.audioSystem.play('hover'));
+            btnVolverInicio.addEventListener('click', () => {
+                window.audioSystem.play('select');
+                window.location.href = document.body.dataset.inicioUrl;
+            });
+        }
     }
 
     function configurarModoCrear() {
@@ -117,14 +126,19 @@ document.addEventListener('DOMContentLoaded', function() {
         const empleadoBanner = document.getElementById('empleado-seleccionado-banner');
         const textoBtnListo = document.getElementById('texto-btn-listo');
         const tituloSeccionLaboral = document.getElementById('titulo-seccion-laboral');
+        const laboralDataSection = document.getElementById('laboral-data');
+        const btnAddLaboral = document.getElementById('btn-add-laboral');
 
         if (tituloPrincipal) tituloPrincipal.textContent = 'Añadir Nuevo Empleado';
         if (seccionDatosPersonales) seccionDatosPersonales.style.display = 'block';
         if (empleadoBanner) empleadoBanner.style.display = 'none';
         if (textoBtnListo) textoBtnListo.textContent = 'Listo';
         if (tituloSeccionLaboral) tituloSeccionLaboral.textContent = 'Datos Laborales';
+        
+        // ⭐ MOSTRAR AUTOMÁTICAMENTE LA SECCIÓN LABORAL
+        if (laboralDataSection) laboralDataSection.style.display = 'block';
+        if (btnAddLaboral) btnAddLaboral.style.display = 'none';
     }
-
     function abrirModalBuscarEmpleado() {
         const modalBuscar = document.getElementById('modal-buscar-empleado');
         const searchInput = document.getElementById('search-empleado-input');
@@ -151,7 +165,6 @@ document.addEventListener('DOMContentLoaded', function() {
         btnCancelarBusqueda.addEventListener('click', () => {
             window.audioSystem.play('select');
             modalBuscar.style.display = 'none';
-            // Volver al modal inicial
             const modalTipoOperacion = document.getElementById('modal-tipo-operacion');
             if (modalTipoOperacion) {
                 modalTipoOperacion.style.display = 'flex';
@@ -177,7 +190,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 const div = document.createElement('div');
                 div.className = 'empleado-item';
                 
-                // Construir roles actuales
                 const rolesHTML = emp.roles_actuales && emp.roles_actuales.length > 0
                     ? emp.roles_actuales.map(r => `<span class="rol-badge">${r.nombrearea} - ${r.nombrerol}</span>`).join('')
                     : '<span class="rol-badge">Sin roles</span>';
@@ -342,7 +354,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     
-        // ===== AUTOCOMPLETADO DE @GMAIL.COM =====
         if (emailInput) {
             emailInput.addEventListener('keydown', (event) => {
                 const value = event.target.value;
@@ -852,24 +863,28 @@ document.addEventListener('DOMContentLoaded', function() {
     function setupFinalSubmit() {
         const btnListo = document.getElementById('btn-listo');
         if (!btnListo) return;
-    
+
         const toBase64 = file => new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onload = () => resolve(reader.result);
             reader.onerror = error => reject(error);
         });
-    
+
         btnListo.addEventListener('click', async () => {
             window.audioSystem.play('select');
             
-            // Si estamos en modo "asignar", usar endpoint diferente
             if (modoOperacion === 'asignar') {
                 await procesarAsignarRol();
                 return;
             }
 
-            // Modo "crear" - continuar con lógica original
+            // ⭐ MODO CREAR - OBTENER FECHA DE INICIO
+            const fechaInicioInput = document.getElementById('fecha_inicio_trabajo');
+            const fechaInicio = fechaInicioInput ? fechaInicioInput.value.trim() : '';
+            
+            console.log('🔍 DEBUG - Fecha de inicio:', fechaInicio);
+
             let fotoBase64 = null;
             const fotoInput = document.getElementById('photo-input');
             if (fotoInput && fotoInput.files[0]) {
@@ -879,7 +894,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.error('Error al procesar foto:', error);
                 }
             }
-    
+
             const data = {
                 personal: {
                     nombre: document.getElementById('nombre')?.value.trim() || '',
@@ -894,18 +909,38 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 area: selectedArea,
                 puesto: selectedPuesto,
+                fecha_inicio: fechaInicio, // ⭐ INCLUIR FECHA DE INICIO
                 horario: { scheduleData: scheduleData, dayColorMap: dayColorMap }
             };
-    
+
+            console.log('📦 DEBUG - Data completo:', JSON.stringify(data, null, 2));
+
             // Validaciones básicas
             if (!data.personal.nombre || !data.personal.apellido || !data.personal.email || !data.personal.dni) {
                 window.audioSystem.play('error');
                 alert('Por favor, completa los campos obligatorios: Nombre, Apellido, DNI y Email.');
                 return;
             }
+            
             if (!data.area || !data.puesto) {
                 window.audioSystem.play('error');
                 alert('Por favor, selecciona un Área y un Puesto para el empleado.');
+                return;
+            }
+            
+            // ⭐ VALIDACIÓN CRÍTICA: Fecha de inicio
+            if (!fechaInicio) {
+                window.audioSystem.play('error');
+                alert('⚠️ Por favor, selecciona la fecha de inicio de trabajo.\n\nEsta fecha determina desde cuándo el empleado podrá registrar asistencias.');
+                
+                // Enfocar el campo de fecha
+                if (fechaInicioInput) {
+                    fechaInicioInput.focus();
+                    fechaInicioInput.style.borderColor = '#e74c3c';
+                    setTimeout(() => {
+                        fechaInicioInput.style.borderColor = '';
+                    }, 3000);
+                }
                 return;
             }
             
@@ -934,7 +969,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // Modal de confirmación
             const confirmar = await mostrarModalConfirmacion(data);
             
             if (!confirmar) {
@@ -944,7 +978,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             btnListo.disabled = true;
             btnListo.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
-    
+
             try {
                 const response = await fetch(document.body.dataset.apiRegistrarEmpleadoUrl, {
                     method: 'POST',
@@ -954,21 +988,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     body: JSON.stringify(data)
                 });
+                
                 const result = await response.json();
+                
                 if (response.ok) {
                     window.audioSystem.play('positive');
-                    alert(result.message + '\n\nUsuario: ' + result.username);
+                    alert(`✅ ${result.message}\n\n📧 Usuario: ${result.username}\n📅 Fecha de inicio: ${result.fecha_inicio}`);
                     window.location.href = document.body.dataset.inicioUrl;
                 } else {
                     window.audioSystem.play('error');
-                    alert(`Error: ${result.error}`);
+                    console.error('❌ Error del servidor:', result);
+                    alert(`❌ Error: ${result.error}`);
                     btnListo.disabled = false;
                     btnListo.innerHTML = '<i class="fas fa-check"></i> Listo';
                 }
             } catch (error) {
-                console.error('Error al enviar el formulario:', error);
+                console.error('❌ Error al enviar el formulario:', error);
                 window.audioSystem.play('error');
-                alert('Ocurrió un error de red. Inténtalo de nuevo.');
+                alert('❌ Ocurrió un error de red. Inténtalo de nuevo.');
                 btnListo.disabled = false;
                 btnListo.innerHTML = '<i class="fas fa-check"></i> Listo';
             }
@@ -977,6 +1014,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function procesarAsignarRol() {
         const btnListo = document.getElementById('btn-listo');
+        const fechaInicioInput = document.getElementById('fecha_inicio_trabajo');
+        const fechaInicio = fechaInicioInput ? fechaInicioInput.value.trim() : '';
 
         if (!selectedArea || !selectedPuesto) {
             window.audioSystem.play('error');
@@ -984,7 +1023,19 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Validación de horario
+        if (!fechaInicio) {
+            window.audioSystem.play('error');
+            alert('⚠️ Por favor, selecciona la fecha de inicio para este rol.\n\nEsta fecha determina desde cuándo el empleado podrá registrar asistencias con este nuevo rol.');
+            if (fechaInicioInput) {
+                fechaInicioInput.focus();
+                fechaInicioInput.style.borderColor = '#e74c3c';
+                setTimeout(() => {
+                    fechaInicioInput.style.borderColor = '';
+                }, 3000);
+            }
+            return;
+        }
+        
         if (Object.keys(dayColorMap).length === 0) {
             window.audioSystem.play('error');
             alert('Por favor, asigna al menos un día de trabajo para el nuevo rol.');
@@ -1012,6 +1063,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const data = {
             empleado_id: empleadoSeleccionado.id,
             puesto_id: selectedPuesto.id,
+            fecha_inicio: fechaInicio,
             horario: { scheduleData: scheduleData, dayColorMap: dayColorMap }
         };
 
@@ -1037,18 +1089,18 @@ document.addEventListener('DOMContentLoaded', function() {
             const result = await response.json();
             if (response.ok) {
                 window.audioSystem.play('positive');
-                alert(result.message);
+                alert(`✅ ${result.message}\n\n📅 Fecha de inicio: ${result.fecha_inicio}`);
                 window.location.href = document.body.dataset.inicioUrl;
             } else {
                 window.audioSystem.play('error');
-                alert(`Error: ${result.error}`);
+                alert(`❌ Error: ${result.error}`);
                 btnListo.disabled = false;
                 btnListo.innerHTML = '<i class="fas fa-check"></i> Asignar Rol';
             }
         } catch (error) {
             console.error('Error al asignar rol:', error);
             window.audioSystem.play('error');
-            alert('Ocurrió un error de red. Inténtalo de nuevo.');
+            alert('❌ Ocurrió un error de red. Inténtalo de nuevo.');
             btnListo.disabled = false;
             btnListo.innerHTML = '<i class="fas fa-check"></i> Asignar Rol';
         }
@@ -1057,6 +1109,13 @@ document.addEventListener('DOMContentLoaded', function() {
     function mostrarModalConfirmacion(data) {
         return new Promise((resolve) => {
             const totalDias = Object.keys(dayColorMap).length;
+            
+            // Formatear fecha de inicio para mostrar
+            let fechaInicioFormateada = 'No especificada';
+            if (data.fecha_inicio) {
+                const [year, month, day] = data.fecha_inicio.split('-');
+                fechaInicioFormateada = `${day}/${month}/${year}`;
+            }
             
             const modalHTML = `
                 <div id="modal-confirmacion-empleado" class="modal-confirmacion-overlay">
@@ -1091,13 +1150,17 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <span><strong>Puesto:</strong> ${data.puesto?.nombre || 'N/A'}</span>
                                 </div>
                                 <div class="dato-item">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    <span><strong>Fecha de inicio:</strong> ${fechaInicioFormateada}</span>
+                                </div>
+                                <div class="dato-item">
                                     <i class="fas fa-calendar-check"></i>
                                     <span><strong>Días laborales:</strong> ${totalDias} día(s) asignado(s)</span>
                                 </div>
                             </div>
                             <p class="modal-confirmacion-nota">
                                 <i class="fas fa-info-circle"></i>
-                                Se enviará un correo con las credenciales de acceso al email proporcionado.
+                                Se enviará un correo con las credenciales de acceso al email proporcionado. El empleado podrá registrar asistencias a partir del ${fechaInicioFormateada}.
                             </p>
                         </div>
                         <div class="modal-confirmacion-actions">
@@ -1155,6 +1218,12 @@ document.addEventListener('DOMContentLoaded', function() {
         return new Promise((resolve) => {
             const totalDias = Object.keys(dayColorMap).length;
             
+            let fechaInicioFormateada = 'No especificada';
+            if (data.fecha_inicio) {
+                const [year, month, day] = data.fecha_inicio.split('-');
+                fechaInicioFormateada = `${day}/${month}/${year}`;
+            }
+            
             const modalHTML = `
                 <div id="modal-confirmacion-empleado" class="modal-confirmacion-overlay">
                     <div class="modal-confirmacion-content">
@@ -1180,13 +1249,17 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <span><strong>Nuevo Puesto:</strong> ${selectedPuesto?.nombre || 'N/A'}</span>
                                 </div>
                                 <div class="dato-item">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    <span><strong>Fecha de inicio:</strong> ${fechaInicioFormateada}</span>
+                                </div>
+                                <div class="dato-item">
                                     <i class="fas fa-calendar-check"></i>
                                     <span><strong>Días laborales:</strong> ${totalDias} día(s) asignado(s)</span>
                                 </div>
                             </div>
                             <p class="modal-confirmacion-nota">
                                 <i class="fas fa-info-circle"></i>
-                                El empleado podrá acceder con sus credenciales actuales y tendrá los permisos del nuevo rol.
+                                El empleado podrá acceder con sus credenciales actuales y tendrá los permisos del nuevo rol. Podrá registrar asistencias para este rol a partir del ${fechaInicioFormateada}.
                             </p>
                         </div>
                         <div class="modal-confirmacion-actions">
