@@ -1,0 +1,61 @@
+{% extends "gestion_stock.html" %}
+
+{% block content %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Nombre</th>
+            <th>Contacto</th>
+            <th>Teléfono</th>
+            <th>Email</th>
+            <th>Productos</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for proveedor in proveedores %}
+        <tr>
+            <td><strong>{{ proveedor.nombre }}</strong></td>
+            <td>{{ proveedor.contacto|default:"-" }}</td>
+            <td>{{ proveedor.telefono|default:"-" }}</td>
+            <td>{{ proveedor.email|default:"-" }}</td>
+            <td>{{ proveedor.producto_set.count }}</td>
+            <td>
+                {% if proveedor.activo %}
+                    <span class="badge badge-success">Activo</span>
+                {% else %}
+                    <span class="badge badge-secondary">Inactivo</span>
+                {% endif %}
+            </td>
+            <td>
+                <a href="{% url 'gestion_stock:proveedor_update' proveedor.id %}" class="btn-icon" title="Editar">
+                    <i class="fas fa-edit"></i>
+                </a>
+                {% if proveedor.producto_set.count == 0 %}
+                <a href="{% url 'gestion_stock:proveedor_delete' proveedor.id %}" class="btn-icon delete" title="Eliminar">
+                    <i class="fas fa-trash"></i>
+                </a>
+                {% else %}
+                <span class="btn-icon" title="No se puede eliminar - Tiene productos" style="color: #ccc; cursor: not-allowed;">
+                    <i class="fas fa-trash"></i>
+                </span>
+                {% endif %}
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="7" class="empty-state">
+                <i class="fas fa-truck"></i>
+                <h3>No hay proveedores</h3>
+                <p>Comienza agregando tu primer proveedor.</p>
+                <a href="{% url 'gestion_stock:proveedor_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i>
+                    Agregar Proveedor
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

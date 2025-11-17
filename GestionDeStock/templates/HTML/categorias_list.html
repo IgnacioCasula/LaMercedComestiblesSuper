@@ -1,0 +1,57 @@
+{% extends "gestion_stock.html" %}
+
+{% block content %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Nombre</th>
+            <th>Descripción</th>
+            <th>Productos</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for categoria in categorias %}
+        <tr>
+            <td><strong>{{ categoria.nombre }}</strong></td>
+            <td>{{ categoria.descripcion|default:"-" }}</td>
+            <td>{{ categoria.producto_set.count }}</td>
+            <td>
+                {% if categoria.activa %}
+                    <span class="badge badge-success">Activa</span>
+                {% else %}
+                    <span class="badge badge-secondary">Inactiva</span>
+                {% endif %}
+            </td>
+            <td>
+                <a href="{% url 'gestion_stock:categoria_update' categoria.id %}" class="btn-icon" title="Editar">
+                    <i class="fas fa-edit"></i>
+                </a>
+                {% if categoria.producto_set.count == 0 %}
+                <a href="{% url 'gestion_stock:categoria_delete' categoria.id %}" class="btn-icon delete" title="Eliminar">
+                    <i class="fas fa-trash"></i>
+                </a>
+                {% else %}
+                <span class="btn-icon" title="No se puede eliminar - Tiene productos" style="color: #ccc; cursor: not-allowed;">
+                    <i class="fas fa-trash"></i>
+                </span>
+                {% endif %}
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5" class="empty-state">
+                <i class="fas fa-tags"></i>
+                <h3>No hay categorías</h3>
+                <p>Comienza creando tu primera categoría.</p>
+                <a href="{% url 'gestion_stock:categoria_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i>
+                    Crear Categoría
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

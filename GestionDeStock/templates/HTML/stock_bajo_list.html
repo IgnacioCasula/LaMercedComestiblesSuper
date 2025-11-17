@@ -1,0 +1,69 @@
+{% extends "gestion_stock.html" %}
+
+{% block content %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Código</th>
+            <th>Producto</th>
+            <th>Categoría</th>
+            <th>Stock Actual</th>
+            <th>Stock Mínimo</th>
+            <th>Diferencia</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for producto in productos %}
+        <tr>
+            <td>{{ producto.codigo }}</td>
+            <td><strong>{{ producto.nombre }}</strong></td>
+            <td>{{ producto.categoria.nombre }}</td>
+            <td class="stock-critico">{{ producto.stock_actual }}</td>
+            <td>{{ producto.stock_minimo }}</td>
+            <td class="stock-critico">
+                {{ producto.stock_actual|add:"-"|add:producto.stock_minimo }}
+            </td>
+            <td>
+                {% if producto.stock_actual == 0 %}
+                    <span class="badge badge-danger">Sin Stock</span>
+                {% elif producto.stock_actual <= producto.stock_minimo %}
+                    <span class="badge badge-danger">Crítico</span>
+                {% else %}
+                    <span class="badge badge-warning">Bajo</span>
+                {% endif %}
+            </td>
+            <td>
+                <a href="{% url 'gestion_stock:product_update' producto.id %}" class="btn btn-warning btn-sm">
+                    <i class="fas fa-edit"></i>
+                    Reabastecer
+                </a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="8" class="empty-state">
+                <i class="fas fa-check-circle"></i>
+                <h3>¡Excelente!</h3>
+                <p>No hay productos con stock bajo. Todo está bajo control.</p>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if productos %}
+<div style="margin-top: 20px; padding: 20px; background: #fff3cd; border-radius: 10px; border-left: 4px solid #ffc107;">
+    <h4 style="color: #856404; margin-bottom: 10px;">
+        <i class="fas fa-exclamation-triangle"></i>
+        Resumen de Stock Bajo
+    </h4>
+    <p style="margin: 0; color: #856404;">
+        <strong>Total de productos con stock bajo:</strong> {{ productos|length }}<br>
+        <strong>Productos críticos (stock ≤ mínimo):</strong> {{ productos_criticos }}<br>
+        <strong>Productos sin stock:</strong> {{ productos_sin_stock }}
+    </p>
+</div>
+{% endif %}
+{% endblock %}

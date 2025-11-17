@@ -1,0 +1,36 @@
+<aside class="sidebar">
+    <nav class="nav-menu">
+        <ul>
+            <li class="nav-item {% if request.resolver_match.url_name == 'gestion_stock' %}active{% endif %}">
+                <a href="{% url 'gestion_stock:gestion_stock' %}" style="display: flex; align-items: center; gap: 15px; text-decoration: none; color: inherit;">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+            <li class="nav-item {% if 'product' in request.resolver_match.url_name %}active{% endif %}">
+                <a href="{% url 'gestion_stock:product_list' %}" style="display: flex; align-items: center; gap: 15px; text-decoration: none; color: inherit;">
+                    <i class="fas fa-boxes"></i>
+                    <span>Productos</span>
+                </a>
+            </li>
+            <li class="nav-item {% if 'categoria' in request.resolver_match.url_name %}active{% endif %}">
+                <a href="{% url 'gestion_stock:categoria_list' %}" style="display: flex; align-items: center; gap: 15px; text-decoration: none; color: inherit;">
+                    <i class="fas fa-tags"></i>
+                    <span>Categorías</span>
+                </a>
+            </li>
+            <li class="nav-item {% if 'proveedor' in request.resolver_match.url_name %}active{% endif %}">
+                <a href="{% url 'gestion_stock:proveedor_list' %}" style="display: flex; align-items: center; gap: 15px; text-decoration: none; color: inherit;">
+                    <i class="fas fa-truck"></i>
+                    <span>Proveedores</span>
+                </a>
+            </li>
+            <li class="nav-item {% if request.resolver_match.url_name == 'stock_bajo_list' %}active{% endif %}">
+                <a href="{% url 'gestion_stock:stock_bajo_list' %}" style="display: flex; align-items: center; gap: 15px; text-decoration: none; color: inherit;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>Stock Bajo</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</aside>
