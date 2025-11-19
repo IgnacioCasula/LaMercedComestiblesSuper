@@ -90,6 +90,14 @@
                         <span>Ir a Stock</span>
                     </a>
                     {% endif %}
+
+                    {% if has_caja or is_admin %}
+                    <a href="{% url 'caja:movimientos_caja_menu' %}" class="tool-button">
+                        <i class="fas fa-exchange-alt tool-icon"></i>
+                        <span>Movimientos de Caja</span>
+                    </a>
+                    {% endif %}
+
                 </div>
             </div>
         </section>

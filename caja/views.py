@@ -5,8 +5,9 @@ from .models import Caja, UsuxSuc, Usuarios, Sucursales, Ubicaciones, Codigopost
 from .forms import AperturaCajaForm
 from .decorators import permiso_requerido
 from django.db import models
-from django.db.models import Sum  
+from django.db.models import Sum, Q  
 from .utils import registrar_actividad
+from django.http import JsonResponse
 
 def obtener_o_crear_sucursal_sistema():
     """
@@ -448,3 +449,286 @@ def obtener_ultimo_cierre(request):
             print(f"Error obteniendo último cierre: {e}")
     
     return redirect('caja:apertura_caja')
+
+
+
+
+@permiso_requerido(['Administrador', 'Cajero'])
+def movimientos_caja_menu_view(request):
+    """Vista del menú de movimientos de caja"""
+    usuario_id = request.session.get('usuario_id')
+    
+    # Verificar si el usuario es administrador
+    from nombredeapp.models import Roles, UsuxRoles
+    roles_usuario = list(
+        Roles.objects.filter(usuxroles__idusuarios_id=usuario_id).values_list('nombrerol', flat=True)
+    )
+    is_admin = 'Administrador' in roles_usuario or 'Recursos Humanos' in roles_usuario
+    
+    return render(request, "movimientos_caja_menu.html", {
+        "usuario_nombre": request.session.get('nombre_usuario', 'Usuario'),
+        "is_admin": is_admin
+    })
+
+@permiso_requerido(['Administrador'])
+def agregar_movimiento_caja_view(request):
+    """Vista para agregar movimiento de caja (solo admin)"""
+    usuario_id = request.session.get('usuario_id')
+    usuario_nombre = request.session.get('nombre_usuario', 'Usuario')
+    
+    # Obtener caja activa si existe
+    id_caja = request.session.get('id_caja')
+    caja_activa = None
+    if id_caja:
+        try:
+            caja_activa = Caja.objects.get(idcaja=id_caja)
+        except Caja.DoesNotExist:
+            pass
+    
+    if request.method == 'POST':
+        try:
+            # Obtener datos del formulario
+            tipo_movimiento = request.POST.get('tipo')
+            concepto = request.POST.get('concepto')
+            valor = float(request.POST.get('valor', 0))
+            
+            if not tipo_movimiento or not concepto:
+                messages.error(request, '❌ Tipo y Concepto son obligatorios')
+                return redirect('caja:agregar_movimiento_caja')
+            
+            # Validar que el valor sea positivo
+            if valor <= 0:
+                messages.error(request, '❌ El valor debe ser mayor a 0')
+                return redirect('caja:agregar_movimiento_caja')
+            
+            # Obtener último movimiento para calcular saldo
+            ultimo_movimiento = Movimientosdecaja.objects.filter(
+                idcaja=caja_activa
+            ).order_by('-idmovcaja').first()
+            
+            saldo_actual = ultimo_movimiento.saldomovcaja if ultimo_movimiento else (caja_activa.montoinicialcaja if caja_activa else 0)
+            
+            # Calcular nuevo saldo según el tipo
+            if tipo_movimiento == 'INGRESO':
+                nuevo_saldo = saldo_actual + valor
+            else:  # EGRESO
+                if valor > saldo_actual:
+                    messages.error(request, '❌ No hay suficiente saldo en la caja para este egreso')
+                    return redirect('caja:agregar_movimiento_caja')
+                nuevo_saldo = saldo_actual - valor
+            
+            # Crear movimiento
+            ahora = datetime.now()
+            movimiento = Movimientosdecaja.objects.create(
+                nombreusuariomovcaja=usuario_nombre,
+                fechamovcaja=ahora.date(),
+                horamovcaja=ahora.time(),
+                nombrecajamovcaja=caja_activa.nombrecaja if caja_activa else 'Caja General',
+                tipomovcaja=tipo_movimiento,
+                conceptomovcaja=concepto,
+                valormovcaja=valor,
+                saldomovcaja=nuevo_saldo,
+                idusuarios_id=usuario_id,
+                idcaja=caja_activa
+            )
+            
+            messages.success(request, '✅ Movimiento registrado correctamente')
+            registrar_actividad(
+                request,
+                'MOVIMIENTO_CAJA',
+                f'Movimiento de caja: {tipo_movimiento} - {concepto} - ${valor}',
+                detalles={
+                    'tipo': tipo_movimiento,
+                    'concepto': concepto,
+                    'valor': float(valor),
+                    'saldo': float(nuevo_saldo)
+                }
+            )
+            return redirect('caja:movimientos_caja_menu')
+            
+        except Exception as e:
+            messages.error(request, f'❌ Error al registrar movimiento: {str(e)}')
+    
+    # Opciones actualizadas para los selects
+    tipos_movimiento = [
+        ('APERTURA', 'Apertura'),
+        ('INGRESO', 'Ingreso'),
+        ('EGRESO', 'Egreso'),
+        ('CIERRE', 'Cierre'),
+    ]
+    
+    conceptos = [
+        'Arqueo final',
+        'Venta de Producto', 
+        'Pago de sueldos',
+        'Fondo Inicial',
+        'Pago de servicios',
+        'Pago Proveedor',
+        'Transf. a Caja',
+        'Gastos varios',
+        'Ajuste de caja',
+        'Otros'
+    ]
+    
+    return render(request, "agregar_movimiento_caja.html", {
+        "usuario_nombre": usuario_nombre,
+        "fecha_actual": datetime.now().strftime("%d/%m/%Y"),
+        "hora_actual": datetime.now().strftime("%H:%M"),
+        "caja_activa": caja_activa,
+        "tipos_movimiento": tipos_movimiento,
+        "conceptos": conceptos
+    })
+
+@permiso_requerido(['Administrador', 'Cajero'])
+def ver_movimientos_caja_view(request):
+    """Vista para ver movimientos de caja con filtros"""
+    movimientos = Movimientosdecaja.objects.all().order_by('-fechamovcaja', '-horamovcaja')
+    
+    # Aplicar filtros
+    usuario_filter = request.GET.get('usuario')
+    caja_filter = request.GET.get('caja')
+    tipo_filter = request.GET.get('tipo')
+    concepto_filter = request.GET.get('concepto')
+    fecha_filter = request.GET.get('fecha')
+    mes_filter = request.GET.get('mes')
+    año_filter = request.GET.get('año')
+    
+    if usuario_filter:
+        movimientos = movimientos.filter(nombreusuariomovcaja__icontains=usuario_filter)
+    if caja_filter:
+        movimientos = movimientos.filter(nombrecajamovcaja__icontains=caja_filter)
+    if tipo_filter:
+        movimientos = movimientos.filter(tipomovcaja=tipo_filter)
+    if concepto_filter:
+        movimientos = movimientos.filter(conceptomovcaja__icontains=concepto_filter)
+    if fecha_filter:
+        movimientos = movimientos.filter(fechamovcaja=fecha_filter)
+    if mes_filter:
+        movimientos = movimientos.filter(fechamovcaja__month=mes_filter)
+    if año_filter:
+        movimientos = movimientos.filter(fechamovcaja__year=año_filter)
+    
+    # Obtener valores únicos para los filtros
+    usuarios = Movimientosdecaja.objects.values_list('nombreusuariomovcaja', flat=True).distinct()
+    cajas = Movimientosdecaja.objects.values_list('nombrecajamovcaja', flat=True).distinct()
+    
+    # Opciones actualizadas para los filtros
+    tipos = ['APERTURA', 'INGRESO', 'EGRESO', 'CIERRE']
+    
+    conceptos = [
+        'Arqueo final',
+        'Venta de Producto', 
+        'Pago de sueldos',
+        'Fondo Inicial',
+        'Pago de servicios',
+        'Pago Proveedor',
+        'Transf. a Caja',
+        'Gastos varios',
+        'Ajuste de caja',
+        'Otros'
+    ]
+    
+    meses = [
+        ('01', 'Enero - 01'),
+        ('02', 'Febrero - 02'), 
+        ('03', 'Marzo - 03'),
+        ('04', 'Abril - 04'),
+        ('05', 'Mayo - 05'),
+        ('06', 'Junio - 06'),
+        ('07', 'Julio - 07'),
+        ('08', 'Agosto - 08'),
+        ('09', 'Septiembre - 09'),
+        ('10', 'Octubre - 10'),
+        ('11', 'Noviembre - 11'),
+        ('12', 'Diciembre - 12')
+    ]
+    
+    años = ['2022', '2023', '2024', '2025']
+    
+    return render(request, "ver_movimientos_caja.html", {
+        "movimientos": movimientos,
+        "usuarios": usuarios,
+        "cajas": cajas,
+        "tipos": tipos,
+        "conceptos": conceptos,
+        "meses": meses,
+        "años": años,
+        "usuario_nombre": request.session.get('nombre_usuario', 'Usuario'),
+        "filtros_activos": {
+            'usuario': usuario_filter,
+            'caja': caja_filter,
+            'tipo': tipo_filter,
+            'concepto': concepto_filter,
+            'fecha': fecha_filter,
+            'mes': mes_filter,
+            'año': año_filter,
+        }
+    })
+
+def api_movimientos_caja(request):
+    """API para obtener movimientos de caja (para imprimir)"""
+    movimientos = Movimientosdecaja.objects.all().order_by('-fechamovcaja', '-horamovcaja')
+    
+    # Aplicar mismos filtros que en la vista
+    usuario_filter = request.GET.get('usuario')
+    caja_filter = request.GET.get('caja')
+    tipo_filter = request.GET.get('tipo')
+    concepto_filter = request.GET.get('concepto')
+    fecha_filter = request.GET.get('fecha')
+    mes_filter = request.GET.get('mes')
+    año_filter = request.GET.get('año')
+    
+    if usuario_filter:
+        movimientos = movimientos.filter(nombreusuariomovcaja__icontains=usuario_filter)
+    if caja_filter:
+        movimientos = movimientos.filter(nombrecajamovcaja__icontains=caja_filter)
+    if tipo_filter:
+        movimientos = movimientos.filter(tipomovcaja=tipo_filter)
+    if concepto_filter:
+        movimientos = movimientos.filter(conceptomovcaja__icontains=concepto_filter)
+    if fecha_filter:
+        movimientos = movimientos.filter(fechamovcaja=fecha_filter)
+    if mes_filter:
+        movimientos = movimientos.filter(fechamovcaja__month=mes_filter)
+    if año_filter:
+        movimientos = movimientos.filter(fechamovcaja__year=año_filter)
+    
+    data = []
+    for mov in movimientos:
+        data.append({
+            'fecha': mov.fechamovcaja.strftime('%d/%m/%Y'),
+            'hora': mov.horamovcaja.strftime('%H:%M'),
+            'usuario': mov.nombreusuariomovcaja,
+            'caja': mov.nombrecajamovcaja,
+            'tipo': mov.tipomovcaja,
+            'concepto': mov.conceptomovcaja,
+            'valor': f"${mov.valormovcaja:,.2f}",
+            'saldo': f"${mov.saldomovcaja:,.2f}",
+        })
+    
+    return JsonResponse(data, safe=False)
+
+def api_filtros_dependientes(request):
+    """API para obtener opciones de filtros dependientes"""
+    caja_seleccionada = request.GET.get('caja')
+    tipo_seleccionado = request.GET.get('tipo')
+    
+    # Filtrar movimientos
+    movimientos = Movimientosdecaja.objects.all()
+    
+    if caja_seleccionada:
+        movimientos = movimientos.filter(nombrecajamovcaja=caja_seleccionada)
+    
+    if tipo_seleccionado:
+        movimientos = movimientos.filter(tipomovcaja=tipo_seleccionado)
+    
+    # Obtener opciones únicas
+    usuarios = movimientos.values_list('nombreusuariomovcaja', flat=True).distinct()
+    tipos = movimientos.values_list('tipomovcaja', flat=True).distinct()
+    conceptos = movimientos.values_list('conceptomovcaja', flat=True).distinct()
+    
+    return JsonResponse({
+        'usuarios': list(usuarios),
+        'tipos': list(tipos),
+        'conceptos': list(conceptos),
+    })

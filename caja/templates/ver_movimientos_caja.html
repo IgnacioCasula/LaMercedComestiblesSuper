@@ -1,0 +1,311 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ver Movimientos de Caja</title>
+    <link rel="stylesheet" href="{% static 'CSS/movimientos_caja.css' %}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container-movimientos">
+        <!-- Encabezado -->
+        <div class="encabezado-movimientos">
+            <div class="titulo-encabezado">
+                <h2>🛒 SuperMercado La Merced</h2>
+                <p class="subtitulo">Ver Movimientos de Caja</p>
+            </div>
+            <div class="info-usuario">
+                <div class="usuario-info">
+                    <span class="icono-usuario">👤</span>
+                    <span>Usuario: {{ usuario_nombre }}</span>
+                </div>
+                <div class="usuario-fecha">
+                    <span>{% now "d/m/Y" %}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="panel-filtros">
+            <div class="panel-encabezado">
+                <h2>🔍 Filtros de Búsqueda</h2>
+            </div>
+            
+            <form method="get" class="formulario-filtros" id="form-filtros">
+                <div class="filtros-grid">
+                    <div class="filtro-grupo">
+                        <label for="usuario">Usuario</label>
+                        <select name="usuario" id="usuario" class="form-control">
+                            <option value="">Todos los usuarios</option>
+                            {% for usuario in usuarios %}
+                            <option value="{{ usuario }}" {% if filtros_activos.usuario == usuario %}selected{% endif %}>
+                                {{ usuario }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="filtro-grupo">
+                        <label for="caja">Caja</label>
+                        <select name="caja" id="caja" class="form-control">
+                            <option value="">Todas las cajas</option>
+                            {% for caja in cajas %}
+                            <option value="{{ caja }}" {% if filtros_activos.caja == caja %}selected{% endif %}>
+                                {{ caja }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="filtro-grupo">
+                        <label for="tipo">Tipo</label>
+                        <select name="tipo" id="tipo" class="form-control">
+                            <option value="">Todos los tipos</option>
+                            {% for tipo in tipos %}
+                            <option value="{{ tipo }}" {% if filtros_activos.tipo == tipo %}selected{% endif %}>
+                                {{ tipo }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="filtro-grupo">
+                        <label for="concepto">Concepto</label>
+                        <select name="concepto" id="concepto" class="form-control">
+                            <option value="">Todos los conceptos</option>
+                            {% for concepto in conceptos %}
+                            <option value="{{ concepto }}" {% if filtros_activos.concepto == concepto %}selected{% endif %}>
+                                {{ concepto }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="filtro-grupo">
+                        <label for="fecha">Fecha específica</label>
+                        <input type="date" name="fecha" id="fecha" class="form-control" 
+                               value="{{ filtros_activos.fecha }}">
+                    </div>
+
+                    <div class="filtro-grupo">
+                        <label for="mes">Mes</label>
+                        <select name="mes" id="mes" class="form-control">
+                            <option value="">Todos los meses</option>
+                            {% for valor, texto in meses %}
+                            <option value="{{ valor }}" {% if filtros_activos.mes == valor %}selected{% endif %}>
+                                {{ texto }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="filtro-grupo">
+                        <label for="año">Año</label>
+                        <select name="año" id="año" class="form-control">
+                            <option value="">Todos los años</option>
+                            {% for año in años %}
+                            <option value="{{ año }}" {% if filtros_activos.año == año %}selected{% endif %}>
+                                {{ año }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="botones-filtros">
+                    <button type="submit" class="btn btn-filtrar">
+                        <i class="fas fa-search"></i>
+                        Aplicar Filtros
+                    </button>
+                    <a href="{% url 'caja:ver_movimientos_caja' %}" class="btn btn-limpiar">
+                        <i class="fas fa-broom"></i>
+                        Limpiar Filtros
+                    </a>
+                    <button type="button" id="btn-imprimir" class="btn btn-imprimir">
+                        <i class="fas fa-print"></i>
+                        Imprimir
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Tabla de movimientos -->
+        <div class="panel-tabla">
+            <div class="panel-encabezado">
+                <h2>📋 Movimientos de Caja (<span id="contador-resultados">{{ movimientos.count }}</span> resultados)</h2>
+            </div>
+            
+            <div class="tabla-container">
+                <table class="tabla-movimientos">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Fecha</th>
+                            <th>Hora</th>
+                            <th>Caja</th>
+                            <th>Tipo</th>
+                            <th>Concepto</th>
+                            <th>Valor</th>
+                            <th>Saldo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-movimientos">
+                        {% for mov in movimientos %}
+                        <tr class="movimiento-{{ mov.tipomovcaja|lower }}">
+                            <td>{{ mov.nombreusuariomovcaja }}</td>
+                            <td>{{ mov.fechamovcaja|date:"d/m/Y" }}</td>
+                            <td>{{ mov.horamovcaja|time:"H:i" }}</td>
+                            <td>{{ mov.nombrecajamovcaja }}</td>
+                            <td>
+                                <span class="badge tipo-{{ mov.tipomovcaja|lower }}">
+                                    {{ mov.tipomovcaja }}
+                                </span>
+                            </td>
+                            <td>{{ mov.conceptomovcaja }}</td>
+                            <td class="valor-movimiento">
+                                ${{ mov.valormovcaja|floatformat:2 }}
+                            </td>
+                            <td class="saldo-movimiento">
+                                ${{ mov.saldomovcaja|floatformat:2 }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center no-data">
+                                <i class="fas fa-inbox"></i>
+                                No se encontraron movimientos
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Botones de acción -->
+        <div class="botones-accion">
+            <a href="{% url 'caja:movimientos_caja_menu' %}" class="btn btn-volver">
+                <i class="fas fa-arrow-left"></i>
+                Volver al Menú
+            </a>
+        </div>
+    </div>
+
+    <!-- Modal de impresión -->
+    <div id="modalImpresion" class="modal-overlay" style="display: none;">
+        <div class="modal-content modal-impresion">
+            <div class="modal-header">
+                <h3>🖨️ Imprimir Movimientos</h3>
+                <button type="button" class="btn-cerrar" onclick="cerrarModalImpresion()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>¿Deseas imprimir los movimientos actuales con los filtros aplicados?</p>
+                <div class="opciones-impresion">
+                    <button type="button" class="btn btn-secundario" onclick="cerrarModalImpresion()">
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primario" onclick="imprimirMovimientos()">
+                        <i class="fas fa-print"></i>
+                        Imprimir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'JS/movimientos_caja.js' %}"></script>
+    
+    <script>
+    // AJAX para filtros dependientes
+    document.addEventListener('DOMContentLoaded', function() {
+        const cajaSelect = document.getElementById('caja');
+        const tipoSelect = document.getElementById('tipo');
+        const usuarioSelect = document.getElementById('usuario');
+        const conceptoSelect = document.getElementById('concepto');
+        
+        function actualizarFiltrosDependientes() {
+            const caja = cajaSelect.value;
+            const tipo = tipoSelect.value;
+            
+            // Mostrar loading
+            tipoSelect.disabled = true;
+            usuarioSelect.disabled = true;
+            conceptoSelect.disabled = true;
+            
+            fetch(`/caja/movimientos-caja/api/filtros-dependientes/?caja=${caja}&tipo=${tipo}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Actualizar tipos
+                    tipoSelect.innerHTML = '<option value="">Todos los tipos</option>';
+                    data.tipos.forEach(tipo => {
+                        const option = document.createElement('option');
+                        option.value = tipo;
+                        option.textContent = tipo;
+                        tipoSelect.appendChild(option);
+                    });
+                    
+                    // Actualizar usuarios
+                    usuarioSelect.innerHTML = '<option value="">Todos los usuarios</option>';
+                    data.usuarios.forEach(usuario => {
+                        const option = document.createElement('option');
+                        option.value = usuario;
+                        option.textContent = usuario;
+                        usuarioSelect.appendChild(option);
+                    });
+                    
+                    // Actualizar conceptos
+                    conceptoSelect.innerHTML = '<option value="">Todos los conceptos</option>';
+                    data.conceptos.forEach(concepto => {
+                        const option = document.createElement('option');
+                        option.value = concepto;
+                        option.textContent = concepto;
+                        conceptoSelect.appendChild(option);
+                    });
+                    
+                    // Restaurar selecciones si existen en los datos
+                    const tipoActual = '{{ filtros_activos.tipo }}';
+                    const usuarioActual = '{{ filtros_activos.usuario }}';
+                    const conceptoActual = '{{ filtros_activos.concepto }}';
+                    
+                    if (tipoActual && data.tipos.includes(tipoActual)) {
+                        tipoSelect.value = tipoActual;
+                    }
+                    if (usuarioActual && data.usuarios.includes(usuarioActual)) {
+                        usuarioSelect.value = usuarioActual;
+                    }
+                    if (conceptoActual && data.conceptos.includes(conceptoActual)) {
+                        conceptoSelect.value = conceptoActual;
+                    }
+                    
+                    // Habilitar selects
+                    tipoSelect.disabled = false;
+                    usuarioSelect.disabled = false;
+                    conceptoSelect.disabled = false;
+                })
+                .catch(error => {
+                    console.error('Error al cargar filtros:', error);
+                    // Habilitar selects en caso de error
+                    tipoSelect.disabled = false;
+                    usuarioSelect.disabled = false;
+                    conceptoSelect.disabled = false;
+                });
+        }
+        
+        // Event listeners para cambios en caja y tipo
+        cajaSelect.addEventListener('change', actualizarFiltrosDependientes);
+        tipoSelect.addEventListener('change', actualizarFiltrosDependientes);
+        
+        // Cargar filtros al inicio si hay una caja seleccionada
+        if (cajaSelect.value || tipoSelect.value) {
+            actualizarFiltrosDependientes();
+        }
+    });
+    </script>
+</body>
+</html>

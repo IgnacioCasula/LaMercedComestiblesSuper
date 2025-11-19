@@ -153,7 +153,7 @@
         <!-- BOTONES - AGREGAR CANCELAR -->
         <div class="boton1" style="display: flex; gap: 10px;">
           <a href="{% url 'inicio' %}" class="boton boton-secundario"> Cancelar</a>
-          <button type="submit" id="boton-cierre" class="boton boton-primario"> Cerrar Caja</button>
+          <button type="button" id="boton-cierre" class="boton boton-primario" onclick="mostrarModalCierre()"> Cerrar Caja</button>
         </div>
         {% else %}
         <div class="alert alert-warning">
@@ -175,6 +175,80 @@
         {% endfor %}
       </div>
     {% endif %}
+
+
+    <!-- Modal de confirmación de cierre -->
+    <div id="modalCierreCaja" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🔒 Confirmar Cierre de Caja</h3>
+                <button type="button" class="btn-cerrar" onclick="cerrarModalCierre()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="resumen-cierre">
+                    <h4>📊 Resumen de Cierre</h4>
+                    <div class="resumen-item">
+                        <span>Ventas en Efectivo:</span>
+                        <span>${{ ventas_efectivo|floatformat:2 }}</span>
+                    </div>
+                    <div class="resumen-item">
+                        <span>Ventas con Tarjeta:</span>
+                        <span>${{ ventas_tarjeta|floatformat:2 }}</span>
+                    </div>
+                    <div class="resumen-item">
+                        <span>Ventas por Transferencia:</span>
+                        <span>${{ ventas_transferencia|floatformat:2 }}</span>
+                    </div>
+                    <div class="resumen-item total">
+                        <span>Total Ventas Sistema:</span>
+                        <span>${{ total_sistema|floatformat:2 }}</span>
+                    </div>
+                    <div class="resumen-item destacado">
+                        <span>Efectivo Esperado:</span>
+                        <span>${{ total_efectivo_esperado|floatformat:2 }}</span>
+                    </div>
+                </div>
+                
+                <div class="alerta-importante">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div>
+                        <strong>¿Estás seguro de que deseas cerrar la caja?</strong>
+                        <p>Esta acción registrará el cierre de tu jornada y no se podrá revertir.</p>
+                    </div>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secundario" onclick="cerrarModalCierre()">
+                        <i class="fas fa-times"></i>
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primario" onclick="confirmarCierre()">
+                        <i class="fas fa-check"></i>
+                        Sí, Cerrar Caja
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function mostrarModalCierre() {
+        document.getElementById('modalCierreCaja').style.display = 'flex';
+    }
+
+    function cerrarModalCierre() {
+        document.getElementById('modalCierreCaja').style.display = 'none';
+    }
+
+    function confirmarCierre() {
+        // Enviar el formulario de cierre
+        document.querySelector('form').submit();
+    }
+    </script>
+
+
   </div>
 
   <script src="{% static 'JS/apertura_caja.js' %}"></script>
