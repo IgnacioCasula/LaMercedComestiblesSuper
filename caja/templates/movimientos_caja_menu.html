@@ -1,0 +1,57 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movimientos de Caja</title>
+    <link rel="stylesheet" href="{% static 'CSS/movimientos_caja.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="main-header">
+            <div class="header-background"></div>
+            <h1>Movimientos de Caja</h1>
+            <div class="user-info">
+                <span class="user-name">👤 {{ usuario_nombre }}</span>
+            </div>
+        </header>
+
+        <!-- Botones de acción rápida -->
+        <div class="quick-actions">
+            <a href="{% url 'inicio' %}" class="action-btn volver">
+                <i class="fas fa-arrow-left"></i>
+                Volver al Menú de Inicio
+            </a>
+        </div>
+
+        <!-- Panel principal -->
+        <main class="main-container">
+            <section class="panel herramientas-panel">
+                <h2>Opciones de Movimientos</h2>
+                <div class="panel-content">
+                    <div class="tools-grid">
+                        {% if is_admin %}
+                        <a href="{% url 'caja:agregar_movimiento_caja' %}" class="tool-button agregar">
+                            <i class="fas fa-plus-circle tool-icon"></i>
+                            <span>Agregar Movimiento de Caja</span>
+                            <small>Solo Administradores</small>
+                        </a>
+                        {% endif %}
+                        
+                        <a href="{% url 'caja:ver_movimientos_caja' %}" class="tool-button ver">
+                            <i class="fas fa-list tool-icon"></i>
+                            <span>Ver Movimientos de Caja</span>
+                            <small>Administradores y Cajeros</small>
+                        </a>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="{% static 'JS/movimientos_caja.js' %}"></script>
+</body>
+</html>
