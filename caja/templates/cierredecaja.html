@@ -53,66 +53,104 @@
       </div>
     </div>
     <!-- RESUMEN DE VENTAS - AGREGAR ESTO -->
-    <div class="resumen-ventas">
-        <h3>📊 Resumen de Ventas del Día</h3>
-        <div class="ventas-grid">
-            <div class="venta-item">
-                <span class="venta-label">Ventas en Efectivo:</span>
-                <span class="venta-monto">${{ ventas_efectivo|floatformat:2 }}</span>
+    <div class="info-calculos">
+        <h3>📊 Resumen para Cierre de Caja</h3>
+        <div class="calculos-grid">
+            <div class="calculo-item">
+                <span class="calculo-label">Monto Inicial:</span>
+                <span class="calculo-valor">${{ caja.montoinicialcaja|floatformat:2 }}</span>
             </div>
-            <div class="venta-item">
-                <span class="venta-label">Ventas con Tarjeta:</span>
-                <span class="venta-monto">${{ ventas_tarjeta|floatformat:2 }}</span>
+            
+            <div class="calculo-item">
+                <span class="calculo-label">+ Ventas Efectivo:</span>
+                <span class="calculo-valor">${{ ventas_efectivo|floatformat:2 }}</span>
             </div>
-            <div class="venta-item">
-                <span class="venta-label">Ventas por Transferencia:</span>
-                <span class="venta-monto">${{ ventas_transferencia|floatformat:2 }}</span>
+            
+            <div class="calculo-item">
+                <span class="calculo-label">+ Ventas Tarjeta:</span>
+                <span class="calculo-valor">${{ ventas_tarjeta|floatformat:2 }}</span>
             </div>
-            <div class="venta-item total">
-                <span class="venta-label">Total Ventas Sistema:</span>
-                <span class="venta-monto">${{ total_sistema|floatformat:2 }}</span>
+            
+            <div class="calculo-item">
+                <span class="calculo-label">+ Ventas Transferencia:</span>
+                <span class="calculo-valor">${{ ventas_transferencia|floatformat:2 }}</span>
+            </div>
+            
+            <div class="calculo-item total">
+                <span class="calculo-label">Total Ventas Sistema:</span>
+                <span class="calculo-valor">${{ total_sistema|floatformat:2 }}</span>
+            </div>
+            
+            <!-- NUEVO: Mostrar saldo actual del sistema -->
+            <div class="calculo-item importante">
+                <span class="calculo-label">💳 Saldo Actual en Sistema:</span>
+                <span class="calculo-valor">${{ saldo_actual_sistema|floatformat:2 }}</span>
             </div>
         </div>
     </div>
 
     <!-- ✅ NUEVO: MOVIMIENTOS DE CAJA -->
+    <!-- ✅ MOVIMIENTOS DE CAJA -->
     <div class="movimientos-caja">
-      
-
         <h3>📋 Movimientos de Caja del Día</h3>
-       
-          <div class="table-responsive">
-              <table class="table table-sm table-striped">
-                  <thead>
-                      <tr>
-                          <th>Hora</th>
-                          <th>Tipo</th>
-                          <th>Concepto</th>
-                          <th>Valor</th>
-                          <th>Saldo</th>
-                      </tr>
-                  </thead>
-                  <tbody>
-                      {% for mov in movimientos_caja %}
-                      <tr>
-                          <td>{{ mov.horamovcaja|time:"H:i" }}</td>
-                          <td>
-                              <span class="badge {% if mov.tipomovcaja == 'VENTA' %}bg-success{% else %}bg-info{% endif %}">
-                                  {{ mov.tipomovcaja }}
-                              </span>
-                          </td>
-                          <td>{{ mov.conceptomovcaja }}</td>
-                          <td>${{ mov.valormovcaja|floatformat:2 }}</td>
-                          <td>${{ mov.saldomovcaja|floatformat:2 }}</td>
-                      </tr>
-                      {% empty %}
-                      <tr>
-                          <td colspan="5" class="text-center">No hay movimientos registrados</td>
-                      </tr>
-                      {% endfor %}
-                  </tbody>
-              </table>
-          </div>
+        <div class="table-responsive">
+            <table class="table table-sm table-striped">
+                <thead>
+                    <tr>
+                        <th>Hora</th>
+                        <th>Tipo</th>
+                        <th>Concepto</th>
+                        <th>Valor</th>
+                        <th>Saldo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for mov in movimientos_caja %}
+                    <tr>
+                        <td>{{ mov.horamovcaja|time:"H:i" }}</td>
+                        <td>
+                            <span class="badge 
+                                {% if mov.tipomovcaja == 'APERTURA' %}bg-primary
+                                {% elif mov.tipomovcaja == 'INGRESO' %}bg-success
+                                {% elif mov.tipomovcaja == 'EGRESO' %}bg-danger
+                                {% elif mov.tipomovcaja == 'CIERRE' %}bg-warning
+                                {% else %}bg-secondary{% endif %}">
+                                {{ mov.tipomovcaja }}
+                            </span>
+                        </td>
+                        <td>{{ mov.conceptomovcaja }}</td>
+                        <td>
+                            {% if mov.tipomovcaja == 'INGRESO' %}
+                            <span class="text-success">+${{ mov.valormovcaja|floatformat:2 }}</span>
+                            {% elif mov.tipomovcaja == 'EGRESO' %}
+                            <span class="text-danger">-${{ mov.valormovcaja|floatformat:2 }}</span>
+                            {% else %}
+                            ${{ mov.valormovcaja|floatformat:2 }}
+                            {% endif %}
+                        </td>
+                        <td><strong>${{ mov.saldomovcaja|floatformat:2 }}</strong></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">
+                            <i class="fas fa-inbox"></i>
+                            No hay movimientos registrados hoy
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                {% if movimientos_caja %}
+                <tfoot>
+                    <tr class="table-active">
+                        <td colspan="3"><strong>Total Final:</strong></td>
+                        <td colspan="2">
+                            <strong>${{ total_efectivo_esperado|floatformat:2 }}</strong>
+                        </td>
+                    </tr>
+                </tfoot>
+                {% endif %}
+            </table>
+        </div>
     </div>
 
 
@@ -123,14 +161,13 @@
         {% if caja %}
         <!-- EFECTIVO ESPERADO - NUEVO CAMPO -->
         <div class="FormularioMontoIni">
-          <label>💰 Efectivo Esperado en Caja</label>
+          <label>💰 Efectivo Esperado en Sistema</label>
           <div class="monto-esperado">
             <span class="divisa">$</span>
             <input type="text" class="form-control" readonly 
-                  value="{{ total_efectivo_esperado|floatformat:2 }}">
-            
+                  value="{{ saldo_actual_sistema|floatformat:2 }}">
           </div>
-          <small class="text-muted">Fondo inicial (${{ caja.montoinicialcaja|floatformat:2 }}) + Ventas efectivo</small>
+          <small class="text-muted">Saldo actual del sistema (incluye movimientos de caja)</small>
         </div>
 
         <!-- CAMPO ORIGINAL MODIFICADO -->
@@ -206,8 +243,8 @@
                         <span>${{ total_sistema|floatformat:2 }}</span>
                     </div>
                     <div class="resumen-item destacado">
-                        <span>Efectivo Esperado:</span>
-                        <span>${{ total_efectivo_esperado|floatformat:2 }}</span>
+                        <span>Saldo Actual del Sistema:</span>
+                        <span>${{ saldo_actual_sistema|floatformat:2 }}</span>
                     </div>
                 </div>
                 
@@ -243,6 +280,13 @@
     }
 
     function confirmarCierre() {
+        // Validar que se haya ingresado el monto final
+        const montoFinal = document.querySelector('input[name="monto_final_efectivo"]').value;
+        if (!montoFinal || parseFloat(montoFinal) < 0) {
+            alert('❌ Por favor ingrese un monto final válido');
+            return;
+        }
+        
         // Enviar el formulario de cierre
         document.querySelector('form').submit();
     }

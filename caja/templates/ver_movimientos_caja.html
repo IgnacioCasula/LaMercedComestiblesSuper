@@ -222,90 +222,74 @@
     <script src="{% static 'JS/movimientos_caja.js' %}"></script>
     
     <script>
-    // AJAX para filtros dependientes
-    document.addEventListener('DOMContentLoaded', function() {
+    // Función simplificada para filtros dependientes
+    function configurarFiltrosDependientes() {
         const cajaSelect = document.getElementById('caja');
         const tipoSelect = document.getElementById('tipo');
-        const usuarioSelect = document.getElementById('usuario');
-        const conceptoSelect = document.getElementById('concepto');
         
-        function actualizarFiltrosDependientes() {
+        function actualizarFiltros() {
             const caja = cajaSelect.value;
             const tipo = tipoSelect.value;
             
-            // Mostrar loading
-            tipoSelect.disabled = true;
-            usuarioSelect.disabled = true;
-            conceptoSelect.disabled = true;
-            
-            fetch(`/caja/movimientos-caja/api/filtros-dependientes/?caja=${caja}&tipo=${tipo}`)
-                .then(response => response.json())
-                .then(data => {
-                    // Actualizar tipos
-                    tipoSelect.innerHTML = '<option value="">Todos los tipos</option>';
-                    data.tipos.forEach(tipo => {
-                        const option = document.createElement('option');
-                        option.value = tipo;
-                        option.textContent = tipo;
-                        tipoSelect.appendChild(option);
+            // Solo actualizar si hay al menos un filtro seleccionado
+            if (caja || tipo) {
+                const url = `/caja/movimientos-caja/api/filtros-dependientes/?caja=${caja}&tipo=${tipo}`;
+                
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Datos recibidos:', data);
+                        
+                        // Actualizar opciones de usuarios
+                        const usuarioSelect = document.getElementById('usuario');
+                        usuarioSelect.innerHTML = '<option value="">Todos los usuarios</option>';
+                        data.usuarios.forEach(usuario => {
+                            const option = document.createElement('option');
+                            option.value = usuario;
+                            option.textContent = usuario;
+                            usuarioSelect.appendChild(option);
+                        });
+                        
+                        // Actualizar opciones de conceptos
+                        const conceptoSelect = document.getElementById('concepto');
+                        conceptoSelect.innerHTML = '<option value="">Todos los conceptos</option>';
+                        data.conceptos.forEach(concepto => {
+                            const option = document.createElement('option');
+                            option.value = concepto;
+                            option.textContent = concepto;
+                            conceptoSelect.appendChild(option);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error al cargar filtros:', error);
                     });
-                    
-                    // Actualizar usuarios
-                    usuarioSelect.innerHTML = '<option value="">Todos los usuarios</option>';
-                    data.usuarios.forEach(usuario => {
-                        const option = document.createElement('option');
-                        option.value = usuario;
-                        option.textContent = usuario;
-                        usuarioSelect.appendChild(option);
-                    });
-                    
-                    // Actualizar conceptos
-                    conceptoSelect.innerHTML = '<option value="">Todos los conceptos</option>';
-                    data.conceptos.forEach(concepto => {
-                        const option = document.createElement('option');
-                        option.value = concepto;
-                        option.textContent = concepto;
-                        conceptoSelect.appendChild(option);
-                    });
-                    
-                    // Restaurar selecciones si existen en los datos
-                    const tipoActual = '{{ filtros_activos.tipo }}';
-                    const usuarioActual = '{{ filtros_activos.usuario }}';
-                    const conceptoActual = '{{ filtros_activos.concepto }}';
-                    
-                    if (tipoActual && data.tipos.includes(tipoActual)) {
-                        tipoSelect.value = tipoActual;
-                    }
-                    if (usuarioActual && data.usuarios.includes(usuarioActual)) {
-                        usuarioSelect.value = usuarioActual;
-                    }
-                    if (conceptoActual && data.conceptos.includes(conceptoActual)) {
-                        conceptoSelect.value = conceptoActual;
-                    }
-                    
-                    // Habilitar selects
-                    tipoSelect.disabled = false;
-                    usuarioSelect.disabled = false;
-                    conceptoSelect.disabled = false;
-                })
-                .catch(error => {
-                    console.error('Error al cargar filtros:', error);
-                    // Habilitar selects en caso de error
-                    tipoSelect.disabled = false;
-                    usuarioSelect.disabled = false;
-                    conceptoSelect.disabled = false;
-                });
+            }
         }
         
-        // Event listeners para cambios en caja y tipo
-        cajaSelect.addEventListener('change', actualizarFiltrosDependientes);
-        tipoSelect.addEventListener('change', actualizarFiltrosDependientes);
-        
-        // Cargar filtros al inicio si hay una caja seleccionada
-        if (cajaSelect.value || tipoSelect.value) {
-            actualizarFiltrosDependientes();
-        }
+        // Configurar event listeners
+        cajaSelect.addEventListener('change', actualizarFiltros);
+        tipoSelect.addEventListener('change', actualizarFiltros);
+    }
+
+    // Inicializar cuando el DOM esté listo
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Inicializando filtros de movimientos');
+        configurarFiltrosDependientes();
     });
+
+    // Funciones básicas de impresión
+    function mostrarModalImpresion() {
+        document.getElementById('modalImpresion').style.display = 'flex';
+    }
+
+    function cerrarModalImpresion() {
+        document.getElementById('modalImpresion').style.display = 'none';
+    }
+
+    function imprimirMovimientos() {
+        window.print();
+        cerrarModalImpresion();
+    }
     </script>
 </body>
 </html>
