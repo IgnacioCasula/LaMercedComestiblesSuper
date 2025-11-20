@@ -329,3 +329,93 @@ textarea {
     max-height: 300px;
     overflow-y: auto;
 }
+
+/* ===== MODAL CENTRADO ===== */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+/* ===== ESTILOS PARA LA SECCIÓN DE CÁLCULOS ===== */
+.info-calculos {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-left: 4px solid #007bff;
+}
+
+.info-calculos h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+    font-size: 1.2rem;
+}
+
+.calculos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 10px;
+}
+
+.calculo-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.calculo-item.total {
+    border-top: 2px solid #28a745;
+    font-weight: bold;
+    color: #28a745;
+    padding-top: 12px;
+    margin-top: 5px;
+}
+
+.calculo-item.importante {
+    background: #fff3cd;
+    padding: 12px;
+    border-radius: 5px;
+    font-weight: bold;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+    margin-top: 10px;
+}
+
+.calculo-label {
+    font-weight: 500;
+    color: #495057;
+}
+
+.calculo-valor {
+    font-weight: 600;
+    color: #212529;
+}
+
+.calculo-item.importante .calculo-label {
+    color: #856404;
+}
+
+.calculo-item.importante .calculo-valor {
+    color: #856404;
+    font-size: 1.1em;
+}
