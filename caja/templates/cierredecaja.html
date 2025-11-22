@@ -53,6 +53,8 @@
       </div>
     </div>
     <!-- RESUMEN DE VENTAS - AGREGAR ESTO -->
+    <!-- RESUMEN DE VENTAS - ACTUALIZADO -->
+    <!-- RESUMEN DE VENTAS - MEJORADO -->
     <div class="info-calculos">
         <h3>📊 Resumen para Cierre de Caja</h3>
         <div class="calculos-grid">
@@ -81,10 +83,23 @@
                 <span class="calculo-valor">${{ total_sistema|floatformat:2 }}</span>
             </div>
             
-            <!-- NUEVO: Mostrar saldo actual del sistema -->
+            <!-- NUEVO: Mostrar ambos saldos claramente -->
             <div class="calculo-item importante">
-                <span class="calculo-label">💳 Saldo Actual en Sistema:</span>
+                <span class="calculo-label">💳 Saldo Total del Sistema:</span>
                 <span class="calculo-valor">${{ saldo_actual_sistema|floatformat:2 }}</span>
+                <small class="text-muted">(Incluye todos los métodos de pago)</small>
+            </div>
+            
+            <div class="calculo-item importante">
+                <span class="calculo-label">💰 Efectivo en Sistema:</span>
+                <span class="calculo-valor">${{ efectivo_actual_sistema|floatformat:2 }}</span>
+                <small class="text-muted">(Solo transacciones en efectivo)</small>
+            </div>
+            
+            <div class="calculo-item destacado">
+                <span class="calculo-label">🎯 Efectivo Esperado:</span>
+                <span class="calculo-valor">${{ efectivo_esperado|floatformat:2 }}</span>
+                <small class="text-muted">(Monto inicial + Ventas en efectivo)</small>
             </div>
         </div>
     </div>
@@ -159,26 +174,46 @@
       {% csrf_token %}
       <div class="AperturaPanelCuerpo">
         {% if caja %}
-        <!-- EFECTIVO ESPERADO - NUEVO CAMPO -->
+        <!-- MOSTRAR AMBOS SALDOS EN EL FORMULARIO -->
         <div class="FormularioMontoIni">
-          <label>💰 Efectivo Esperado en Sistema</label>
+          <label>💳 Saldo Total del Sistema</label>
           <div class="monto-esperado">
             <span class="divisa">$</span>
             <input type="text" class="form-control" readonly 
                   value="{{ saldo_actual_sistema|floatformat:2 }}">
           </div>
-          <small class="text-muted">Saldo actual del sistema (incluye movimientos de caja)</small>
+          <small class="text-muted">Total registrado en el sistema (todos los métodos de pago)</small>
+        </div>
+
+        <div class="FormularioMontoIni">
+          <label>💰 Efectivo en Sistema</label>
+          <div class="monto-esperado">
+            <span class="divisa">$</span>
+            <input type="text" class="form-control" readonly 
+                  value="{{ efectivo_actual_sistema|floatformat:2 }}">
+          </div>
+          <small class="text-muted">Solo transacciones en efectivo registradas</small>
+        </div>
+
+        <div class="FormularioMontoIni">
+          <label>🎯 Efectivo Esperado (Teórico)</label>
+          <div class="monto-esperado">
+            <span class="divisa">$</span>
+            <input type="text" class="form-control" readonly 
+                  value="{{ efectivo_esperado|floatformat:2 }}">
+          </div>
+          <small class="text-muted">Monto inicial (${{ caja.montoinicialcaja|floatformat:2 }}) + Ventas en efectivo (${{ ventas_efectivo|floatformat:2 }})</small>
         </div>
 
         <!-- CAMPO ORIGINAL MODIFICADO -->
         <div class="FormularioMontoIni">
-          <label>💵 Efectivo Físico Contado</label>
+          <label>💵 Efectivo Físico Contado (Real)</label>
           <div class="FormularioInputMontoIni">
             <span class="divisa">$</span>
             <input type="number" name="monto_final_efectivo" class="form-control" 
-                  step="0.01" min="0" required value="{{ caja.montofinalcaja }}" placeholder="0.00">
+                  step="0.01" min="0" required value="{{ efectivo_esperado|floatformat:2 }}" placeholder="0.00">
           </div>
-          <small class="text-muted">Ingrese el monto real contado en efectivo</small>
+          <small class="text-muted">Ingrese el monto real contado en efectivo para comparar con el esperado</small>
         </div>
 
         <div class="FormularioMontoIni">
@@ -187,7 +222,7 @@
                     placeholder="Notas sobre diferencias, incidencias..."></textarea>
         </div>
 
-        <!-- BOTONES - AGREGAR CANCELAR -->
+        <!-- BOTONES -->
         <div class="boton1" style="display: flex; gap: 10px;">
           <a href="{% url 'inicio' %}" class="boton boton-secundario"> Cancelar</a>
           <button type="button" id="boton-cierre" class="boton boton-primario" onclick="mostrarModalCierre()"> Cerrar Caja</button>
