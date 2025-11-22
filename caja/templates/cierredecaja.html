@@ -83,7 +83,7 @@
                 <span class="calculo-valor">${{ total_sistema|floatformat:2 }}</span>
             </div>
             
-            <!-- NUEVO: Mostrar ambos saldos claramente -->
+            <!-- Mostrar ambos saldos claramente -->
             <div class="calculo-item importante">
                 <span class="calculo-label">💳 Saldo Total del Sistema:</span>
                 <span class="calculo-valor">${{ saldo_actual_sistema|floatformat:2 }}</span>
@@ -95,14 +95,9 @@
                 <span class="calculo-valor">${{ efectivo_actual_sistema|floatformat:2 }}</span>
                 <small class="text-muted">(Solo transacciones en efectivo)</small>
             </div>
-            
-            <div class="calculo-item destacado">
-                <span class="calculo-label">🎯 Efectivo Esperado:</span>
-                <span class="calculo-valor">${{ efectivo_esperado|floatformat:2 }}</span>
-                <small class="text-muted">(Monto inicial + Ventas en efectivo)</small>
-            </div>
         </div>
     </div>
+
 
     <!-- ✅ NUEVO: MOVIMIENTOS DE CAJA -->
     <!-- ✅ MOVIMIENTOS DE CAJA -->
@@ -195,25 +190,15 @@
           <small class="text-muted">Solo transacciones en efectivo registradas</small>
         </div>
 
-        <div class="FormularioMontoIni">
-          <label>🎯 Efectivo Esperado (Teórico)</label>
-          <div class="monto-esperado">
-            <span class="divisa">$</span>
-            <input type="text" class="form-control" readonly 
-                  value="{{ efectivo_esperado|floatformat:2 }}">
-          </div>
-          <small class="text-muted">Monto inicial (${{ caja.montoinicialcaja|floatformat:2 }}) + Ventas en efectivo (${{ ventas_efectivo|floatformat:2 }})</small>
-        </div>
-
         <!-- CAMPO ORIGINAL MODIFICADO -->
         <div class="FormularioMontoIni">
           <label>💵 Efectivo Físico Contado (Real)</label>
           <div class="FormularioInputMontoIni">
             <span class="divisa">$</span>
             <input type="number" name="monto_final_efectivo" class="form-control" 
-                  step="0.01" min="0" required value="{{ efectivo_esperado|floatformat:2 }}" placeholder="0.00">
+                  step="0.01" min="0" required value="{{ efectivo_actual_sistema|floatformat:2 }}" placeholder="0.00">
           </div>
-          <small class="text-muted">Ingrese el monto real contado en efectivo para comparar con el esperado</small>
+          <small class="text-muted">Ingrese el monto real contado en efectivo para comparar con el efectivo en sistema</small>
         </div>
 
         <div class="FormularioMontoIni">
@@ -251,7 +236,7 @@
 
     <!-- Modal de confirmación de cierre -->
     <div id="modalCierreCaja" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
+        <div class="modalcierre">
             <div class="modal-header">
                 <h3>🔒 Confirmar Cierre de Caja</h3>
                 <button type="button" class="btn-cerrar" onclick="cerrarModalCierre()">

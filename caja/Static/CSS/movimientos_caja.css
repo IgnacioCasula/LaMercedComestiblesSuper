@@ -394,6 +394,7 @@ body {
 
 .modal-body {
     padding: 25px;
+    background-color: white;
 }
 
 .opciones-impresion {

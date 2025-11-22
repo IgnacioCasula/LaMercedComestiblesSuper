@@ -252,7 +252,7 @@ def apertura_caja_view(request):
     })
 
 def cierre_caja_view(request):
-    """Vista mejorada para cierre de caja - MOSTRAR AMBOS SALDOS"""
+    """Vista simplificada para cierre de caja - SIN EFECTIVO ESPERADO"""
     usuario_id = request.session.get('usuario_id')
     usuario_nombre = request.session.get('usuario_nombre')
     id_caja = request.session.get('id_caja')
@@ -262,7 +262,6 @@ def cierre_caja_view(request):
     ventas_tarjeta = 0
     ventas_transferencia = 0
     total_sistema = 0
-    efectivo_esperado = 0
     movimientos_caja = []
     
     if id_caja:
@@ -300,18 +299,11 @@ def cierre_caja_view(request):
                 
                 total_sistema = ventas_efectivo + ventas_tarjeta + ventas_transferencia
                 
-                # CALCULAR EFECTIVO ESPERADO: Monto inicial + ventas en efectivo
-                efectivo_esperado = caja.montoinicialcaja + ventas_efectivo
-                
                 # Obtener TODOS los movimientos del día (incluyendo ventas)
                 movimientos_caja = Movimientosdecaja.objects.filter(
                     idcaja=caja,
                     fechamovcaja=hoy
                 ).order_by('horamovcaja')
-                
-                print(f"📊 Movimientos encontrados: {movimientos_caja.count()}")
-                for mov in movimientos_caja:
-                    print(f"  - {mov.horamovcaja} | {mov.tipomovcaja} | {mov.conceptomovcaja} | ${mov.valormovcaja}")
                 
         except Caja.DoesNotExist:
             messages.error(request, "No se encontró la caja.")
@@ -325,8 +317,8 @@ def cierre_caja_view(request):
         try:
             monto_final_efectivo = float(monto_final_efectivo)
             
-            # CALCULAR DIFERENCIA CON EL EFECTIVO ESPERADO
-            diferencia = monto_final_efectivo - efectivo_esperado
+            # CALCULAR DIFERENCIA CON EL EFECTIVO EN SISTEMA
+            diferencia = monto_final_efectivo - caja.efectivo_actual
             
             # Cerrar caja
             ahora = datetime.now()
@@ -350,7 +342,7 @@ def cierre_caja_view(request):
                     tipomovcaja='CIERRE',
                     conceptomovcaja='Cierre de caja',
                     valormovcaja=0,
-                    saldomovcaja=caja.saldo_actual,  # Usar saldo actual
+                    saldomovcaja=caja.saldo_actual,
                     idusuarios_id=usuario_id,
                     idcaja=caja
                 )
@@ -380,7 +372,6 @@ def cierre_caja_view(request):
         "ventas_tarjeta": ventas_tarjeta,
         "ventas_transferencia": ventas_transferencia,
         "total_sistema": total_sistema,
-        "efectivo_esperado": efectivo_esperado,
         "movimientos_caja": movimientos_caja,
         "saldo_actual_sistema": caja.saldo_actual if caja else 0,
         "efectivo_actual_sistema": caja.efectivo_actual if caja else 0
@@ -433,7 +424,7 @@ def movimientos_caja_menu_view(request):
 
 @permiso_requerido(['Administrador'])
 def agregar_movimiento_caja_view(request):
-    """Vista para agregar movimiento de caja (solo admin) - ACTUALIZADA CON SALDO REAL"""
+    """Vista para agregar movimiento de caja (solo admin) - CORREGIDA"""
     usuario_id = request.session.get('usuario_id')
     usuario_nombre = request.session.get('nombre_usuario', 'Usuario')
     
@@ -441,6 +432,7 @@ def agregar_movimiento_caja_view(request):
     id_caja = request.session.get('id_caja')
     caja_activa = None
     saldo_actual = 0
+    efectivo_actual = 0
     caja_abierta = False
     
     if id_caja:
@@ -449,8 +441,9 @@ def agregar_movimiento_caja_view(request):
             # Verificar que la caja esté abierta
             if caja_activa.horacierrecaja == time(0, 0, 0):
                 caja_abierta = True
-                # Usar el saldo actual del modelo (no del último movimiento)
+                # Usar los saldos actuales del modelo
                 saldo_actual = caja_activa.saldo_actual
+                efectivo_actual = caja_activa.efectivo_actual
             
         except Caja.DoesNotExist:
             request.session.pop('caja_abierta', None)
@@ -477,17 +470,20 @@ def agregar_movimiento_caja_view(request):
                 messages.error(request, '❌ El valor debe ser mayor a 0')
                 return redirect('caja:agregar_movimiento_caja')
             
-            # Calcular nuevo saldo según el tipo - ACTUALIZANDO EL SALDO REAL
+            # Calcular nuevos saldos según el tipo - ACTUALIZANDO AMBOS SALDOS
             if tipo_movimiento == 'INGRESO':
                 nuevo_saldo = saldo_actual + valor
+                nuevo_efectivo = efectivo_actual + valor
             else:  # EGRESO
                 if valor > saldo_actual:
                     messages.error(request, f'❌ No hay suficiente saldo en la caja. Saldo actual: ${saldo_actual:.2f}')
                     return redirect('caja:agregar_movimiento_caja')
                 nuevo_saldo = saldo_actual - valor
-            nuevo_saldo = actualizar_saldo_caja(caja_activa, valor, tipo_movimiento == 'INGRESO')
-            # ACTUALIZAR EL SALDO REAL DE LA CAJA
+                nuevo_efectivo = efectivo_actual - valor
+            
+            # ACTUALIZAR LOS SALDOS REALES DE LA CAJA
             caja_activa.saldo_actual = nuevo_saldo
+            caja_activa.efectivo_actual = nuevo_efectivo
             caja_activa.save()
             
             # Crear movimiento
@@ -500,12 +496,12 @@ def agregar_movimiento_caja_view(request):
                 tipomovcaja=tipo_movimiento,
                 conceptomovcaja=concepto,
                 valormovcaja=valor,
-                saldomovcaja=nuevo_saldo,  # Este es el saldo calculado
+                saldomovcaja=nuevo_saldo,
                 idusuarios_id=usuario_id,
                 idcaja=caja_activa
             )
             
-            messages.success(request, f'✅ Movimiento registrado correctamente. Nuevo saldo: ${nuevo_saldo:.2f}')
+            messages.success(request, f'✅ Movimiento registrado correctamente. Nuevo saldo: ${nuevo_saldo:.2f}, Nuevo efectivo: ${nuevo_efectivo:.2f}')
             registrar_actividad(
                 request,
                 'MOVIMIENTO_CAJA',
@@ -515,7 +511,9 @@ def agregar_movimiento_caja_view(request):
                     'concepto': concepto,
                     'valor': float(valor),
                     'saldo_anterior': float(saldo_actual),
-                    'saldo_nuevo': float(nuevo_saldo)
+                    'saldo_nuevo': float(nuevo_saldo),
+                    'efectivo_anterior': float(efectivo_actual),
+                    'efectivo_nuevo': float(nuevo_efectivo)
                 }
             )
             return redirect('caja:movimientos_caja_menu')
@@ -556,11 +554,11 @@ def agregar_movimiento_caja_view(request):
         "caja_activa": caja_activa,
         "caja_abierta": caja_abierta,
         "saldo_actual": saldo_actual,
+        "efectivo_actual": efectivo_actual,
         "tipos_movimiento": tipos_movimiento,
         "conceptos_por_tipo": conceptos_por_tipo,
         "conceptos_por_tipo_json": conceptos_por_tipo_json
     })
-
 @permiso_requerido(['Administrador', 'Cajero'])
 def ver_movimientos_caja_view(request):
     """Vista para ver movimientos de caja con filtros MEJORADA"""
