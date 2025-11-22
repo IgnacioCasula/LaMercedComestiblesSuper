@@ -7,6 +7,9 @@ from django.contrib import messages
 import json
 from caja.models import Caja, Productos, Ventas, Movimientosdecaja, DetalleDeVentas, Inventarios, Ofertas
 from .forms import VentaForm, RecargoForm
+from caja.views import actualizar_saldo_caja
+
+
 
 def registrar_venta(request):
     """Vista para registrar una nueva venta"""
@@ -149,7 +152,7 @@ def buscar_producto(request):
 
 @csrf_exempt
 def procesar_venta(request):
-    """API para procesar venta via AJAX"""
+    """API para procesar venta via AJAX - CORREGIDA"""
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -175,10 +178,15 @@ def procesar_venta(request):
                     'error': 'No hay caja activa'
                 })
             
-            # Obtener oferta por defecto (usar la primera disponible)
+            # Obtener método de pago
+            metodo_pago = data.get('metodo_pago', 'EFECTIVO')
+            es_efectivo = metodo_pago.upper() in ['EFECTIVO', 'EFECTIVO']
+            
+            print(f"💰 Método de pago: {metodo_pago}, Es efectivo: {es_efectivo}")
+            
+            # Obtener oferta por defecto
             oferta_default = Ofertas.objects.first()
             if not oferta_default:
-                # Crear una oferta por defecto si no existe
                 primer_producto = Productos.objects.first()
                 if primer_producto:
                     oferta_default = Ofertas.objects.create(
@@ -199,7 +207,7 @@ def procesar_venta(request):
                 # Crear la venta
                 venta = Ventas(
                     totalventa=0,
-                    metodopago=data.get('metodo_pago', 'EFECTIVO'),
+                    metodopago=metodo_pago,
                     estadoventa='COMPLETADA',
                     fechaventa=timezone.now().date(),
                     horaventa=timezone.now().time(),
@@ -248,38 +256,53 @@ def procesar_venta(request):
                 venta.totalventa = total_venta
                 venta.save()
                 
-                # REGISTRAR MOVIMIENTO DE CAJA
+                # ACTUALIZAR CAJA SEGÚN MÉTODO DE PAGO - CORREGIDO
+                if es_efectivo:
+                    # Si es efectivo, actualizar ambos campos
+                    caja_activa.saldo_actual += total_venta
+                    caja_activa.efectivo_actual += total_venta
+                else:
+                    # Si no es efectivo, solo actualizar saldo total
+                    caja_activa.saldo_actual += total_venta
+                
+                caja_activa.save()
+                
+                # REGISTRAR MOVIMIENTO DE CAJA - CORREGIDO
                 try:
-                    # Obtener el último saldo de la caja
-                    ultimo_movimiento = Movimientosdecaja.objects.filter(
-                        idcaja=caja_activa
-                    ).order_by('-idmovcaja').first()
+                    concepto_movimiento = f"VENTA - {metodo_pago}"
                     
-                    saldo_actual = ultimo_movimiento.saldomovcaja if ultimo_movimiento else caja_activa.montoinicialcaja
-                    nuevo_saldo = saldo_actual + total_venta
-
+                    # Crear movimiento de caja para la venta
                     Movimientosdecaja.objects.create(
                         nombreusuariomovcaja=request.session.get('nombre_usuario', 'Usuario'),
                         fechamovcaja=timezone.now().date(),
                         horamovcaja=timezone.now().time(),
                         nombrecajamovcaja=caja_activa.nombrecaja,
-                        tipomovcaja='VENTA',
-                        conceptomovcaja=f'Venta #{venta.idventa} - {data.get("metodo_pago", "EFECTIVO")}',
+                        tipomovcaja='INGRESO',  # Cambiado de 'VENTA' a 'INGRESO' para consistencia
+                        conceptomovcaja=concepto_movimiento,
                         valormovcaja=total_venta,
-                        saldomovcaja=nuevo_saldo,
+                        saldomovcaja=caja_activa.saldo_actual,  # Usar el saldo actual real
                         idusuarios_id=request.session.get('usuario_id'),
                         idcaja=caja_activa
                     )
+                    print(f"✅ Movimiento de caja registrado: ${total_venta}")
+                    
                 except Exception as e:
-                    print(f"Error registrando movimiento de caja: {e}")
+                    print(f"❌ Error registrando movimiento de caja: {e}")
+                    # No hacer rollback por error en movimiento, solo log
 
                 print(f"✅ Venta procesada exitosamente: #{venta.idventa}")
+                print(f"💰 Método pago: {metodo_pago}, Total: ${total_venta}")
+                print(f"📊 Nuevo saldo: ${caja_activa.saldo_actual}, Nuevo efectivo: ${caja_activa.efectivo_actual}")
+                
                 return JsonResponse({
                     'success': True,
                     'venta_id': venta.idventa,
                     'total': float(total_venta),
                     'fecha': venta.fechaventa.strftime('%d/%m/%Y'),
-                    'hora': venta.horaventa.strftime('%H:%M')
+                    'hora': venta.horaventa.strftime('%H:%M'),
+                    'metodo_pago': metodo_pago,
+                    'nuevo_saldo': float(caja_activa.saldo_actual),
+                    'nuevo_efectivo': float(caja_activa.efectivo_actual)
                 })
                 
         except Exception as e:

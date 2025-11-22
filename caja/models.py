@@ -161,7 +161,8 @@ class Caja(models.Model):
     montoinicialcaja = models.FloatField(db_column='MontoInicialCaja')
     montofinalcaja = models.FloatField(db_column='MontoFinalCaja')
     # NUEVO CAMPO: Saldo actual en tiempo real
-    saldo_actual = models.FloatField(db_column='SaldoActual', default=0.0)
+    saldo_actual = models.FloatField(db_column='SaldoActual', default=0.0)  # Todos los métodos de pago
+    efectivo_actual = models.FloatField(db_column='EfectivoActual', default=0.0)  # Solo efectivo
     observacionapertura = models.CharField(db_column='Observacionapertura', max_length=100, blank=True, null=True)
     idsucursal = models.ForeignKey(Sucursales, on_delete=models.CASCADE, db_column='IdSucursal')
     idusuarios = models.ForeignKey(Usuarios, on_delete=models.CASCADE, db_column='IdUsuarios')

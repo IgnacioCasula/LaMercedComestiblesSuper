@@ -50,8 +50,11 @@
         <div class="UltimaOperacion" id="UltimaOperacion">
           {% if ultimo_cierre %}
             🕒 Último cierre: {{ ultimo_cierre.fecha }} {{ ultimo_cierre.hora }} - {{ ultimo_cierre.usuario }}
-            {% if ultimo_cierre.monto_final %}
-              <br>💰 Monto final: ${{ ultimo_cierre.monto_final|floatformat:2 }}
+            <br>💰 Monto final físico: ${{ ultimo_cierre.monto_final|floatformat:2 }}
+            <br>💳 Saldo del sistema: ${{ ultimo_cierre.saldo_sistema|floatformat:2 }}
+            <br>💵 Efectivo del sistema: ${{ ultimo_cierre.efectivo_sistema|floatformat:2 }}
+            {% if ultimo_cierre.diferencia != '0.00' %}
+              <br>⚖️ Diferencia: ${{ ultimo_cierre.diferencia }}
             {% endif %}
           {% else %}
             🕒 No hay registros de cierres recientes

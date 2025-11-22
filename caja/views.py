@@ -95,51 +95,48 @@ def menu_caja_view(request):
     })
 
 def apertura_caja_view(request):
-    #"""Vista para apertura de caja - CON INFORMACIÓN REAL DEL ÚLTIMO CIERRE"""
     usuario_id = request.session.get('usuario_id')
     usuario_nombre = request.session.get('nombre_usuario')
     
-    # Obtener información REAL del último cierre
+    # Verificar si ya hay una caja abierta
+    caja_abierta_existente = Caja.objects.filter(
+        idusuarios_id=usuario_id,
+        horacierrecaja=time(0, 0, 0)
+    ).first()
+    
+    if caja_abierta_existente:
+        messages.warning(request, "Ya tienes una caja abierta. Debes cerrarla antes de abrir una nueva.")
+        request.session['caja_abierta'] = True
+        request.session['id_caja'] = caja_abierta_existente.idcaja
+        return redirect("caja:menu_caja")
+    
+    # Obtener información del último cierre CORREGIDA
     ultimo_cierre_info = None
     try:
-        # Buscar el último cierre del usuario (cajas cerradas)
         ultimo_cierre = Caja.objects.filter(
             idusuarios_id=usuario_id
         ).exclude(
-            horacierrecaja=time(0, 0, 0)  # Excluir cajas abiertas
+            horacierrecaja=time(0, 0, 0)
         ).order_by('-fechacierrecaja', '-horacierrecaja').first()
         
         if ultimo_cierre:
-            # Calcular diferencia REAL del último cierre
-            # Buscar ventas de ese día para calcular diferencia precisa
-            ventas_ultimo_cierre = Ventas.objects.filter(
-                idcaja=ultimo_cierre,
-                fechaventa=ultimo_cierre.fechacierrecaja
-            )
-            
-            ventas_efectivo = ventas_ultimo_cierre.filter(metodopago='Efectivo').aggregate(
-                total=Sum('totalventa')
-            )['total'] or 0.0
-            
-            # Calcular diferencia: Efectivo real - (Fondo inicial + Ventas efectivo)
-            efectivo_esperado = ultimo_cierre.montoinicialcaja + ventas_efectivo
-            diferencia = ultimo_cierre.montofinalcaja - efectivo_esperado
-            
-            # Obtener nombre del usuario que cerró la caja
-            usuario_cierre = ultimo_cierre.idusuarios.nombreusuario
+            # Calcular diferencia CORRECTA: Efectivo físico vs Efectivo sistema
+            diferencia = ultimo_cierre.montofinalcaja - ultimo_cierre.efectivo_actual
             
             ultimo_cierre_info = {
                 'hora': ultimo_cierre.horacierrecaja.strftime('%H:%M'),
                 'fecha': ultimo_cierre.fechacierrecaja.strftime('%d/%m/%Y'),
-                'usuario': usuario_cierre,
+                'usuario': ultimo_cierre.idusuarios.nombreusuario,
                 'diferencia': f"{diferencia:.2f}",
                 'monto_final': ultimo_cierre.montofinalcaja,
-                'monto_inicial': ultimo_cierre.montoinicialcaja,
-                'ventas_efectivo': ventas_efectivo
+                'saldo_sistema': ultimo_cierre.saldo_actual,
+                'efectivo_sistema': ultimo_cierre.efectivo_actual
             }
             
     except Exception as e:
         print(f"Error obteniendo último cierre: {e}")
+    
+    # Resto del código igual...
         # En caso de error, mostrar información básica
         try:
             ultimo_cierre = Caja.objects.filter(
@@ -200,9 +197,10 @@ def apertura_caja_view(request):
             apertura.montofinalcaja = 0.0
             apertura.horacierrecaja = time(0, 0, 0)
             apertura.fechacierrecaja = apertura.fechaaperturacaja
-            apertura.nombrecaja = f"Caja {usuario_nombre} - {ahora.strftime('%d/%m %H:%M')}"
+            apertura.nombrecaja = f"Caja {usuario_nombre}"
             # INICIALIZAR EL SALDO ACTUAL CON EL MONTO INICIAL
             apertura.saldo_actual = apertura.montoinicialcaja
+            apertura.efectivo_actual = apertura.montoinicialcaja
             
             apertura.save()
             
@@ -214,7 +212,7 @@ def apertura_caja_view(request):
                     horamovcaja=ahora.time(),
                     nombrecajamovcaja=apertura.nombrecaja,
                     tipomovcaja='APERTURA',
-                    conceptomovcaja=f'Apertura de caja - {apertura.observacionapertura}',
+                    conceptomovcaja='Apertura de caja',
                     valormovcaja=apertura.montoinicialcaja,
                     saldomovcaja=apertura.montoinicialcaja,
                     idusuarios_id=usuario_id,
@@ -235,7 +233,9 @@ def apertura_caja_view(request):
                 f'Apertura de caja con monto inicial ${apertura.montoinicialcaja}',
                 detalles={
                     'caja_id': apertura.idcaja,
-                    'monto_inicial': float(apertura.montoinicialcaja)
+                    'monto_inicial': float(apertura.montoinicialcaja),
+                    'saldo_inicial': float(apertura.saldo_actual),
+                    'efectivo_inicial': float(apertura.efectivo_actual)
                 }
             )
             return redirect("inicio")
@@ -252,9 +252,9 @@ def apertura_caja_view(request):
     })
 
 def cierre_caja_view(request):
-    """Vista mejorada para cierre de caja con cálculo automático - ACTUALIZADA"""
+    """Vista mejorada para cierre de caja - MOSTRAR AMBOS SALDOS"""
     usuario_id = request.session.get('usuario_id')
-    usuario_nombre = request.session.get('nombre_usuario')
+    usuario_nombre = request.session.get('usuario_nombre')
     id_caja = request.session.get('id_caja')
     
     caja = None
@@ -262,69 +262,62 @@ def cierre_caja_view(request):
     ventas_tarjeta = 0
     ventas_transferencia = 0
     total_sistema = 0
-    total_efectivo_esperado = 0
+    efectivo_esperado = 0
     movimientos_caja = []
     
-    # Intentar obtener la caja
     if id_caja:
         try:
             caja = Caja.objects.get(idcaja=id_caja, idusuarios_id=usuario_id)
             
-            # Verificar que la caja esté abierta
             if caja.horacierrecaja != time(0, 0, 0):
                 messages.warning(request, "Esta caja ya está cerrada.")
                 request.session.pop('caja_abierta', None)
                 request.session.pop('id_caja', None)
                 caja = None
             else:
-                # CALCULAR VENTAS DEL DÍA para esta caja
                 hoy = date.today()
                 
+                # Calcular ventas por método de pago
                 ventas_dia = Ventas.objects.filter(
                     idcaja=caja,
                     fechaventa=hoy
                 )
                 
-                # Calcular totales por método de pago
-                ventas_efectivo_result = ventas_dia.filter(
+                ventas_efectivo = ventas_dia.filter(
                     models.Q(metodopago='EFECTIVO') | 
                     models.Q(metodopago='Efectivo')
-                ).aggregate(total=models.Sum('totalventa'))
-                ventas_efectivo = ventas_efectivo_result['total'] or 0.0
+                ).aggregate(total=models.Sum('totalventa'))['total'] or 0.0
                 
-                ventas_tarjeta_result = ventas_dia.filter(
+                ventas_tarjeta = ventas_dia.filter(
                     models.Q(metodopago='TARJETA DEBITO') |
                     models.Q(metodopago='TARJETA CREDITO') |
-                    models.Q(metodopago='Tarjeta Débito') |
-                    models.Q(metodopago='Tarjeta Crédito') |
                     models.Q(metodopago__icontains='TARJETA')
-                ).aggregate(total=models.Sum('totalventa'))
-                ventas_tarjeta = ventas_tarjeta_result['total'] or 0.0
+                ).aggregate(total=models.Sum('totalventa'))['total'] or 0.0
                 
-                ventas_transferencia_result = ventas_dia.filter(
-                    models.Q(metodopago='TRANSFERENCIA') |
-                    models.Q(metodopago='Transferencia')
-                ).aggregate(total=models.Sum('totalventa'))
-                ventas_transferencia = ventas_transferencia_result['total'] or 0.0
+                ventas_transferencia = ventas_dia.filter(
+                    models.Q(metodopago='TRANSFERENCIA')
+                ).aggregate(total=models.Sum('totalventa'))['total'] or 0.0
                 
                 total_sistema = ventas_efectivo + ventas_tarjeta + ventas_transferencia
                 
-                # CALCULO MEJORADO: Usar el saldo actual de la caja como base
-                # Esto ya incluye todas las ventas en efectivo y movimientos
-                total_efectivo_esperado = caja.saldo_actual
-
-                # Obtener TODOS los movimientos de caja del día
+                # CALCULAR EFECTIVO ESPERADO: Monto inicial + ventas en efectivo
+                efectivo_esperado = caja.montoinicialcaja + ventas_efectivo
+                
+                # Obtener TODOS los movimientos del día (incluyendo ventas)
                 movimientos_caja = Movimientosdecaja.objects.filter(
                     idcaja=caja,
                     fechamovcaja=hoy
                 ).order_by('horamovcaja')
+                
+                print(f"📊 Movimientos encontrados: {movimientos_caja.count()}")
+                for mov in movimientos_caja:
+                    print(f"  - {mov.horamovcaja} | {mov.tipomovcaja} | {mov.conceptomovcaja} | ${mov.valormovcaja}")
                 
         except Caja.DoesNotExist:
             messages.error(request, "No se encontró la caja.")
             request.session.pop('caja_abierta', None)
             request.session.pop('id_caja', None)
     
-    # Si es POST, procesar el cierre
     if request.method == "POST" and caja:
         monto_final_efectivo = request.POST.get('monto_final_efectivo', 0)
         observacion_cierre = request.POST.get('observacion_cierre', '')
@@ -332,8 +325,8 @@ def cierre_caja_view(request):
         try:
             monto_final_efectivo = float(monto_final_efectivo)
             
-            # CALCULAR DIFERENCIA CON EL SALDO ACTUAL REAL
-            diferencia = monto_final_efectivo - caja.saldo_actual
+            # CALCULAR DIFERENCIA CON EL EFECTIVO ESPERADO
+            diferencia = monto_final_efectivo - efectivo_esperado
             
             # Cerrar caja
             ahora = datetime.now()
@@ -341,7 +334,7 @@ def cierre_caja_view(request):
             caja.fechacierrecaja = ahora.date()
             caja.montofinalcaja = monto_final_efectivo
             
-            # Guardar observación si existe el campo
+            # Guardar observación si existe
             if hasattr(caja, 'observacioncierre'):
                 caja.observacioncierre = observacion_cierre
             
@@ -355,9 +348,9 @@ def cierre_caja_view(request):
                     horamovcaja=ahora.time(),
                     nombrecajamovcaja=caja.nombrecaja,
                     tipomovcaja='CIERRE',
-                    conceptomovcaja=f'Cierre de caja - Diferencia: ${diferencia:.2f}',
+                    conceptomovcaja='Cierre de caja',
                     valormovcaja=0,
-                    saldomovcaja=monto_final_efectivo,
+                    saldomovcaja=caja.saldo_actual,  # Usar saldo actual
                     idusuarios_id=usuario_id,
                     idcaja=caja
                 )
@@ -375,23 +368,10 @@ def cierre_caja_view(request):
             else:
                 messages.success(request, f"✅ Caja cerrada. ⚠ FALTANTE: ${abs(diferencia):.2f}")
                 
-            registrar_actividad(
-                request,
-                'CIERRE_CAJA',
-                f'Cierre de caja - Diferencia: ${diferencia:.2f}',
-                detalles={
-                    'caja_id': caja.idcaja,
-                    'diferencia': float(diferencia),
-                    'monto_final': float(monto_final_efectivo),
-                    'saldo_sistema': float(caja.saldo_actual)
-                },
-                nivel='WARNING' if abs(diferencia) > 100 else 'INFO'
-            )
             return redirect("inicio")
         except Exception as e:
             messages.error(request, f"❌ Error al cerrar la caja: {str(e)}")
     
-    # Renderizar el template
     return render(request, "cierredecaja.html", {
         "usuario_nombre": usuario_nombre,
         "fecha_actual": datetime.now().strftime("%d/%m/%Y"),
@@ -400,9 +380,10 @@ def cierre_caja_view(request):
         "ventas_tarjeta": ventas_tarjeta,
         "ventas_transferencia": ventas_transferencia,
         "total_sistema": total_sistema,
-        "total_efectivo_esperado": total_efectivo_esperado,
+        "efectivo_esperado": efectivo_esperado,
         "movimientos_caja": movimientos_caja,
-        "saldo_actual_sistema": caja.saldo_actual if caja else 0
+        "saldo_actual_sistema": caja.saldo_actual if caja else 0,
+        "efectivo_actual_sistema": caja.efectivo_actual if caja else 0
     })
 
 def obtener_ultimo_cierre(request):
@@ -504,7 +485,7 @@ def agregar_movimiento_caja_view(request):
                     messages.error(request, f'❌ No hay suficiente saldo en la caja. Saldo actual: ${saldo_actual:.2f}')
                     return redirect('caja:agregar_movimiento_caja')
                 nuevo_saldo = saldo_actual - valor
-            
+            nuevo_saldo = actualizar_saldo_caja(caja_activa, valor, tipo_movimiento == 'INGRESO')
             # ACTUALIZAR EL SALDO REAL DE LA CAJA
             caja_activa.saldo_actual = nuevo_saldo
             caja_activa.save()
@@ -598,11 +579,29 @@ def ver_movimientos_caja_view(request):
     if usuario_filter and usuario_filter != '':
         movimientos = movimientos.filter(nombreusuariomovcaja__icontains=usuario_filter)
     if caja_filter and caja_filter != '':
-        movimientos = movimientos.filter(nombrecajamovcaja__icontains=caja_filter)
+        # Filtrar solo por nombre base de caja (sin fecha/hora)
+        movimientos = movimientos.filter(
+            models.Q(nombrecajamovcaja__icontains=caja_filter) |
+            models.Q(nombrecajamovcaja__icontains=caja_filter.split(' - ')[0] if ' - ' in caja_filter else caja_filter)
+        )
     if tipo_filter and tipo_filter != '':
         movimientos = movimientos.filter(tipomovcaja=tipo_filter)
     if concepto_filter and concepto_filter != '':
-        movimientos = movimientos.filter(conceptomovcaja__icontains=concepto_filter)
+        # Simplificar conceptos para filtro
+        conceptos_simplificados = {
+            'efectivo': 'EFECTIVO',
+            'tarjeta': 'TARJETA',
+            'débito': 'DEBITO',
+            'crédito': 'CREDITO',
+            'transferencia': 'TRANSFERENCIA',
+            'apertura': 'Apertura de caja',
+            'cierre': 'Cierre de caja'
+        }
+        
+        concepto_simple = conceptos_simplificados.get(concepto_filter.lower(), concepto_filter)
+        movimientos = movimientos.filter(conceptomovcaja__icontains=concepto_simple)
+    
+    # Resto del código igual...
     if fecha_filter and fecha_filter != '':
         movimientos = movimientos.filter(fechamovcaja=fecha_filter)
     if mes_filter and mes_filter != '':
@@ -758,3 +757,26 @@ def api_filtros_dependientes(request):
         'tipos': list(tipos),
         'conceptos': list(conceptos),
     })
+
+def actualizar_saldo_caja(caja, monto, es_ingreso=True):
+    """Actualiza el saldo de la caja de manera segura"""
+    if es_ingreso:
+        caja.saldo_actual += monto
+    else:
+        caja.saldo_actual -= monto
+    caja.save()
+    return caja.saldo_actual
+
+def actualizar_saldos_caja(caja, monto, es_efectivo=True, es_ingreso=True):
+    """Actualiza ambos saldos de la caja de manera segura"""
+    if es_ingreso:
+        caja.saldo_actual += monto
+        if es_efectivo:
+            caja.efectivo_actual += monto
+    else:
+        caja.saldo_actual -= monto
+        if es_efectivo:
+            caja.efectivo_actual -= monto
+    
+    caja.save()
+    return caja.saldo_actual, caja.efectivo_actual
