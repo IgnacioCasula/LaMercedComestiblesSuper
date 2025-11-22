@@ -344,15 +344,7 @@ textarea {
     z-index: 1000;
 }
 
-.modal-content {
-    background: white;
-    border-radius: 15px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    max-width: 500px;
-    width: 90%;
-    max-height: 90vh;
-    overflow-y: auto;
-}
+
 
 /* ===== ESTILOS PARA LA SECCIÓN DE CÁLCULOS ===== */
 .info-calculos {
@@ -433,8 +425,8 @@ textarea {
     z-index: 1000;
 }
 
-.modal-content {
-    background: white;
+.modalcierre {
+    background-color: white;
     border-radius: 15px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     max-width: 500px;
