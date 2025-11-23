@@ -152,7 +152,7 @@ def buscar_producto(request):
 
 @csrf_exempt
 def procesar_venta(request):
-    """API para procesar venta via AJAX - CORREGIDA"""
+    """API para procesar venta via AJAX - CORREGIDO ZONA HORARIA"""
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -204,13 +204,16 @@ def procesar_venta(request):
                     })
             
             with transaction.atomic():
+                # ✅ USAR timezone.localtime() PARA OBTENER LA HORA LOCAL CORRECTA
+                ahora = timezone.localtime(timezone.now())
+                
                 # Crear la venta
                 venta = Ventas(
                     totalventa=0,
                     metodopago=metodo_pago,
                     estadoventa='COMPLETADA',
-                    fechaventa=timezone.now().date(),
-                    horaventa=timezone.now().time(),
+                    fechaventa=ahora.date(),
+                    horaventa=ahora.time(),
                     idusuarios_id=request.session.get('usuario_id'),
                     idofertas=oferta_default,
                     idcaja=caja_activa
@@ -256,43 +259,40 @@ def procesar_venta(request):
                 venta.totalventa = total_venta
                 venta.save()
                 
-                # ACTUALIZAR CAJA SEGÚN MÉTODO DE PAGO - CORREGIDO
+                # ACTUALIZAR CAJA SEGÚN MÉTODO DE PAGO
                 if es_efectivo:
-                    # Si es efectivo, actualizar ambos campos
                     caja_activa.saldo_actual += total_venta
                     caja_activa.efectivo_actual += total_venta
                 else:
-                    # Si no es efectivo, solo actualizar saldo total
                     caja_activa.saldo_actual += total_venta
                 
                 caja_activa.save()
                 
-                # REGISTRAR MOVIMIENTO DE CAJA - CORREGIDO
+                # ✅ REGISTRAR MOVIMIENTO DE CAJA CON LA MISMA HORA LOCAL
                 try:
                     concepto_movimiento = f"VENTA - {metodo_pago}"
                     
-                    # Crear movimiento de caja para la venta
                     Movimientosdecaja.objects.create(
                         nombreusuariomovcaja=request.session.get('nombre_usuario', 'Usuario'),
-                        fechamovcaja=timezone.now().date(),
-                        horamovcaja=timezone.now().time(),
+                        fechamovcaja=ahora.date(),
+                        horamovcaja=ahora.time(),  # ✅ MISMA HORA LOCAL
                         nombrecajamovcaja=caja_activa.nombrecaja,
-                        tipomovcaja='INGRESO',  # Cambiado de 'VENTA' a 'INGRESO' para consistencia
+                        tipomovcaja='INGRESO',
                         conceptomovcaja=concepto_movimiento,
                         valormovcaja=total_venta,
-                        saldomovcaja=caja_activa.saldo_actual,  # Usar el saldo actual real
+                        saldomovcaja=caja_activa.saldo_actual,
                         idusuarios_id=request.session.get('usuario_id'),
                         idcaja=caja_activa
                     )
-                    print(f"✅ Movimiento de caja registrado: ${total_venta}")
+                    print(f"✅ Movimiento de caja registrado: ${total_venta} a las {ahora.time()}")
                     
                 except Exception as e:
                     print(f"❌ Error registrando movimiento de caja: {e}")
-                    # No hacer rollback por error en movimiento, solo log
 
                 print(f"✅ Venta procesada exitosamente: #{venta.idventa}")
                 print(f"💰 Método pago: {metodo_pago}, Total: ${total_venta}")
-                print(f"📊 Nuevo saldo: ${caja_activa.saldo_actual}, Nuevo efectivo: ${caja_activa.efectivo_actual}")
+                print(f"🕐 Hora registrada: {ahora.time()}")
+                print(f"📊 Nuevo saldo: ${caja_activa.saldo_actual}")
                 
                 return JsonResponse({
                     'success': True,
@@ -302,7 +302,8 @@ def procesar_venta(request):
                     'hora': venta.horaventa.strftime('%H:%M'),
                     'metodo_pago': metodo_pago,
                     'nuevo_saldo': float(caja_activa.saldo_actual),
-                    'nuevo_efectivo': float(caja_activa.efectivo_actual)
+                    'nuevo_efectivo': float(caja_activa.efectivo_actual),
+                    'hora_registrada': ahora.time().strftime('%H:%M')  # Para debugging
                 })
                 
         except Exception as e:

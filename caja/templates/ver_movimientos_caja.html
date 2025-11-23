@@ -11,6 +11,14 @@
 </head>
 <body>
     <div class="container-movimientos">
+        <!-- ✅ BOTÓN VOLVER ARRIBA A LA IZQUIERDA -->
+        <div class="boton-volver-superior" style="margin-bottom: 20px;">
+            <a href="{% url 'caja:movimientos_caja_menu' %}" class="btnvolver">
+                <i class="fas fa-arrow-left"></i>
+                Volver al Menú de Movimientos
+            </a>
+        </div>
+
         <!-- Encabezado -->
         <div class="encabezado-movimientos">
             <div class="titulo-encabezado">
@@ -185,14 +193,7 @@
             </div>
         </div>
 
-        <!-- Botones de acción -->
-        <div class="botones-accion">
-            <a href="{% url 'caja:movimientos_caja_menu' %}" class="btn btn-volver">
-                <i class="fas fa-arrow-left"></i>
-                Volver al Menú
-            </a>
-        </div>
-    </div>
+        
 
     <!-- Modal de impresión -->
     <div id="modalImpresion" class="modal-overlay" style="display: none;">

@@ -9,10 +9,18 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <div class="container">
+    <div class="menumovcajaentero">
         <!-- Header -->
-        <header class="main-header">
-            <div class="header-background"></div>
+        <header class="encabezadodemenumovcaja">
+
+
+            <div class="quick-actions">
+            <a href="{% url 'inicio' %}" class="btnvolver volver">
+                <i class="fas fa-arrow-left"></i>
+                Volver al Menú de Inicio
+            </a>
+        </div>
+            
             <h1>Movimientos de Caja</h1>
             <div class="user-info">
                 <span class="user-name">👤 {{ usuario_nombre }}</span>
@@ -20,18 +28,13 @@
         </header>
 
         <!-- Botones de acción rápida -->
-        <div class="quick-actions">
-            <a href="{% url 'inicio' %}" class="action-btn volver">
-                <i class="fas fa-arrow-left"></i>
-                Volver al Menú de Inicio
-            </a>
-        </div>
+        
 
         <!-- Panel principal -->
-        <main class="main-container">
+        <main class="contenedorparaopciones">
             <section class="panel herramientas-panel">
                 <h2>Opciones de Movimientos</h2>
-                <div class="panel-content">
+                <div class="panelcontenidobotones">
                     <div class="tools-grid">
                         {% if is_admin %}
                         <a href="{% url 'caja:agregar_movimiento_caja' %}" class="tool-button agregar">

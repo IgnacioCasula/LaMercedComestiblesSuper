@@ -194,6 +194,8 @@ body {
     font-size: 0.8rem;
     font-weight: 600;
     text-transform: uppercase;
+    color: black !important;
+    
 }
 
 .tipo-apertura {
@@ -800,3 +802,98 @@ select:disabled {
         grid-template-columns: 1fr !important;
     }
 }
+
+.btnvolver {
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+    color: white;
+    text-decoration: none;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border: none;
+    cursor: pointer;
+    font-size: 15px;
+}
+
+.encabezadodemenumovcaja {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 25px 35px;
+    border-radius: 20px;
+    margin-bottom: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    flex-wrap: wrap;
+    gap: 20px;
+    width: 1100px;
+       
+
+}
+
+.emcabezadodemenumovcaja h1 {
+    font-size: 2em;
+    color: rgb(44, 62, 80);
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    margin: 0px;
+    gap: 15px;
+}
+
+.menumovcajaentero {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    
+}
+
+.panelcontenidobotones {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+}
+
+.contenedorparaopciones {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+}
+
+.tools-grid {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.tool-button {
+    flex: 1;
+    min-width: 280px; /* Ancho mínimo para cada botón */
+    max-width: 350px; /* Ancho máximo para cada botón */
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.herramientas-panel h2 {
+    display: flex;
+    align-items: center;
+    flex-direction: column; 
+}
+
+.user-info {
+    font-size: 2em;
+}
+
+
