@@ -258,15 +258,64 @@ body {
     box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);
 }
 
-.btn-secundario {
-    background: #6c757d;
+.btncancelar {
+    padding: 14px 28px;
+    border: none;
+    border-radius: 12px;
     color: white;
+    text-decoration: none;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    font-size: 15px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    position: relative;
+    overflow: hidden;
 }
 
-.btn-secundario:hover {
-    background: #5a6268;
-    transform: translateY(-2px);
+.btncancelar.btncan {
+    background: #dc3545;
 }
+
+.btncancelar:hover {
+    background:#c82333;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.btnconfirmar {
+    padding: 14px 28px;
+    border: none;
+    border-radius: 12px;
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    font-size: 15px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    position: relative;
+    overflow: hidden;
+}
+
+.btnconfirmar.btncon {
+    background: #28a745;
+}
+
+.btnconfirmar:hover {
+    background:#218838;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
 
 .btn-filtrar {
     background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);

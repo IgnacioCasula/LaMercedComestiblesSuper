@@ -119,11 +119,11 @@
 
                     <!-- Botones -->
                     <div class="botones-accion">
-                        <a href="{% url 'caja:movimientos_caja_menu' %}" class="btn btn-secundario">
+                        <a href="{% url 'caja:movimientos_caja_menu' %}" class="btncancelar btncan">
                             <i class="fas fa-times"></i>
                             Cancelar
                         </a>
-                        <button type="submit" class="btn btn-primario" id="btn-submit" {% if not caja_abierta %}disabled{% endif %}>
+                        <button type="submit" class="btnconfirmar btncon" id="btn-submit" {% if not caja_abierta %}disabled{% endif %}>
                             <i class="fas fa-check"></i>
                             Registrar Movimiento
                         </button>
