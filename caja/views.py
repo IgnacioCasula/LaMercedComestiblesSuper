@@ -252,9 +252,9 @@ def apertura_caja_view(request):
     })
 
 def cierre_caja_view(request):
-    """Vista simplificada para cierre de caja - SIN EFECTIVO ESPERADO"""
+    """Vista simplificada para cierre de caja - CORREGIDA"""
     usuario_id = request.session.get('usuario_id')
-    usuario_nombre = request.session.get('usuario_nombre')
+    usuario_nombre = request.session.get('nombre_usuario')  # Cambié de 'usuario_nombre' a 'nombre_usuario'
     id_caja = request.session.get('id_caja')
     
     caja = None
@@ -332,22 +332,24 @@ def cierre_caja_view(request):
             
             caja.save()
             
-            # Registrar movimiento de CIERRE
+            # ✅ CORREGIDO: Registrar movimiento de CIERRE - VALOR DEBE SER 0
             try:
                 Movimientosdecaja.objects.create(
                     nombreusuariomovcaja=usuario_nombre,
                     fechamovcaja=ahora.date(),
                     horamovcaja=ahora.time(),
                     nombrecajamovcaja=caja.nombrecaja,
-                    tipomovcaja='CIERRE',
-                    conceptomovcaja='Cierre de caja',
-                    valormovcaja=0,
-                    saldomovcaja=caja.saldo_actual,
+                    tipomovcaja='CIERRE',  # ✅ Tipo correcto
+                    conceptomovcaja='Cierre de caja',  # ✅ Concepto correcto
+                    valormovcaja=0,  # ✅ El cierre no afecta el valor, solo registra el evento
+                    saldomovcaja=caja.saldo_actual,  # ✅ Saldo final
                     idusuarios_id=usuario_id,
                     idcaja=caja
                 )
+                print(f"✅ Movimiento de cierre registrado para caja {caja.idcaja}")
             except Exception as e:
-                print(f"Error registrando movimiento de cierre: {e}")
+                print(f"❌ Error registrando movimiento de cierre: {e}")
+                # No mostrar error al usuario pero loguear el problema
             
             # Limpiar sesión
             request.session.pop('caja_abierta', None)
