@@ -274,7 +274,7 @@ body {
 }
 
 .btn-limpiar {
-    background: #ffc107;
+    background: #ffc107 !important;
     color: #212529;
 }
 

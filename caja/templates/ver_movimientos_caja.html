@@ -205,9 +205,49 @@
                 </button>
             </div>
             <div class="modal-body">
-                <p>¿Deseas imprimir los movimientos actuales con los filtros aplicados?</p>
+                <p><strong>¿Deseas imprimir los movimientos actuales con los filtros aplicados?</strong></p>
+                
+                <div class="configuracion-impresion">
+                    <div class="opcion-impresion">
+                        <label><strong>Destino:</strong></label>
+                        <select id="destino-impresion" class="form-control">
+                            <option value="anydesk">AnyDesk Printer</option>
+                            <option value="pdf">Guardar como PDF</option>
+                        </select>
+                    </div>
+                    
+                    <div class="opcion-impresion">
+                        <label><strong>Páginas:</strong></label>
+                        <select id="paginas-impresion" class="form-control">
+                            <option value="all">Todas</option>
+                            <option value="current">Página actual</option>
+                        </select>
+                    </div>
+                    
+                    <div class="opcion-impresion">
+                        <label><strong>Diseño:</strong></label>
+                        <select id="diseno-impresion" class="form-control">
+                            <option value="vertical">Vertical</option>
+                            <option value="horizontal">Horizontal</option>
+                        </select>
+                    </div>
+                    
+                    <div class="opcion-impresion">
+                        <label><strong>Color:</strong></label>
+                        <select id="color-impresion" class="form-control">
+                            <option value="color">Color</option>
+                            <option value="bw">Blanco y negro</option>
+                        </select>
+                    </div>
+                    
+                    <div class="info-impresion">
+                        <p><i class="fas fa-info-circle"></i> Se imprimirán <strong id="hojas-count">{{ movimientos.count }}</strong> movimientos</p>
+                    </div>
+                </div>
+                
                 <div class="opciones-impresion">
                     <button type="button" class="btn btn-secundario" onclick="cerrarModalImpresion()">
+                        <i class="fas fa-times"></i>
                         Cancelar
                     </button>
                     <button type="button" class="btn btn-primario" onclick="imprimirMovimientos()">
@@ -218,6 +258,38 @@
             </div>
         </div>
     </div>
+
+    <style>
+    .configuracion-impresion {
+        margin: 20px 0;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .opcion-impresion {
+        margin-bottom: 15px;
+    }
+
+    .opcion-impresion label {
+        font-weight: 600;
+        margin-bottom: 5px;
+        display: block;
+    }
+
+    .info-impresion {
+        margin-top: 15px;
+        padding: 10px;
+        background: #e7f3ff;
+        border-radius: 5px;
+        border-left: 4px solid #007bff;
+    }
+
+    .info-impresion p {
+        margin: 0;
+        color: #0056b3;
+    }
+    </style>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{% static 'JS/movimientos_caja.js' %}"></script>
@@ -280,17 +352,176 @@
 
     // Funciones básicas de impresión
     function mostrarModalImpresion() {
-        document.getElementById('modalImpresion').style.display = 'flex';
-    }
+    // Actualizar contador de hojas
+    const totalMovimientos = document.querySelectorAll('#tbody-movimientos tr').length;
+    document.getElementById('hojas-count').textContent = totalMovimientos;
+    
+    document.getElementById('modalImpresion').style.display = 'flex';
+}
 
     function cerrarModalImpresion() {
         document.getElementById('modalImpresion').style.display = 'none';
     }
 
     function imprimirMovimientos() {
-        window.print();
+        // Obtener configuraciones
+        const destino = document.getElementById('destino-impresion').value;
+        const paginas = document.getElementById('paginas-impresion').value;
+        const diseno = document.getElementById('diseno-impresion').value;
+        const color = document.getElementById('color-impresion').value;
+        
+        console.log('Configuración de impresión:', { destino, paginas, diseno, color });
+        
+        // Crear ventana de impresión
+        const ventanaImpresion = window.open('', '_blank');
+        const estilo = `
+            <style>
+                @media print {
+                    body { 
+                        margin: 0; 
+                        padding: 20px; 
+                        font-family: Arial, sans-serif; 
+                        font-size: 12px;
+                    }
+                    .encabezado-impresion { 
+                        text-align: center; 
+                        margin-bottom: 20px; 
+                        border-bottom: 2px solid #333;
+                        padding-bottom: 10px;
+                    }
+                    .encabezado-impresion h1 { 
+                        margin: 0; 
+                        color: #2c3e50; 
+                        font-size: 18px;
+                    }
+                    .info-impresion { 
+                        display: flex; 
+                        justify-content: space-between; 
+                        margin-bottom: 15px;
+                        font-size: 11px;
+                    }
+                    table { 
+                        width: 100%; 
+                        border-collapse: collapse; 
+                        margin-top: 10px;
+                    }
+                    th { 
+                        background-color: #34495e; 
+                        color: white; 
+                        padding: 8px; 
+                        text-align: left;
+                        font-size: 11px;
+                    }
+                    td { 
+                        padding: 6px; 
+                        border-bottom: 1px solid #ddd;
+                        font-size: 10px;
+                    }
+                    .tipo-ingreso { color: #28a745; font-weight: bold; }
+                    .tipo-egreso { color: #dc3545; font-weight: bold; }
+                    .tipo-apertura { color: #ffc107; font-weight: bold; }
+                    .tipo-cierre { color: #17a2b8; font-weight: bold; }
+                    @page { 
+                        size: ${diseno === 'horizontal' ? 'landscape' : 'portrait'}; 
+                        margin: 1cm;
+                    }
+                }
+            </style>
+        `;
+        
+        // Obtener datos de la tabla actual
+        const tabla = document.querySelector('.tabla-movimientos');
+        const filas = tabla.querySelectorAll('tbody tr');
+        
+        let contenidoTabla = '';
+        filas.forEach(fila => {
+            const celdas = fila.querySelectorAll('td');
+            let filaHTML = '<tr>';
+            celdas.forEach((celda, index) => {
+                if (index === 4) { // Columna de tipo
+                    const tipo = celda.querySelector('.badge').textContent.trim().toLowerCase();
+                    filaHTML += `<td class="tipo-${tipo}">${celda.textContent.trim()}</td>`;
+                } else {
+                    filaHTML += `<td>${celda.textContent.trim()}</td>`;
+                }
+            });
+            filaHTML += '</tr>';
+            contenidoTabla += filaHTML;
+        });
+        
+        const fechaImpresion = new Date().toLocaleDateString('es-ES');
+        const horaImpresion = new Date().toLocaleTimeString('es-ES');
+        
+        const contenido = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Movimientos de Caja - ${fechaImpresion}</title>
+                ${estilo}
+            </head>
+            <body>
+                <div class="encabezado-impresion">
+                    <h1>🛒 SuperMercado La Merced</h1>
+                    <p><strong>Reporte de Movimientos de Caja</strong></p>
+                </div>
+                
+                <div class="info-impresion">
+                    <div>Usuario: {{ usuario_nombre }}</div>
+                    <div>Fecha: ${fechaImpresion} ${horaImpresion}</div>
+                    <div>Total movimientos: ${filas.length}</div>
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Fecha</th>
+                            <th>Hora</th>
+                            <th>Caja</th>
+                            <th>Tipo</th>
+                            <th>Concepto</th>
+                            <th>Valor</th>
+                            <th>Saldo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${contenidoTabla}
+                    </tbody>
+                </table>
+                
+                <div style="margin-top: 20px; text-align: center; font-size: 10px;">
+                    <p>Generado automáticamente por Sistema La Merced</p>
+                </div>
+            </body>
+            </html>
+        `;
+        
+        ventanaImpresion.document.write(contenido);
+        ventanaImpresion.document.close();
+        
+        // Esperar a que cargue el contenido antes de imprimir
+        ventanaImpresion.onload = function() {
+            if (destino === 'pdf') {
+                // Para PDF, mostramos el diálogo de guardar
+                ventanaImpresion.print();
+            } else {
+                // Para impresora directa
+                ventanaImpresion.print();
+            }
+            
+            // Cerrar la ventana después de imprimir
+            setTimeout(() => {
+                ventanaImpresion.close();
+            }, 500);
+        };
+        
         cerrarModalImpresion();
     }
+
+    // Agregar event listener al botón de imprimir
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('btn-imprimir').addEventListener('click', mostrarModalImpresion);
+    });
     </script>
 </body>
 </html>
