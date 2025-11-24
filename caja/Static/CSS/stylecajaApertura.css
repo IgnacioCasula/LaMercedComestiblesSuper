@@ -221,12 +221,29 @@ textarea {
 }
 
 .boton-primario {
-    background-color: #41D431;
-    color: black;
+    padding: 14px 28px;
+    border: none;
+    border-radius: 12px;
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    font-size: 15px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    position: relative;
+    overflow: hidden;
+    background: #28a745;
 }
 
 .boton-primario:hover {
-    background-color: green;
+    background: #28a745;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
 }
 
 .abajo {
@@ -235,14 +252,29 @@ textarea {
 }
 
 .boton-secundario {
-    background-color:#D95353 ;
-    color: black;
+    padding: 14px 28px;
+    border: none;
+    border-radius: 12px;
+    color: white;
     text-decoration: none;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    font-size: 15px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    position: relative;
+    overflow: hidden;
+    background: #dc3545;
 }
 
 .boton-secundario:hover {
-    background-color: red;
-    text-decoration: none;
+    background:#c82333;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
 }
 
 .resumen-ventas {
@@ -552,18 +584,16 @@ textarea {
 }
 
 .btnconfirmarcierre.pr {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    color: #495057;
-    border: 2px solid #dee2e6;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    border-radius: 12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    border: 2px solid transparent;
 }
 
 .btnconfirmarcierre:hover {
-    background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
-    border-color: #adb5bd;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);
+
 }
 
 
