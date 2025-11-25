@@ -14,6 +14,8 @@
 <div id="ventas" class="container py-4">
   <div class="frame">
     <div class="d-flex align-items-center gap-2 mb-2">
+      <!-- BOTÓN VOLVER AL INICIO REPOSICIONADO -->
+      <a href="{% url 'inicio' %}" class="pill btn-purple text-decoration-none text-center">Volver al inicio</a>
       <span class="pill">🧾 Registrar Venta - Comestibles la Merced</span>
       <span class="pill">Cajero: {{ usuario_nombre }}</span>
       <span class="pill">Sucursal: {{ sucursal.nombresucursal }}</span>
@@ -83,7 +85,6 @@
         <div class="actions mt-3">
           <button class="btn-green w-100" id="btnEmitirTicket">Emitir Ticket</button>
           <button class="btn-red w-100" id="btnCancelarTodo">Limpiar Lista de Productos</button>
-          <a href="{% url 'inicio' %}" class="btn-purple w-100 text-center">Volver al inicio</a>
         </div>
       </aside>
     </div>

@@ -39,6 +39,28 @@ body {
 }
 
 
+/* ===== BOTÓN VOLVER AL INICIO REPOSICIONADO ===== */
+.btn-purple.pill {
+    background:#6f42c1;
+    color:#fff;
+    border:none;
+    border-radius:999px;
+    padding:6px 14px;
+    font-weight:600;
+    letter-spacing:.2px;
+    text-decoration: none;
+    display: inline-block;
+    transition: background-color 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-purple.pill:hover{
+    background:#5a2dac;
+    color:#fff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
 .btn-purple{
     background:#6f42c1;
     color:#fff;
@@ -48,7 +70,7 @@ body {
     display: inline-block;
     text-align: center;
     padding: 12px 18px;
-    width: 25%;
+    width: 100%;
     box-sizing: border-box;
 }
 .btn-purple:hover{
@@ -114,7 +136,7 @@ table.sheet tbody td{
     border-right:1px solid var(--line);
     padding:12px 8px;
     text-align:center;
-    transition: background-color 0.2s ease;
+    transition: all 0.3s ease;
 }
 
 
@@ -126,8 +148,21 @@ table.sheet tbody tr:nth-child(even) td{
 table.sheet td:last-child, table.sheet th:last-child{ border-right:none; }
 
 
+/* ===== HOVER MEJORADO PARA FILAS ===== */
+table.sheet tbody tr {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
 table.sheet tbody tr:hover td{
-    background:#e3f2fd; /* Azul muy claro al hover */
+    background:#e3f2fd !important; /* Azul muy claro al hover */
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+table.sheet tbody tr:active td {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 
@@ -166,6 +201,13 @@ table.sheet tbody tr:hover td{
     justify-content:center;
     height:190px;
     overflow:hidden;
+    transition: all 0.3s ease;
+}
+
+/* Efecto hover para la vista previa cuando hay contenido */
+.preview:has(.vista-previa-card):hover {
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
 }
 
 
@@ -258,12 +300,13 @@ table.sheet tbody tr:hover td{
     justify-content: center;
     cursor: pointer;
     font-weight: bold;
-    transition: background-color 0.2s ease;
+    transition: all 0.2s ease;
 }
 
 
 .qty-btn:hover {
     background: #5a6268;
+    transform: scale(1.1);
 }
 
 
@@ -354,6 +397,12 @@ table.sheet tbody tr:hover td{
     .actions {
         justify-content: center;
     }
+
+    /* Ajuste para el botón volver en móviles */
+    .btn-purple.pill {
+        padding: 8px 12px;
+        font-size: 14px;
+    }
 }
 
 
@@ -385,8 +434,13 @@ table.sheet tbody tr:hover td{
     border-radius: 10px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     text-align: center;
+    animation: fadeIn 0.3s ease;
 }
 
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 
 .img-producto-preview {
     max-width: 100%;
@@ -395,6 +449,11 @@ table.sheet tbody tr:hover td{
     object-fit: cover;
     border: 2px solid #e9ecef;
     margin-bottom: 10px;
+    transition: transform 0.3s ease;
+}
+
+.img-producto-preview:hover {
+    transform: scale(1.05);
 }
 
 
@@ -414,4 +473,36 @@ datalist option {
 
 datalist option:hover {
     background: #f8f9fa;
+}
+
+/* ===== ESTILOS NUEVOS AGREGADOS ===== */
+
+/* Estilos para filas interactivas - MEJORADO */
+#tablaBody tr {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+#tablaBody tr:hover {
+    background-color: #e3f2fd !important;
+    z-index: 1;
+}
+
+/* Efecto de selección activa */
+#tablaBody tr.active-row td {
+    background: #d1ecf1 !important;
+    border-left: 3px solid #17a2b8;
+}
+
+/* Transición suave para todos los elementos interactivos */
+* {
+    transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Mejora visual para el contenedor principal */
+.d-flex.align-items-center.gap-2.mb-2 {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 20px !important;
 }
