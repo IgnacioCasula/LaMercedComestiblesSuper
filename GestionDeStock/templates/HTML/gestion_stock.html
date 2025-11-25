@@ -1131,10 +1131,17 @@
                             <input type="text" placeholder="Buscar productos..." id="searchProductos">
                             <i class="fas fa-search"></i>
                         </div>
-                        <button class="btn btn-primary" id="btnNuevoProducto">
-                            <i class="fas fa-plus"></i>
-                            Nuevo Producto
-                        </button>
+                        <div>
+                            <a href="{% url 'stock:crear_producto' %}" class="btn btn-primary me-2">
+                                <i class="fas fa-plus"></i> Nuevo Producto
+                            </a>
+                            <a href="{% url 'stock:crear_categoria' %}" class="btn btn-success me-2">
+                                <i class="fas fa-plus"></i> Nueva Categoría
+                            </a>
+                            <a href="{% url 'stock:crear_proveedor' %}" class="btn btn-info">
+                                <i class="fas fa-plus"></i> Nuevo Proveedor
+                            </a>
+                        </div>
                     </div>
 
                     <!-- Filtros para productos -->
@@ -1166,6 +1173,7 @@
                                     <th>ID</th>
                                     <th>Imagen</th>
                                     <th>Nombre</th>
+                                    <th>Precio</th> 
                                     <th>Categoría</th>
                                     <th>Proveedor</th>
                                     <th>Stock</th>
@@ -1584,1943 +1592,27 @@
         </div>
     </div>
 
+    <!-- Al final del archivo, antes de </body> -->
     <script>
-        // Datos de ejemplo para simular la aplicación
-        let productos = JSON.parse(localStorage.getItem('productos')) || [
-            { 
-                id: 1, 
-                nombre: "Arroz Integral", 
-                categoria: "Granos", 
-                stock: 45, 
-                stockMinimo: 20, 
-                imagen: "https://via.placeholder.com/50", 
-                proveedor: 1,
-                vencimiento: "2024-12-31",
-                lote: "LOTE-001",
-                precio: 2.50
-            },
-            { 
-                id: 2, 
-                nombre: "Aceite de Oliva", 
-                categoria: "Aceites", 
-                stock: 12, 
-                stockMinimo: 15, 
-                imagen: "https://via.placeholder.com/50", 
-                proveedor: 2,
-                vencimiento: "2024-06-15",
-                lote: "LOTE-002",
-                precio: 8.75
-            },
-            { 
-                id: 3, 
-                nombre: "Azúcar Morena", 
-                categoria: "Endulzantes", 
-                stock: 8, 
-                stockMinimo: 10, 
-                imagen: "https://via.placeholder.com/50", 
-                proveedor: 1,
-                vencimiento: "2025-03-20",
-                lote: "LOTE-003",
-                precio: 3.20
-            },
-            { 
-                id: 4, 
-                nombre: "Harina de Trigo", 
-                categoria: "Harinas", 
-                stock: 32, 
-                stockMinimo: 25, 
-                imagen: "https://via.placeholder.com/50", 
-                proveedor: 3,
-                vencimiento: "2024-05-01",
-                lote: "LOTE-004",
-                precio: 1.80
-            },
-            { 
-                id: 5, 
-                nombre: "Leche Deslactosada", 
-                categoria: "Lácteos", 
-                stock: 0, 
-                stockMinimo: 15, 
-                imagen: "https://via.placeholder.com/50", 
-                proveedor: 2,
-                vencimiento: "2024-04-10",
-                lote: "LOTE-005",
-                precio: 2.10
-            }
-        ];
+        // URLs base
+        const API_PRODUCTOS = '/stock/api/productos/';
+        const API_CATEGORIAS = '/stock/api/categorias/';
+        const API_PROVEEDORES = '/stock/api/proveedores/';
 
-        let categorias = JSON.parse(localStorage.getItem('categorias')) || [
-            { id: 1, nombre: "Granos", descripcion: "Productos de grano" },
-            { id: 2, nombre: "Aceites", descripcion: "Aceites comestibles" },
-            { id: 3, nombre: "Endulzantes", descripcion: "Productos para endulzar" },
-            { id: 4, nombre: "Harinas", descripcion: "Harinas de diferentes tipos" },
-            { id: 5, nombre: "Lácteos", descripcion: "Productos lácteos" }
-        ];
+        // Variables globales para los datos
+        let productos = [];
+        let categorias = [];
+        let proveedores = [];
 
-        let proveedores = JSON.parse(localStorage.getItem('proveedores')) || [
-            { id: 1, nombre: "Distribuidora Alimentos S.A.", contacto: "Juan Pérez", telefono: "+34 600 123 456", email: "juan@alimentos.com" },
-            { id: 2, nombre: "Importaciones Delicias", contacto: "María García", telefono: "+34 600 654 321", email: "maria@delicias.com" },
-            { id: 3, nombre: "Suministros Naturales", contacto: "Carlos López", telefono: "+34 600 789 012", email: "carlos@naturales.com" }
-        ];
-
-        let pedidos = JSON.parse(localStorage.getItem('pedidos')) || [
-            {
-                id: 1,
-                proveedor: 1,
-                fecha: "2024-03-15",
-                fechaEntrega: "2024-03-20",
-                estado: "recibido",
-                items: [
-                    { producto: 1, cantidad: 50, precio: 2.30 },
-                    { producto: 3, cantidad: 30, precio: 3.00 }
-                ],
-                notas: "Pedido regular de fin de mes",
-                total: 205.00
-            },
-            {
-                id: 2,
-                proveedor: 2,
-                fecha: "2024-03-18",
-                fechaEntrega: "2024-03-25",
-                estado: "en_camino",
-                items: [
-                    { producto: 2, cantidad: 20, precio: 8.50 },
-                    { producto: 5, cantidad: 40, precio: 2.00 }
-                ],
-                notas: "",
-                total: 250.00
-            },
-            {
-                id: 3,
-                proveedor: 3,
-                fecha: "2024-03-20",
-                fechaEntrega: "2024-03-27",
-                estado: "confirmado",
-                items: [
-                    { producto: 4, cantidad: 25, precio: 1.70 }
-                ],
-                notas: "Pedido urgente por bajo stock",
-                total: 42.50
-            }
-        ];
-
-        // Guardar datos en localStorage
-        function guardarDatos() {
-            localStorage.setItem('productos', JSON.stringify(productos));
-            localStorage.setItem('categorias', JSON.stringify(categorias));
-            localStorage.setItem('proveedores', JSON.stringify(proveedores));
-            localStorage.setItem('pedidos', JSON.stringify(pedidos));
+        // ===== FUNCIONES BÁSICAS =====
+        function getCSRFToken() {
+            const cookieValue = document.cookie
+                .split('; ')
+                .find(row => row.startsWith('csrftoken='))
+                ?.split('=')[1];
+            return cookieValue || '';
         }
 
-        // Función para calcular días restantes hasta vencimiento
-        function calcularDiasRestantes(fechaVencimiento) {
-            if (!fechaVencimiento) return null;
-            
-            const hoy = new Date();
-            const vencimiento = new Date(fechaVencimiento);
-            const diferencia = vencimiento - hoy;
-            const dias = Math.ceil(diferencia / (1000 * 60 * 60 * 24));
-            
-            return dias;
-        }
-
-        // Función para determinar estado de vencimiento
-        function obtenerEstadoVencimiento(fechaVencimiento) {
-            if (!fechaVencimiento) return { estado: 'sin-fecha', texto: 'Sin fecha', clase: 'badge-secondary' };
-            
-            const dias = calcularDiasRestantes(fechaVencimiento);
-            
-            if (dias < 0) {
-                return { estado: 'vencido', texto: 'Vencido', clase: 'badge-danger' };
-            } else if (dias <= 7) {
-                return { estado: 'critico', texto: 'Crítico', clase: 'badge-danger' };
-            } else if (dias <= 30) {
-                return { estado: 'proximo', texto: 'Próximo', clase: 'badge-warning' };
-            } else {
-                return { estado: 'ok', texto: 'Vigente', clase: 'badge-success' };
-            }
-        }
-
-        // Función para formatear fecha
-        function formatearFecha(fecha) {
-            if (!fecha) return 'No definida';
-            
-            const opciones = { year: 'numeric', month: '2-digit', day: '2-digit' };
-            return new Date(fecha).toLocaleDateString('es-ES', opciones);
-        }
-
-        // Función para obtener texto de estado de pedido
-        function obtenerEstadoPedido(estado) {
-            const estados = {
-                'pendiente': { texto: 'Pendiente', clase: 'badge-warning' },
-                'confirmado': { texto: 'Confirmado', clase: 'badge-info' },
-                'en_camino': { texto: 'En Camino', clase: 'badge-primary' },
-                'recibido': { texto: 'Recibido', clase: 'badge-success' },
-                'cancelado': { texto: 'Cancelado', clase: 'badge-danger' }
-            };
-            
-            return estados[estado] || { texto: 'Desconocido', clase: 'badge-secondary' };
-        }
-
-        // Navegación entre secciones
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', function() {
-                // Remover clase active de todos los items
-                document.querySelectorAll('.nav-item').forEach(nav => {
-                    nav.classList.remove('active');
-                });
-                
-                // Agregar clase active al item clickeado
-                this.classList.add('active');
-                
-                // Ocultar todas las secciones
-                document.querySelectorAll('.section').forEach(section => {
-                    section.classList.remove('active');
-                });
-                
-                // Mostrar la sección correspondiente
-                const sectionId = this.getAttribute('data-section');
-                document.getElementById(sectionId).classList.add('active');
-                
-                // Cargar datos de la sección si es necesario
-                if (sectionId === 'productos') {
-                    cargarProductos();
-                    cargarFiltrosProductos();
-                } else if (sectionId === 'categorias') {
-                    cargarCategorias();
-                } else if (sectionId === 'proveedores') {
-                    cargarProveedores();
-                } else if (sectionId === 'pedidos') {
-                    cargarPedidos();
-                    cargarFiltrosPedidos();
-                } else if (sectionId === 'vencimientos') {
-                    cargarVencimientos();
-                }
-            });
-        });
-
-        // Funcionalidad de búsqueda
-        document.getElementById('searchProductos')?.addEventListener('input', function(e) {
-            filtrarProductos();
-        });
-
-        document.getElementById('searchCategorias')?.addEventListener('input', function(e) {
-            filtrarCategorias(e.target.value);
-        });
-
-        document.getElementById('searchProveedores')?.addEventListener('input', function(e) {
-            filtrarProveedores(e.target.value);
-        });
-
-        document.getElementById('searchPedidos')?.addEventListener('input', function(e) {
-            filtrarPedidos();
-        });
-
-        document.getElementById('searchVencimientos')?.addEventListener('input', function(e) {
-            filtrarVencimientos();
-        });
-
-        // Filtros para productos
-        document.getElementById('filtroProveedorProductos')?.addEventListener('change', function() {
-            filtrarProductos();
-        });
-
-        document.getElementById('filtroCategoriaProductos')?.addEventListener('change', function() {
-            filtrarProductos();
-        });
-
-        document.getElementById('filtroEstadoProductos')?.addEventListener('change', function() {
-            filtrarProductos();
-        });
-
-        document.getElementById('filtroVencimientoProductos')?.addEventListener('change', function() {
-            filtrarProductos();
-        });
-
-        // Filtros para pedidos
-        document.getElementById('filtroProveedorPedidos')?.addEventListener('change', function() {
-            filtrarPedidos();
-        });
-
-        document.getElementById('filtroEstadoPedidos')?.addEventListener('change', function() {
-            filtrarPedidos();
-        });
-
-        document.getElementById('filtroFechaPedidos')?.addEventListener('change', function() {
-            filtrarPedidos();
-        });
-
-        // Filtros para vencimientos
-        document.getElementById('filtroEstadoVencimiento')?.addEventListener('change', function() {
-            filtrarVencimientos();
-        });
-
-        document.getElementById('filtroDiasVencimiento')?.addEventListener('change', function() {
-            filtrarVencimientos();
-        });
-
-        // Botones para abrir modales
-        document.getElementById('btnNuevoProducto').addEventListener('click', () => abrirModalProducto());
-        document.getElementById('btnNuevaCategoria').addEventListener('click', () => abrirModalCategoria());
-        document.getElementById('btnNuevoProveedor').addEventListener('click', () => abrirModalProveedor());
-        document.getElementById('btnNuevoPedido').addEventListener('click', () => abrirModalPedido());
-        document.getElementById('btnReporteVencimientos').addEventListener('click', () => generarReporteVencimientos());
-
-        // Cerrar modales
-        document.getElementById('modalProductoCerrar').addEventListener('click', () => cerrarModalProducto());
-        document.getElementById('modalProductoCancelar').addEventListener('click', () => cerrarModalProducto());
-        document.getElementById('modalCategoriaCerrar').addEventListener('click', () => cerrarModalCategoria());
-        document.getElementById('modalCategoriaCancelar').addEventListener('click', () => cerrarModalCategoria());
-        document.getElementById('modalProveedorCerrar').addEventListener('click', () => cerrarModalProveedor());
-        document.getElementById('modalProveedorCancelar').addEventListener('click', () => cerrarModalProveedor());
-        document.getElementById('modalPedidoCerrar').addEventListener('click', () => cerrarModalPedido());
-        document.getElementById('modalPedidoCancelar').addEventListener('click', () => cerrarModalPedido());
-        document.getElementById('modalPDFCerrar').addEventListener('click', () => cerrarModalPDF());
-        document.getElementById('modalPDFCancelar').addEventListener('click', () => cerrarModalPDF());
-
-        // Guardar en modales
-        document.getElementById('modalProductoGuardar').addEventListener('click', () => guardarProducto());
-        document.getElementById('modalCategoriaGuardar').addEventListener('click', () => guardarCategoria());
-        document.getElementById('modalProveedorGuardar').addEventListener('click', () => guardarProveedor());
-        document.getElementById('modalPedidoGuardar').addEventListener('click', () => guardarPedido());
-        document.getElementById('modalPDFDescargar').addEventListener('click', () => descargarPDF());
-
-        // Agregar producto al pedido
-        document.getElementById('btnAgregarProducto').addEventListener('click', () => agregarProductoPedido());
-
-        // Cargar datos del dashboard
-        function cargarDashboard() {
-            // Calcular estadísticas de stock
-            const totalProductos = productos.length;
-            const stockOptimo = productos.filter(p => p.stock > p.stockMinimo * 1.2).length;
-            const stockBajo = productos.filter(p => p.stock <= p.stockMinimo && p.stock > 0).length;
-            const sinStock = productos.filter(p => p.stock === 0).length;
-            
-            // Calcular estadísticas de vencimiento
-            const productosConVencimiento = productos.filter(p => p.vencimiento);
-            const vencidos = productosConVencimiento.filter(p => {
-                const dias = calcularDiasRestantes(p.vencimiento);
-                return dias < 0;
-            }).length;
-            
-            const proximosVencer = productosConVencimiento.filter(p => {
-                const dias = calcularDiasRestantes(p.vencimiento);
-                return dias >= 0 && dias <= 30;
-            }).length;
-            
-            // Actualizar UI
-            document.getElementById('total-productos').textContent = totalProductos;
-            document.getElementById('stock-optimo').textContent = stockOptimo;
-            document.getElementById('stock-bajo').textContent = stockBajo;
-            document.getElementById('sin-stock').textContent = sinStock;
-            document.getElementById('vencidos').textContent = vencidos;
-            document.getElementById('proximos-vencer').textContent = proximosVencer;
-        }
-
-        // Cargar filtros para productos
-        function cargarFiltrosProductos() {
-            // Cargar filtro de proveedores
-            const filtroProveedor = document.getElementById('filtroProveedorProductos');
-            filtroProveedor.innerHTML = '<option value="">Todos los proveedores</option>';
-            proveedores.forEach(proveedor => {
-                filtroProveedor.innerHTML += `<option value="${proveedor.id}">${proveedor.nombre}</option>`;
-            });
-
-            // Cargar filtro de categorías
-            const filtroCategoria = document.getElementById('filtroCategoriaProductos');
-            filtroCategoria.innerHTML = '<option value="">Todas las categorías</option>';
-            categorias.forEach(categoria => {
-                filtroCategoria.innerHTML += `<option value="${categoria.nombre}">${categoria.nombre}</option>`;
-            });
-        }
-
-        // Cargar filtros para pedidos
-        function cargarFiltrosPedidos() {
-            // Cargar filtro de proveedores
-            const filtroProveedor = document.getElementById('filtroProveedorPedidos');
-            filtroProveedor.innerHTML = '<option value="">Todos los proveedores</option>';
-            proveedores.forEach(proveedor => {
-                filtroProveedor.innerHTML += `<option value="${proveedor.id}">${proveedor.nombre}</option>`;
-            });
-        }
-
-        // Cargar productos
-        function cargarProductos() {
-            const tbody = document.getElementById('productos-content');
-            tbody.innerHTML = '';
-            
-            if (productos.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="9" class="empty-state">
-                            <i class="fas fa-box-open"></i>
-                            <h3>No hay productos</h3>
-                            <p>Agrega tu primer producto para comenzar</p>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            productos.forEach(producto => {
-                const proveedor = proveedores.find(p => p.id === producto.proveedor);
-                
-                // Estado de stock
-                const estadoStock = producto.stock === 0 ? 
-                    '<span class="badge badge-danger">Sin Stock</span>' : 
-                    producto.stock <= producto.stockMinimo ? 
-                    '<span class="badge badge-warning">Stock Bajo</span>' : 
-                    '<span class="badge badge-success">Óptimo</span>';
-                
-                // Estado de vencimiento
-                const estadoVencimiento = obtenerEstadoVencimiento(producto.vencimiento);
-                const fechaFormateada = formatearFecha(producto.vencimiento);
-                
-                // Determinar si el botón de eliminar debe estar deshabilitado
-                const puedeEliminar = producto.stock === 0;
-                const botonEliminar = puedeEliminar ? 
-                    `<button class="btn-icon delete eliminar-producto" data-id="${producto.id}" title="Eliminar">
-                        <i class="fas fa-trash"></i>
-                    </button>` :
-                    `<button class="btn-icon delete" disabled title="No se puede eliminar productos con stock">
-                        <i class="fas fa-trash"></i>
-                    </button>`;
-                
-                const fila = document.createElement('tr');
-                fila.innerHTML = `
-                    <td>${producto.id}</td>
-                    <td><img src="${producto.imagen}" alt="${producto.nombre}" class="product-image"></td>
-                    <td>${producto.nombre}</td>
-                    <td>${producto.categoria}</td>
-                    <td>${proveedor ? proveedor.nombre : 'N/A'}</td>
-                    <td>${producto.stock}</td>
-                    <td>
-                        <div>${fechaFormateada}</div>
-                        <small class="${estadoVencimiento.clase}">${estadoVencimiento.texto}</small>
-                    </td>
-                    <td>${estadoStock}</td>
-                    <td>
-                        <button class="btn-icon editar-producto" data-id="${producto.id}" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        ${botonEliminar}
-                    </td>
-                `;
-                tbody.appendChild(fila);
-            });
-
-            // Agregar eventos a los botones de editar y eliminar
-            document.querySelectorAll('.editar-producto').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const id = parseInt(this.getAttribute('data-id'));
-                    abrirModalProducto(id);
-                });
-            });
-
-            document.querySelectorAll('.eliminar-producto').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const id = parseInt(this.getAttribute('data-id'));
-                    eliminarProducto(id);
-                });
-            });
-        }
-
-        // Cargar pedidos
-        function cargarPedidos() {
-            const tbody = document.getElementById('pedidos-content');
-            tbody.innerHTML = '';
-            
-            if (pedidos.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="7" class="empty-state">
-                            <i class="fas fa-clipboard-list"></i>
-                            <h3>No hay pedidos</h3>
-                            <p>Agrega tu primer pedido para comenzar</p>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            pedidos.forEach(pedido => {
-                const proveedor = proveedores.find(p => p.id === pedido.proveedor);
-                const estadoPedido = obtenerEstadoPedido(pedido.estado);
-                const fechaFormateada = formatearFecha(pedido.fecha);
-                const productosCount = pedido.items.length;
-                
-                const fila = document.createElement('tr');
-                fila.innerHTML = `
-                    <td>${pedido.id}</td>
-                    <td>${proveedor ? proveedor.nombre : 'N/A'}</td>
-                    <td>${fechaFormateada}</td>
-                    <td>${productosCount} producto(s)</td>
-                    <td>$${pedido.total.toFixed(2)}</td>
-                    <td><span class="${estadoPedido.clase}">${estadoPedido.texto}</span></td>
-                    <td>
-                        <button class="btn-icon editar-pedido" data-id="${pedido.id}" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn-icon generar-pdf-pedido" data-id="${pedido.id}" title="Generar PDF">
-                            <i class="fas fa-file-pdf"></i>
-                        </button>
-                        <button class="btn-icon delete eliminar-pedido" data-id="${pedido.id}" title="Eliminar">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(fila);
-            });
-
-            // Agregar eventos a los botones de editar y eliminar
-            document.querySelectorAll('.editar-pedido').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const id = parseInt(this.getAttribute('data-id'));
-                    abrirModalPedido(id);
-                });
-            });
-
-            document.querySelectorAll('.generar-pdf-pedido').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const id = parseInt(this.getAttribute('data-id'));
-                    generarPDF(id);
-                });
-            });
-
-            document.querySelectorAll('.eliminar-pedido').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const id = parseInt(this.getAttribute('data-id'));
-                    eliminarPedido(id);
-                });
-            });
-        }
-
-        // Cargar vencimientos
-        function cargarVencimientos() {
-            const tbody = document.getElementById('vencimientos-content');
-            tbody.innerHTML = '';
-            
-            const productosConVencimiento = productos.filter(p => p.vencimiento);
-            
-            if (productosConVencimiento.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="8" class="empty-state">
-                            <i class="fas fa-calendar-times"></i>
-                            <h3>No hay productos con vencimiento</h3>
-                            <p>Agrega fechas de vencimiento a tus productos</p>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            productosConVencimiento.forEach(producto => {
-                const diasRestantes = calcularDiasRestantes(producto.vencimiento);
-                const estadoVencimiento = obtenerEstadoVencimiento(producto.vencimiento);
-                const fechaFormateada = formatearFecha(producto.vencimiento);
-                
-                let textoDias = '';
-                let claseDias = '';
-                
-                if (diasRestantes === null) {
-                    textoDias = 'N/A';
-                    claseDias = '';
-                } else if (diasRestantes < 0) {
-                    textoDias = `Vencido hace ${Math.abs(diasRestantes)} días`;
-                    claseDias = 'vencimiento-critico';
-                } else if (diasRestantes === 0) {
-                    textoDias = 'Vence hoy';
-                    claseDias = 'vencimiento-critico';
-                } else if (diasRestantes <= 7) {
-                    textoDias = `${diasRestantes} días`;
-                    claseDias = 'vencimiento-critico';
-                } else if (diasRestantes <= 30) {
-                    textoDias = `${diasRestantes} días`;
-                    claseDias = 'vencimiento-proximo';
-                } else {
-                    textoDias = `${diasRestantes} días`;
-                    claseDias = 'vencimiento-ok';
-                }
-                
-                const fila = document.createElement('tr');
-                fila.innerHTML = `
-                    <td>${producto.id}</td>
-                    <td>${producto.nombre}</td>
-                    <td>${producto.categoria}</td>
-                    <td>${producto.stock}</td>
-                    <td>${fechaFormateada}</td>
-                    <td class="${claseDias}">${textoDias}</td>
-                    <td><span class="${estadoVencimiento.clase}">${estadoVencimiento.texto}</span></td>
-                    <td>
-                        <button class="btn-icon editar-producto" data-id="${producto.id}" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(fila);
-            });
-
-            // Agregar eventos a los botones de editar
-            document.querySelectorAll('.editar-producto').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const id = parseInt(this.getAttribute('data-id'));
-                    abrirModalProducto(id);
-                });
-            });
-        }
-
-        // Cargar categorías
-        function cargarCategorias() {
-            const tbody = document.getElementById('categorias-content');
-            tbody.innerHTML = '';
-            
-            if (categorias.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="5" class="empty-state">
-                            <i class="fas fa-tags"></i>
-                            <h3>No hay categorías</h3>
-                            <p>Agrega tu primera categoría para comenzar</p>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            categorias.forEach(categoria => {
-                const productosEnCategoria = productos.filter(p => p.categoria === categoria.nombre).length;
-                
-                const fila = document.createElement('tr');
-                fila.innerHTML = `
-                    <td>${categoria.id}</td>
-                    <td>${categoria.nombre}</td>
-                    <td>${categoria.descripcion}</td>
-                    <td>${productosEnCategoria}</td>
-                    <td>
-                        <button class="btn-icon editar-categoria" data-id="${categoria.id}" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn-icon delete eliminar-categoria" data-id="${categoria.id}" title="Eliminar">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(fila);
-            });
-
-            // Agregar eventos a los botones de editar y eliminar
-            document.querySelectorAll('.editar-categoria').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const id = parseInt(this.getAttribute('data-id'));
-                    abrirModalCategoria(id);
-                });
-            });
-
-            document.querySelectorAll('.eliminar-categoria').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const id = parseInt(this.getAttribute('data-id'));
-                    eliminarCategoria(id);
-                });
-            });
-        }
-
-        // Cargar proveedores
-        function cargarProveedores() {
-            const tbody = document.getElementById('proveedores-content');
-            tbody.innerHTML = '';
-            
-            if (proveedores.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="6" class="empty-state">
-                            <i class="fas fa-truck"></i>
-                            <h3>No hay proveedores</h3>
-                            <p>Agrega tu primer proveedor para comenzar</p>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            proveedores.forEach(proveedor => {
-                const productosDelProveedor = productos.filter(p => p.proveedor === proveedor.id);
-                
-                const fila = document.createElement('tr');
-                fila.innerHTML = `
-                    <td>${proveedor.id}</td>
-                    <td>${proveedor.nombre}</td>
-                    <td>${proveedor.contacto}</td>
-                    <td>${proveedor.telefono}</td>
-                    <td>
-                        <div>${productosDelProveedor.length} productos</div>
-                        <small>${productosDelProveedor.map(p => p.nombre).join(', ')}</small>
-                    </td>
-                    <td>
-                        <button class="btn-icon editar-proveedor" data-id="${proveedor.id}" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn-icon delete eliminar-proveedor" data-id="${proveedor.id}" title="Eliminar">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(fila);
-            });
-
-            // Agregar eventos a los botones de editar y eliminar
-            document.querySelectorAll('.editar-proveedor').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const id = parseInt(this.getAttribute('data-id'));
-                    abrirModalProveedor(id);
-                });
-            });
-
-            document.querySelectorAll('.eliminar-proveedor').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const id = parseInt(this.getAttribute('data-id'));
-                    eliminarProveedor(id);
-                });
-            });
-        }
-
-        // Funciones de filtrado
-        function filtrarProductos() {
-            const termino = document.getElementById('searchProductos').value.toLowerCase();
-            const filtroProveedor = document.getElementById('filtroProveedorProductos').value;
-            const filtroCategoria = document.getElementById('filtroCategoriaProductos').value;
-            const filtroEstado = document.getElementById('filtroEstadoProductos').value;
-            const filtroVencimiento = document.getElementById('filtroVencimientoProductos').value;
-            
-            const productosFiltrados = productos.filter(p => {
-                // Filtro por término de búsqueda
-                const coincideTermino = p.nombre.toLowerCase().includes(termino) || 
-                    p.categoria.toLowerCase().includes(termino);
-                
-                // Filtro por proveedor
-                const coincideProveedor = !filtroProveedor || p.proveedor == filtroProveedor;
-                
-                // Filtro por categoría
-                const coincideCategoria = !filtroCategoria || p.categoria === filtroCategoria;
-                
-                // Filtro por estado de stock
-                let coincideEstado = true;
-                if (filtroEstado === 'optimo') {
-                    coincideEstado = p.stock > p.stockMinimo * 1.2;
-                } else if (filtroEstado === 'bajo') {
-                    coincideEstado = p.stock <= p.stockMinimo && p.stock > 0;
-                } else if (filtroEstado === 'sin') {
-                    coincideEstado = p.stock === 0;
-                }
-                
-                // Filtro por estado de vencimiento
-                let coincideVencimiento = true;
-                if (filtroVencimiento) {
-                    const estado = obtenerEstadoVencimiento(p.vencimiento);
-                    coincideVencimiento = estado.estado === filtroVencimiento;
-                }
-                
-                return coincideTermino && coincideProveedor && coincideCategoria && coincideEstado && coincideVencimiento;
-            });
-            
-            const tbody = document.getElementById('productos-content');
-            tbody.innerHTML = '';
-            
-            if (productosFiltrados.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="9" class="empty-state">
-                            <i class="fas fa-search"></i>
-                            <h3>No se encontraron productos</h3>
-                            <p>Intenta con otros filtros o términos de búsqueda</p>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            productosFiltrados.forEach(producto => {
-                const proveedor = proveedores.find(p => p.id === producto.proveedor);
-                
-                // Estado de stock
-                const estadoStock = producto.stock === 0 ? 
-                    '<span class="badge badge-danger">Sin Stock</span>' : 
-                    producto.stock <= producto.stockMinimo ? 
-                    '<span class="badge badge-warning">Stock Bajo</span>' : 
-                    '<span class="badge badge-success">Óptimo</span>';
-                
-                // Estado de vencimiento
-                const estadoVencimiento = obtenerEstadoVencimiento(producto.vencimiento);
-                const fechaFormateada = formatearFecha(producto.vencimiento);
-                
-                // Determinar si el botón de eliminar debe estar deshabilitado
-                const puedeEliminar = producto.stock === 0;
-                const botonEliminar = puedeEliminar ? 
-                    `<button class="btn-icon delete eliminar-producto" data-id="${producto.id}" title="Eliminar">
-                        <i class="fas fa-trash"></i>
-                    </button>` :
-                    `<button class="btn-icon delete" disabled title="No se puede eliminar productos con stock">
-                        <i class="fas fa-trash"></i>
-                    </button>`;
-                
-                const fila = document.createElement('tr');
-                fila.innerHTML = `
-                    <td>${producto.id}</td>
-                    <td><img src="${producto.imagen}" alt="${producto.nombre}" class="product-image"></td>
-                    <td>${producto.nombre}</td>
-                    <td>${producto.categoria}</td>
-                    <td>${proveedor ? proveedor.nombre : 'N/A'}</td>
-                    <td>${producto.stock}</td>
-                    <td>
-                        <div>${fechaFormateada}</div>
-                        <small class="${estadoVencimiento.clase}">${estadoVencimiento.texto}</small>
-                    </td>
-                    <td>${estadoStock}</td>
-                    <td>
-                        <button class="btn-icon editar-producto" data-id="${producto.id}" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        ${botonEliminar}
-                    </td>
-                `;
-                tbody.appendChild(fila);
-            });
-
-            // Reagregar eventos a los botones
-            document.querySelectorAll('.editar-producto').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const id = parseInt(this.getAttribute('data-id'));
-                    abrirModalProducto(id);
-                });
-            });
-
-            document.querySelectorAll('.eliminar-producto').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const id = parseInt(this.getAttribute('data-id'));
-                    eliminarProducto(id);
-                });
-            });
-        }
-
-        function filtrarPedidos() {
-            const termino = document.getElementById('searchPedidos').value.toLowerCase();
-            const filtroProveedor = document.getElementById('filtroProveedorPedidos').value;
-            const filtroEstado = document.getElementById('filtroEstadoPedidos').value;
-            const filtroFecha = document.getElementById('filtroFechaPedidos').value;
-            
-            const pedidosFiltrados = pedidos.filter(pedido => {
-                const proveedor = proveedores.find(p => p.id === pedido.proveedor);
-                
-                // Filtro por término de búsqueda
-                const coincideTermino = proveedor && proveedor.nombre.toLowerCase().includes(termino);
-                
-                // Filtro por proveedor
-                const coincideProveedor = !filtroProveedor || pedido.proveedor == filtroProveedor;
-                
-                // Filtro por estado
-                const coincideEstado = !filtroEstado || pedido.estado === filtroEstado;
-                
-                // Filtro por fecha
-                let coincideFecha = true;
-                if (filtroFecha) {
-                    const hoy = new Date();
-                    const fechaPedido = new Date(pedido.fecha);
-                    
-                    if (filtroFecha === 'hoy') {
-                        coincideFecha = fechaPedido.toDateString() === hoy.toDateString();
-                    } else if (filtroFecha === 'semana') {
-                        const inicioSemana = new Date(hoy);
-                        inicioSemana.setDate(hoy.getDate() - hoy.getDay());
-                        coincideFecha = fechaPedido >= inicioSemana;
-                    } else if (filtroFecha === 'mes') {
-                        coincideFecha = fechaPedido.getMonth() === hoy.getMonth() && 
-                                       fechaPedido.getFullYear() === hoy.getFullYear();
-                    }
-                }
-                
-                return coincideTermino && coincideProveedor && coincideEstado && coincideFecha;
-            });
-            
-            const tbody = document.getElementById('pedidos-content');
-            tbody.innerHTML = '';
-            
-            if (pedidosFiltrados.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="7" class="empty-state">
-                            <i class="fas fa-search"></i>
-                            <h3>No se encontraron pedidos</h3>
-                            <p>Intenta con otros filtros o términos de búsqueda</p>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            pedidosFiltrados.forEach(pedido => {
-                const proveedor = proveedores.find(p => p.id === pedido.proveedor);
-                const estadoPedido = obtenerEstadoPedido(pedido.estado);
-                const fechaFormateada = formatearFecha(pedido.fecha);
-                const productosCount = pedido.items.length;
-                
-                const fila = document.createElement('tr');
-                fila.innerHTML = `
-                    <td>${pedido.id}</td>
-                    <td>${proveedor ? proveedor.nombre : 'N/A'}</td>
-                    <td>${fechaFormateada}</td>
-                    <td>${productosCount} producto(s)</td>
-                    <td>$${pedido.total.toFixed(2)}</td>
-                    <td><span class="${estadoPedido.clase}">${estadoPedido.texto}</span></td>
-                    <td>
-                        <button class="btn-icon editar-pedido" data-id="${pedido.id}" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn-icon generar-pdf-pedido" data-id="${pedido.id}" title="Generar PDF">
-                            <i class="fas fa-file-pdf"></i>
-                        </button>
-                        <button class="btn-icon delete eliminar-pedido" data-id="${pedido.id}" title="Eliminar">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(fila);
-            });
-
-            // Reagregar eventos a los botones
-            document.querySelectorAll('.editar-pedido').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const id = parseInt(this.getAttribute('data-id'));
-                    abrirModalPedido(id);
-                });
-            });
-
-            document.querySelectorAll('.generar-pdf-pedido').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const id = parseInt(this.getAttribute('data-id'));
-                    generarPDF(id);
-                });
-            });
-
-            document.querySelectorAll('.eliminar-pedido').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const id = parseInt(this.getAttribute('data-id'));
-                    eliminarPedido(id);
-                });
-            });
-        }
-
-        function filtrarVencimientos() {
-            const termino = document.getElementById('searchVencimientos').value.toLowerCase();
-            const filtroEstado = document.getElementById('filtroEstadoVencimiento').value;
-            const filtroDias = document.getElementById('filtroDiasVencimiento').value;
-            
-            const productosConVencimiento = productos.filter(p => p.vencimiento);
-            
-            const productosFiltrados = productosConVencimiento.filter(p => {
-                // Filtro por término de búsqueda
-                const coincideTermino = p.nombre.toLowerCase().includes(termino) || 
-                    p.categoria.toLowerCase().includes(termino);
-                
-                // Filtro por estado de vencimiento
-                let coincideEstado = true;
-                if (filtroEstado) {
-                    const estado = obtenerEstadoVencimiento(p.vencimiento);
-                    coincideEstado = estado.estado === filtroEstado;
-                }
-                
-                // Filtro por días
-                let coincideDias = true;
-                if (filtroDias) {
-                    const dias = calcularDiasRestantes(p.vencimiento);
-                    coincideDias = dias >= 0 && dias <= parseInt(filtroDias);
-                }
-                
-                return coincideTermino && coincideEstado && coincideDias;
-            });
-            
-            const tbody = document.getElementById('vencimientos-content');
-            tbody.innerHTML = '';
-            
-            if (productosFiltrados.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="8" class="empty-state">
-                            <i class="fas fa-search"></i>
-                            <h3>No se encontraron productos</h3>
-                            <p>Intenta con otros filtros o términos de búsqueda</p>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            productosFiltrados.forEach(producto => {
-                const diasRestantes = calcularDiasRestantes(producto.vencimiento);
-                const estadoVencimiento = obtenerEstadoVencimiento(producto.vencimiento);
-                const fechaFormateada = formatearFecha(producto.vencimiento);
-                
-                let textoDias = '';
-                let claseDias = '';
-                
-                if (diasRestantes === null) {
-                    textoDias = 'N/A';
-                    claseDias = '';
-                } else if (diasRestantes < 0) {
-                    textoDias = `Vencido hace ${Math.abs(diasRestantes)} días`;
-                    claseDias = 'vencimiento-critico';
-                } else if (diasRestantes === 0) {
-                    textoDias = 'Vence hoy';
-                    claseDias = 'vencimiento-critico';
-                } else if (diasRestantes <= 7) {
-                    textoDias = `${diasRestantes} días`;
-                    claseDias = 'vencimiento-critico';
-                } else if (diasRestantes <= 30) {
-                    textoDias = `${diasRestantes} días`;
-                    claseDias = 'vencimiento-proximo';
-                } else {
-                    textoDias = `${diasRestantes} días`;
-                    claseDias = 'vencimiento-ok';
-                }
-                
-                const fila = document.createElement('tr');
-                fila.innerHTML = `
-                    <td>${producto.id}</td>
-                    <td>${producto.nombre}</td>
-                    <td>${producto.categoria}</td>
-                    <td>${producto.stock}</td>
-                    <td>${fechaFormateada}</td>
-                    <td class="${claseDias}">${textoDias}</td>
-                    <td><span class="${estadoVencimiento.clase}">${estadoVencimiento.texto}</span></td>
-                    <td>
-                        <button class="btn-icon editar-producto" data-id="${producto.id}" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(fila);
-            });
-
-            // Reagregar eventos a los botones
-            document.querySelectorAll('.editar-producto').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const id = parseInt(this.getAttribute('data-id'));
-                    abrirModalProducto(id);
-                });
-            });
-        }
-
-        function filtrarCategorias(termino) {
-            const categoriasFiltradas = categorias.filter(c => 
-                c.nombre.toLowerCase().includes(termino.toLowerCase()) || 
-                c.descripcion.toLowerCase().includes(termino.toLowerCase())
-            );
-            
-            const tbody = document.getElementById('categorias-content');
-            tbody.innerHTML = '';
-            
-            if (categoriasFiltradas.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="5" class="empty-state">
-                            <i class="fas fa-search"></i>
-                            <h3>No se encontraron categorías</h3>
-                            <p>Intenta con otro término de búsqueda</p>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            categoriasFiltradas.forEach(categoria => {
-                const productosEnCategoria = productos.filter(p => p.categoria === categoria.nombre).length;
-                
-                const fila = document.createElement('tr');
-                fila.innerHTML = `
-                    <td>${categoria.id}</td>
-                    <td>${categoria.nombre}</td>
-                    <td>${categoria.descripcion}</td>
-                    <td>${productosEnCategoria}</td>
-                    <td>
-                        <button class="btn-icon editar-categoria" data-id="${categoria.id}" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn-icon delete eliminar-categoria" data-id="${categoria.id}" title="Eliminar">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(fila);
-            });
-
-            // Reagregar eventos a los botones
-            document.querySelectorAll('.editar-categoria').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const id = parseInt(this.getAttribute('data-id'));
-                    abrirModalCategoria(id);
-                });
-            });
-
-            document.querySelectorAll('.eliminar-categoria').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const id = parseInt(this.getAttribute('data-id'));
-                    eliminarCategoria(id);
-                });
-            });
-        }
-
-        function filtrarProveedores(termino) {
-            const proveedoresFiltrados = proveedores.filter(p => 
-                p.nombre.toLowerCase().includes(termino.toLowerCase()) || 
-                p.contacto.toLowerCase().includes(termino.toLowerCase())
-            );
-            
-            const tbody = document.getElementById('proveedores-content');
-            tbody.innerHTML = '';
-            
-            if (proveedoresFiltrados.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="6" class="empty-state">
-                            <i class="fas fa-search"></i>
-                            <h3>No se encontraron proveedores</h3>
-                            <p>Intenta con otro término de búsqueda</p>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            proveedoresFiltrados.forEach(proveedor => {
-                const productosDelProveedor = productos.filter(p => p.proveedor === proveedor.id);
-                
-                const fila = document.createElement('tr');
-                fila.innerHTML = `
-                    <td>${proveedor.id}</td>
-                    <td>${proveedor.nombre}</td>
-                    <td>${proveedor.contacto}</td>
-                    <td>${proveedor.telefono}</td>
-                    <td>
-                        <div>${productosDelProveedor.length} productos</div>
-                        <small>${productosDelProveedor.map(p => p.nombre).join(', ')}</small>
-                    </td>
-                    <td>
-                        <button class="btn-icon editar-proveedor" data-id="${proveedor.id}" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn-icon delete eliminar-proveedor" data-id="${proveedor.id}" title="Eliminar">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(fila);
-            });
-
-            // Reagregar eventos a los botones
-            document.querySelectorAll('.editar-proveedor').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const id = parseInt(this.getAttribute('data-id'));
-                    abrirModalProveedor(id);
-                });
-            });
-
-            document.querySelectorAll('.eliminar-proveedor').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const id = parseInt(this.getAttribute('data-id'));
-                    eliminarProveedor(id);
-                });
-            });
-        }
-
-        // Funciones para abrir modales
-        function abrirModalProducto(id = null) {
-            const modal = document.getElementById('modalProducto');
-            const titulo = document.getElementById('modalProductoTitulo');
-            const form = document.getElementById('formProducto');
-            
-            // Llenar select de categorías
-            const selectCategoria = document.getElementById('productoCategoria');
-            selectCategoria.innerHTML = '<option value="">Seleccione una categoría</option>';
-            categorias.forEach(cat => {
-                selectCategoria.innerHTML += `<option value="${cat.nombre}">${cat.nombre}</option>`;
-            });
-            
-            // Llenar select de proveedores
-            const selectProveedor = document.getElementById('productoProveedor');
-            selectProveedor.innerHTML = '<option value="">Seleccione un proveedor</option>';
-            proveedores.forEach(prov => {
-                selectProveedor.innerHTML += `<option value="${prov.id}">${prov.nombre}</option>`;
-            });
-            
-            if (id) {
-                // Modo edición
-                titulo.textContent = 'Editar Producto';
-                const producto = productos.find(p => p.id === id);
-                document.getElementById('productoId').value = producto.id;
-                document.getElementById('productoNombre').value = producto.nombre;
-                document.getElementById('productoCategoria').value = producto.categoria;
-                document.getElementById('productoStock').value = producto.stock;
-                document.getElementById('productoStockMinimo').value = producto.stockMinimo;
-                document.getElementById('productoProveedor').value = producto.proveedor;
-                document.getElementById('productoVencimiento').value = producto.vencimiento || '';
-                document.getElementById('productoLote').value = producto.lote || '';
-                document.getElementById('productoImagen').value = producto.imagen;
-            } else {
-                // Modo nuevo
-                titulo.textContent = 'Nuevo Producto';
-                form.reset();
-                document.getElementById('productoId').value = '';
-            }
-            
-            modal.classList.add('active');
-        }
-
-        function abrirModalCategoria(id = null) {
-            const modal = document.getElementById('modalCategoria');
-            const titulo = document.getElementById('modalCategoriaTitulo');
-            const form = document.getElementById('formCategoria');
-            
-            if (id) {
-                // Modo edición
-                titulo.textContent = 'Editar Categoría';
-                const categoria = categorias.find(c => c.id === id);
-                document.getElementById('categoriaId').value = categoria.id;
-                document.getElementById('categoriaNombre').value = categoria.nombre;
-                document.getElementById('categoriaDescripcion').value = categoria.descripcion;
-            } else {
-                // Modo nuevo
-                titulo.textContent = 'Nueva Categoría';
-                form.reset();
-                document.getElementById('categoriaId').value = '';
-            }
-            
-            modal.classList.add('active');
-        }
-
-        function abrirModalProveedor(id = null) {
-            const modal = document.getElementById('modalProveedor');
-            const titulo = document.getElementById('modalProveedorTitulo');
-            const form = document.getElementById('formProveedor');
-            
-            if (id) {
-                // Modo edición
-                titulo.textContent = 'Editar Proveedor';
-                const proveedor = proveedores.find(p => p.id === id);
-                document.getElementById('proveedorId').value = proveedor.id;
-                document.getElementById('proveedorNombre').value = proveedor.nombre;
-                document.getElementById('proveedorContacto').value = proveedor.contacto;
-                document.getElementById('proveedorTelefono').value = proveedor.telefono;
-                document.getElementById('proveedorEmail').value = proveedor.email || '';
-            } else {
-                // Modo nuevo
-                titulo.textContent = 'Nuevo Proveedor';
-                form.reset();
-                document.getElementById('proveedorId').value = '';
-            }
-            
-            modal.classList.add('active');
-        }
-
-        function abrirModalPedido(id = null) {
-            const modal = document.getElementById('modalPedido');
-            const titulo = document.getElementById('modalPedidoTitulo');
-            const form = document.getElementById('formPedido');
-            
-            // Llenar select de proveedores
-            const selectProveedor = document.getElementById('pedidoProveedor');
-            selectProveedor.innerHTML = '<option value="">Seleccione un proveedor</option>';
-            proveedores.forEach(prov => {
-                selectProveedor.innerHTML += `<option value="${prov.id}">${prov.nombre}</option>`;
-            });
-            
-            // Llenar select de productos
-            const selectProducto = document.getElementById('pedidoProducto');
-            selectProducto.innerHTML = '<option value="">Seleccione un producto</option>';
-            productos.forEach(prod => {
-                selectProducto.innerHTML += `<option value="${prod.id}" data-precio="${prod.precio || 0}">${prod.nombre}</option>`;
-            });
-            
-            // Limpiar items del pedido
-            document.getElementById('pedidoItems').innerHTML = '';
-            document.getElementById('pedidoTotal').textContent = '0.00';
-            
-            if (id) {
-                // Modo edición
-                titulo.textContent = 'Editar Pedido';
-                const pedido = pedidos.find(p => p.id === id);
-                document.getElementById('pedidoId').value = pedido.id;
-                document.getElementById('pedidoProveedor').value = pedido.proveedor;
-                document.getElementById('pedidoFecha').value = pedido.fechaEntrega;
-                document.getElementById('pedidoEstado').value = pedido.estado;
-                document.getElementById('pedidoNotas').value = pedido.notas || '';
-                
-                // Cargar items del pedido
-                pedido.items.forEach(item => {
-                    const producto = productos.find(p => p.id === item.producto);
-                    if (producto) {
-                        agregarItemPedido(producto.id, producto.nombre, item.cantidad, item.precio);
-                    }
-                });
-                
-                actualizarTotalPedido();
-            } else {
-                // Modo nuevo
-                titulo.textContent = 'Nuevo Pedido';
-                form.reset();
-                document.getElementById('pedidoId').value = '';
-                document.getElementById('pedidoFecha').valueAsDate = new Date();
-            }
-            
-            modal.classList.add('active');
-        }
-
-        function abrirModalPDF(pedidoId) {
-            const modal = document.getElementById('modalPDF');
-            document.getElementById('pdfPedidoId').textContent = pedidoId;
-            
-            // Generar vista previa del PDF
-            generarVistaPreviaPDF(pedidoId);
-            
-            modal.classList.add('active');
-        }
-
-        // Funciones para cerrar modales
-        function cerrarModalProducto() {
-            document.getElementById('modalProducto').classList.remove('active');
-        }
-
-        function cerrarModalCategoria() {
-            document.getElementById('modalCategoria').classList.remove('active');
-        }
-
-        function cerrarModalProveedor() {
-            document.getElementById('modalProveedor').classList.remove('active');
-        }
-
-        function cerrarModalPedido() {
-            document.getElementById('modalPedido').classList.remove('active');
-        }
-
-        function cerrarModalPDF() {
-            document.getElementById('modalPDF').classList.remove('active');
-        }
-
-        // Funciones para guardar datos
-        function guardarProducto() {
-            const id = document.getElementById('productoId').value;
-            const nombre = document.getElementById('productoNombre').value;
-            const categoria = document.getElementById('productoCategoria').value;
-            const stock = parseInt(document.getElementById('productoStock').value);
-            const stockMinimo = parseInt(document.getElementById('productoStockMinimo').value);
-            const proveedor = parseInt(document.getElementById('productoProveedor').value);
-            const vencimiento = document.getElementById('productoVencimiento').value;
-            const lote = document.getElementById('productoLote').value;
-            const imagen = document.getElementById('productoImagen').value || 'https://via.placeholder.com/50';
-            
-            if (!nombre || !categoria || isNaN(stock) || isNaN(stockMinimo) || !proveedor) {
-                mostrarMensaje('Por favor, complete todos los campos obligatorios', 'error');
-                return;
-            }
-            
-            if (id) {
-                // Actualizar producto existente
-                const index = productos.findIndex(p => p.id === parseInt(id));
-                productos[index] = { 
-                    id: parseInt(id), 
-                    nombre, 
-                    categoria, 
-                    stock, 
-                    stockMinimo, 
-                    proveedor, 
-                    vencimiento,
-                    lote,
-                    imagen,
-                    precio: productos[index].precio || 0
-                };
-                mostrarMensaje('Producto actualizado correctamente', 'success');
-            } else {
-                // Crear nuevo producto
-                const nuevoId = productos.length > 0 ? Math.max(...productos.map(p => p.id)) + 1 : 1;
-                productos.push({ 
-                    id: nuevoId, 
-                    nombre, 
-                    categoria, 
-                    stock, 
-                    stockMinimo, 
-                    proveedor, 
-                    vencimiento,
-                    lote,
-                    imagen,
-                    precio: 0
-                });
-                mostrarMensaje('Producto creado correctamente', 'success');
-            }
-            
-            guardarDatos();
-            cerrarModalProducto();
-            cargarProductos();
-            cargarDashboard();
-        }
-
-        function guardarCategoria() {
-            const id = document.getElementById('categoriaId').value;
-            const nombre = document.getElementById('categoriaNombre').value;
-            const descripcion = document.getElementById('categoriaDescripcion').value;
-            
-            if (!nombre) {
-                mostrarMensaje('Por favor, complete el nombre de la categoría', 'error');
-                return;
-            }
-            
-            if (id) {
-                // Actualizar categoría existente
-                const index = categorias.findIndex(c => c.id === parseInt(id));
-                categorias[index] = { 
-                    id: parseInt(id), 
-                    nombre, 
-                    descripcion 
-                };
-                mostrarMensaje('Categoría actualizada correctamente', 'success');
-            } else {
-                // Crear nueva categoría
-                const nuevoId = categorias.length > 0 ? Math.max(...categorias.map(c => c.id)) + 1 : 1;
-                categorias.push({ 
-                    id: nuevoId, 
-                    nombre, 
-                    descripcion 
-                });
-                mostrarMensaje('Categoría creada correctamente', 'success');
-            }
-            
-            guardarDatos();
-            cerrarModalCategoria();
-            cargarCategorias();
-        }
-
-        function guardarProveedor() {
-            const id = document.getElementById('proveedorId').value;
-            const nombre = document.getElementById('proveedorNombre').value;
-            const contacto = document.getElementById('proveedorContacto').value;
-            const telefono = document.getElementById('proveedorTelefono').value;
-            const email = document.getElementById('proveedorEmail').value;
-            
-            if (!nombre || !contacto || !telefono) {
-                mostrarMensaje('Por favor, complete todos los campos obligatorios', 'error');
-                return;
-            }
-            
-            if (id) {
-                // Actualizar proveedor existente
-                const index = proveedores.findIndex(p => p.id === parseInt(id));
-                proveedores[index] = { 
-                    id: parseInt(id), 
-                    nombre, 
-                    contacto, 
-                    telefono, 
-                    email 
-                };
-                mostrarMensaje('Proveedor actualizado correctamente', 'success');
-            } else {
-                // Crear nuevo proveedor
-                const nuevoId = proveedores.length > 0 ? Math.max(...proveedores.map(p => p.id)) + 1 : 1;
-                proveedores.push({ 
-                    id: nuevoId, 
-                    nombre, 
-                    contacto, 
-                    telefono, 
-                    email 
-                });
-                mostrarMensaje('Proveedor creado correctamente', 'success');
-            }
-            
-            guardarDatos();
-            cerrarModalProveedor();
-            cargarProveedores();
-        }
-
-        function guardarPedido() {
-            const id = document.getElementById('pedidoId').value;
-            const proveedor = parseInt(document.getElementById('pedidoProveedor').value);
-            const fechaEntrega = document.getElementById('pedidoFecha').value;
-            const estado = document.getElementById('pedidoEstado').value;
-            const notas = document.getElementById('pedidoNotas').value;
-            
-            // Obtener items del pedido
-            const items = [];
-            const filasItems = document.querySelectorAll('#pedidoItems tr');
-            
-            if (filasItems.length === 0) {
-                mostrarMensaje('Debe agregar al menos un producto al pedido', 'error');
-                return;
-            }
-            
-            filasItems.forEach(fila => {
-                const productoId = parseInt(fila.getAttribute('data-producto-id'));
-                const cantidad = parseInt(fila.querySelector('.item-cantidad-input').value);
-                const precio = parseFloat(fila.querySelector('.item-precio-input').value);
-                
-                items.push({
-                    producto: productoId,
-                    cantidad: cantidad,
-                    precio: precio
-                });
-            });
-            
-            // Calcular total
-            const total = items.reduce((sum, item) => sum + (item.cantidad * item.precio), 0);
-            
-            if (!proveedor || !fechaEntrega || !estado) {
-                mostrarMensaje('Por favor, complete todos los campos obligatorios', 'error');
-                return;
-            }
-            
-            if (id) {
-                // Actualizar pedido existente
-                const index = pedidos.findIndex(p => p.id === parseInt(id));
-                pedidos[index] = { 
-                    id: parseInt(id), 
-                    proveedor, 
-                    fecha: pedidos[index].fecha, // Mantener la fecha original
-                    fechaEntrega, 
-                    estado, 
-                    items, 
-                    notas, 
-                    total 
-                };
-                mostrarMensaje('Pedido actualizado correctamente', 'success');
-            } else {
-                // Crear nuevo pedido
-                const nuevoId = pedidos.length > 0 ? Math.max(...pedidos.map(p => p.id)) + 1 : 1;
-                const fechaActual = new Date().toISOString().split('T')[0];
-                
-                pedidos.push({ 
-                    id: nuevoId, 
-                    proveedor, 
-                    fecha: fechaActual,
-                    fechaEntrega, 
-                    estado, 
-                    items, 
-                    notas, 
-                    total 
-                });
-                mostrarMensaje('Pedido creado correctamente', 'success');
-            }
-            
-            guardarDatos();
-            cerrarModalPedido();
-            cargarPedidos();
-        }
-
-        // Funciones para eliminar elementos
-        function eliminarProducto(id) {
-            const producto = productos.find(p => p.id === id);
-            
-            // Verificar si el producto tiene stock
-            if (producto.stock > 0) {
-                mostrarMensaje('No se puede eliminar un producto que tiene stock', 'error');
-                return;
-            }
-            
-            if (confirm('¿Está seguro de que desea eliminar este producto?')) {
-                productos = productos.filter(p => p.id !== id);
-                guardarDatos();
-                cargarProductos();
-                cargarDashboard();
-                mostrarMensaje('Producto eliminado correctamente', 'success');
-            }
-        }
-
-        function eliminarCategoria(id) {
-            const categoria = categorias.find(c => c.id === id);
-            const productosEnCategoria = productos.filter(p => p.categoria === categoria.nombre);
-            
-            if (productosEnCategoria.length > 0) {
-                mostrarMensaje('No se puede eliminar la categoría porque tiene productos asociados', 'error');
-                return;
-            }
-            
-            if (confirm('¿Está seguro de que desea eliminar esta categoría?')) {
-                categorias = categorias.filter(c => c.id !== id);
-                guardarDatos();
-                cargarCategorias();
-                mostrarMensaje('Categoría eliminada correctamente', 'success');
-            }
-        }
-
-        function eliminarProveedor(id) {
-            const productosDelProveedor = productos.filter(p => p.proveedor === id);
-            
-            if (productosDelProveedor.length > 0) {
-                mostrarMensaje('No se puede eliminar el proveedor porque tiene productos asociados', 'error');
-                return;
-            }
-            
-            if (confirm('¿Está seguro de que desea eliminar este proveedor?')) {
-                proveedores = proveedores.filter(p => p.id !== id);
-                guardarDatos();
-                cargarProveedores();
-                mostrarMensaje('Proveedor eliminado correctamente', 'success');
-            }
-        }
-
-        function eliminarPedido(id) {
-            if (confirm('¿Está seguro de que desea eliminar este pedido?')) {
-                pedidos = pedidos.filter(p => p.id !== id);
-                guardarDatos();
-                cargarPedidos();
-                mostrarMensaje('Pedido eliminado correctamente', 'success');
-            }
-        }
-
-        // Funciones para gestionar items del pedido
-        function agregarProductoPedido() {
-            const productoSelect = document.getElementById('pedidoProducto');
-            const productoId = parseInt(productoSelect.value);
-            const cantidad = parseInt(document.getElementById('pedidoCantidad').value) || 1;
-            const precio = parseFloat(document.getElementById('pedidoPrecio').value) || 0;
-            
-            if (!productoId) {
-                mostrarMensaje('Por favor, seleccione un producto', 'error');
-                return;
-            }
-            
-            if (cantidad <= 0) {
-                mostrarMensaje('La cantidad debe ser mayor a cero', 'error');
-                return;
-            }
-            
-            if (precio < 0) {
-                mostrarMensaje('El precio no puede ser negativo', 'error');
-                return;
-            }
-            
-            const producto = productos.find(p => p.id === productoId);
-            if (!producto) {
-                mostrarMensaje('Producto no encontrado', 'error');
-                return;
-            }
-            
-            // Verificar si el producto ya está en el pedido
-            const itemsTable = document.getElementById('pedidoItems');
-            const itemExistente = itemsTable.querySelector(`tr[data-producto-id="${productoId}"]`);
-            
-            if (itemExistente) {
-                // Actualizar cantidad y precio del producto existente
-                const cantidadInput = itemExistente.querySelector('.item-cantidad-input');
-                const precioInput = itemExistente.querySelector('.item-precio-input');
-                
-                cantidadInput.value = parseInt(cantidadInput.value) + cantidad;
-                precioInput.value = precio;
-                
-                // Actualizar subtotal
-                const subtotalCell = itemExistente.querySelector('.item-subtotal');
-                const nuevoSubtotal = (parseInt(cantidadInput.value) * parseFloat(precioInput.value)).toFixed(2);
-                subtotalCell.textContent = `$${nuevoSubtotal}`;
-            } else {
-                // Agregar nuevo producto al pedido
-                agregarItemPedido(productoId, producto.nombre, cantidad, precio);
-            }
-            
-            // Limpiar campos de entrada
-            document.getElementById('pedidoCantidad').value = 1;
-            document.getElementById('pedidoPrecio').value = '';
-            
-            // Actualizar total
-            actualizarTotalPedido();
-        }
-
-        function agregarItemPedido(productoId, productoNombre, cantidad, precio) {
-            const itemsTable = document.getElementById('pedidoItems');
-            const subtotal = (cantidad * precio).toFixed(2);
-            
-            const fila = document.createElement('tr');
-            fila.setAttribute('data-producto-id', productoId);
-            fila.innerHTML = `
-                <td>${productoNombre}</td>
-                <td class="item-cantidad">
-                    <input type="number" class="form-control item-cantidad-input" value="${cantidad}" min="1" onchange="actualizarSubtotal(this)">
-                </td>
-                <td class="item-precio">
-                    <input type="number" class="form-control item-precio-input" value="${precio.toFixed(2)}" min="0" step="0.01" onchange="actualizarSubtotal(this)">
-                </td>
-                <td class="item-subtotal">$${subtotal}</td>
-                <td class="item-acciones">
-                    <button type="button" class="btn-icon delete" onclick="eliminarItemPedido(this)">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
-            `;
-            
-            itemsTable.appendChild(fila);
-        }
-
-        function eliminarItemPedido(boton) {
-            const fila = boton.closest('tr');
-            fila.remove();
-            actualizarTotalPedido();
-        }
-
-        function actualizarSubtotal(input) {
-            const fila = input.closest('tr');
-            const cantidad = parseInt(fila.querySelector('.item-cantidad-input').value) || 0;
-            const precio = parseFloat(fila.querySelector('.item-precio-input').value) || 0;
-            const subtotal = (cantidad * precio).toFixed(2);
-            
-            fila.querySelector('.item-subtotal').textContent = `$${subtotal}`;
-            actualizarTotalPedido();
-        }
-
-        function actualizarTotalPedido() {
-            const filas = document.querySelectorAll('#pedidoItems tr');
-            let total = 0;
-            
-            filas.forEach(fila => {
-                const subtotalText = fila.querySelector('.item-subtotal').textContent;
-                const subtotal = parseFloat(subtotalText.replace('$', '')) || 0;
-                total += subtotal;
-            });
-            
-            document.getElementById('pedidoTotal').textContent = total.toFixed(2);
-        }
-
-        // Generar PDF
-        function generarPDF(pedidoId) {
-            const pedido = pedidos.find(p => p.id === pedidoId);
-            if (!pedido) {
-                mostrarMensaje('Pedido no encontrado', 'error');
-                return;
-            }
-            
-            abrirModalPDF(pedidoId);
-        }
-
-        function generarVistaPreviaPDF(pedidoId) {
-            const pedido = pedidos.find(p => p.id === pedidoId);
-            const proveedor = proveedores.find(p => p.id === pedido.proveedor);
-            const estadoPedido = obtenerEstadoPedido(pedido.estado);
-            
-            let itemsHTML = '';
-            pedido.items.forEach(item => {
-                const producto = productos.find(p => p.id === item.producto);
-                const subtotal = item.cantidad * item.precio;
-                
-                itemsHTML += `
-                    <tr>
-                        <td>${producto ? producto.nombre : 'Producto no encontrado'}</td>
-                        <td>${item.cantidad}</td>
-                        <td>$${item.precio.toFixed(2)}</td>
-                        <td>$${subtotal.toFixed(2)}</td>
-                    </tr>
-                `;
-            });
-            
-            const pdfPreview = document.getElementById('pdfPreview');
-            pdfPreview.innerHTML = `
-                <div class="pdf-header">
-                    <h1>La Merced Comestibles</h1>
-                    <p>Sistema de Gestión de Pedidos</p>
-                    <h2>PEDIDO #${pedido.id}</h2>
-                </div>
-                
-                <div class="pdf-info">
-                    <div class="pdf-info-section">
-                        <h3>Información del Pedido</h3>
-                        <p><strong>Número de Pedido:</strong> ${pedido.id}</p>
-                        <p><strong>Fecha de Creación:</strong> ${formatearFecha(pedido.fecha)}</p>
-                        <p><strong>Fecha de Entrega Esperada:</strong> ${formatearFecha(pedido.fechaEntrega)}</p>
-                        <p><strong>Estado:</strong> <span class="${estadoPedido.clase}">${estadoPedido.texto}</span></p>
-                    </div>
-                    
-                    <div class="pdf-info-section">
-                        <h3>Información del Proveedor</h3>
-                        <p><strong>Proveedor:</strong> ${proveedor ? proveedor.nombre : 'N/A'}</p>
-                        <p><strong>Contacto:</strong> ${proveedor ? proveedor.contacto : 'N/A'}</p>
-                        <p><strong>Teléfono:</strong> ${proveedor ? proveedor.telefono : 'N/A'}</p>
-                        <p><strong>Email:</strong> ${proveedor ? proveedor.email : 'N/A'}</p>
-                    </div>
-                </div>
-                
-                <table class="pdf-table">
-                    <thead>
-                        <tr>
-                            <th>Producto</th>
-                            <th>Cantidad</th>
-                            <th>Precio Unitario</th>
-                            <th>Subtotal</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${itemsHTML}
-                    </tbody>
-                </table>
-                
-                <div class="pdf-total">
-                    <strong>TOTAL: $${pedido.total.toFixed(2)}</strong>
-                </div>
-                
-                ${pedido.notas ? `
-                <div class="form-group">
-                    <h3>Notas Adicionales</h3>
-                    <p>${pedido.notas}</p>
-                </div>
-                ` : ''}
-                
-                <div class="pdf-footer">
-                    <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} - La Merced Comestibles</p>
-                </div>
-            `;
-        }
-
-        function descargarPDF() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            const pedidoId = document.getElementById('pdfPedidoId').textContent;
-            const pedido = pedidos.find(p => p.id === parseInt(pedidoId));
-            const proveedor = proveedores.find(p => p.id === pedido.proveedor);
-            
-            // Configuración del documento
-            doc.setFontSize(20);
-            doc.setTextColor(40, 40, 40);
-            doc.text('La Merced Comestibles', 105, 20, { align: 'center' });
-            
-            doc.setFontSize(14);
-            doc.text('Sistema de Gestión de Pedidos', 105, 30, { align: 'center' });
-            
-            doc.setFontSize(16);
-            doc.text(`PEDIDO #${pedido.id}`, 105, 45, { align: 'center' });
-            
-            // Información del pedido
-            doc.setFontSize(12);
-            doc.text('INFORMACIÓN DEL PEDIDO', 20, 65);
-            doc.line(20, 67, 80, 67);
-            
-            doc.text(`Número de Pedido: ${pedido.id}`, 20, 75);
-            doc.text(`Fecha de Creación: ${formatearFecha(pedido.fecha)}`, 20, 82);
-            doc.text(`Fecha de Entrega Esperada: ${formatearFecha(pedido.fechaEntrega)}`, 20, 89);
-            doc.text(`Estado: ${obtenerEstadoPedido(pedido.estado).texto}`, 20, 96);
-            
-            // Información del proveedor
-            doc.text('INFORMACIÓN DEL PROVEEDOR', 110, 65);
-            doc.line(110, 67, 190, 67);
-            
-            doc.text(`Proveedor: ${proveedor ? proveedor.nombre : 'N/A'}`, 110, 75);
-            doc.text(`Contacto: ${proveedor ? proveedor.contacto : 'N/A'}`, 110, 82);
-            doc.text(`Teléfono: ${proveedor ? proveedor.telefono : 'N/A'}`, 110, 89);
-            doc.text(`Email: ${proveedor ? proveedor.email : 'N/A'}`, 110, 96);
-            
-            // Tabla de productos
-            let yPosition = 115;
-            doc.text('DETALLE DEL PEDIDO', 20, yPosition);
-            doc.line(20, yPosition + 2, 80, yPosition + 2);
-            yPosition += 10;
-            
-            // Encabezados de la tabla
-            doc.setFillColor(102, 126, 234);
-            doc.setTextColor(255, 255, 255);
-            doc.rect(20, yPosition, 170, 10, 'F');
-            doc.text('Producto', 25, yPosition + 7);
-            doc.text('Cantidad', 100, yPosition + 7);
-            doc.text('Precio', 130, yPosition + 7);
-            doc.text('Subtotal', 160, yPosition + 7);
-            
-            yPosition += 10;
-            doc.setTextColor(0, 0, 0);
-            
-            // Items del pedido
-            pedido.items.forEach(item => {
-                const producto = productos.find(p => p.id === item.producto);
-                const subtotal = item.cantidad * item.precio;
-                
-                if (yPosition > 250) {
-                    doc.addPage();
-                    yPosition = 20;
-                }
-                
-                doc.text(producto ? producto.nombre : 'Producto no encontrado', 25, yPosition + 7);
-                doc.text(item.cantidad.toString(), 100, yPosition + 7);
-                doc.text(`$${item.precio.toFixed(2)}`, 130, yPosition + 7);
-                doc.text(`$${subtotal.toFixed(2)}`, 160, yPosition + 7);
-                
-                yPosition += 10;
-            });
-            
-            // Total
-            yPosition += 10;
-            doc.setFontSize(14);
-            doc.text(`TOTAL: $${pedido.total.toFixed(2)}`, 160, yPosition, { align: 'right' });
-            
-            // Notas
-            if (pedido.notas) {
-                yPosition += 15;
-                doc.setFontSize(12);
-                doc.text('NOTAS ADICIONALES', 20, yPosition);
-                doc.line(20, yPosition + 2, 80, yPosition + 2);
-                yPosition += 10;
-                
-                const splitNotes = doc.splitTextToSize(pedido.notas, 170);
-                doc.text(splitNotes, 20, yPosition);
-            }
-            
-            // Pie de página
-            const pageCount = doc.internal.getNumberOfPages();
-            for (let i = 1; i <= pageCount; i++) {
-                doc.setPage(i);
-                doc.setFontSize(10);
-                doc.setTextColor(128, 128, 128);
-                doc.text(`Página ${i} de ${pageCount}`, 105, 285, { align: 'center' });
-                doc.text(`Generado el ${new Date().toLocaleDateString('es-ES')}`, 105, 290, { align: 'center' });
-            }
-            
-            // Descargar el PDF
-            doc.save(`pedido-${pedido.id}-${new Date().toISOString().split('T')[0]}.pdf`);
-            mostrarMensaje('PDF generado y descargado correctamente', 'success');
-            cerrarModalPDF();
-        }
-
-        // Generar reporte de vencimientos
-        function generarReporteVencimientos() {
-            const productosConVencimiento = productos.filter(p => p.vencimiento);
-            const vencidos = productosConVencimiento.filter(p => {
-                const dias = calcularDiasRestantes(p.vencimiento);
-                return dias < 0;
-            });
-            
-            const proximosVencer = productosConVencimiento.filter(p => {
-                const dias = calcularDiasRestantes(p.vencimiento);
-                return dias >= 0 && dias <= 30;
-            });
-            
-            let reporte = `REPORTE DE VENCIMIENTOS - ${new Date().toLocaleDateString('es-ES')}\n\n`;
-            reporte += `PRODUCTOS VENCIDOS (${vencidos.length}):\n`;
-            reporte += '----------------------------------------\n';
-            
-            vencidos.forEach(producto => {
-                const dias = calcularDiasRestantes(producto.vencimiento);
-                reporte += `${producto.nombre} - Vencido hace ${Math.abs(dias)} días - Stock: ${producto.stock}\n`;
-            });
-            
-            reporte += `\nPRODUCTOS PRÓXIMOS A VENCER (${proximosVencer.length}):\n`;
-            reporte += '----------------------------------------\n';
-            
-            proximosVencer.forEach(producto => {
-                const dias = calcularDiasRestantes(producto.vencimiento);
-                reporte += `${producto.nombre} - Vence en ${dias} días - Stock: ${producto.stock}\n`;
-            });
-            
-            // Crear y descargar archivo de texto
-            const blob = new Blob([reporte], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `reporte-vencimientos-${new Date().toISOString().split('T')[0]}.txt`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            mostrarMensaje('Reporte generado correctamente', 'success');
-        }
-
-        // Función para mostrar mensajes
         function mostrarMensaje(mensaje, tipo = 'info') {
             // Crear elemento de notificación
             const notificacion = document.createElement('div');
@@ -3541,40 +1633,502 @@
                 </button>
             `;
             
-            // Agregar al DOM
             document.body.appendChild(notificacion);
             
-            // Mostrar con animación
-            setTimeout(() => {
-                notificacion.classList.add('mostrar');
-            }, 100);
+            setTimeout(() => notificacion.classList.add('mostrar'), 100);
             
-            // Auto-eliminar después de 5 segundos
             setTimeout(() => {
                 notificacion.classList.remove('mostrar');
-                setTimeout(() => {
-                    if (notificacion.parentNode) {
-                        notificacion.parentNode.removeChild(notificacion);
-                    }
-                }, 300);
+                setTimeout(() => notificacion.remove(), 300);
             }, 5000);
             
-            // Cerrar al hacer clic en el botón
             notificacion.querySelector('.notificacion-cerrar').addEventListener('click', function() {
                 notificacion.classList.remove('mostrar');
-                setTimeout(() => {
-                    if (notificacion.parentNode) {
-                        notificacion.parentNode.removeChild(notificacion);
-                    }
-                }, 300);
+                setTimeout(() => notificacion.remove(), 300);
             });
         }
 
-        // Inicializar
+        // ===== FUNCIONES DE CARGA DE DATOS =====
+        async function fetchAPI(url, options = {}) {
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': getCSRFToken(),
+                    },
+                    ...options
+                });
+                
+                if (!response.ok) throw new Error(`Error ${response.status}`);
+                return await response.json();
+            } catch (error) {
+                console.error('Error en fetchAPI:', error);
+                throw error;
+            }
+        }
+
+        async function cargarDatosReales() {
+            try {
+                console.log('🔄 Cargando datos...');
+                
+                productos = await fetchAPI(API_PRODUCTOS);
+                categorias = await fetchAPI(API_CATEGORIAS);
+                proveedores = await fetchAPI(API_PROVEEDORES);
+                
+                cargarProductos();
+                cargarCategorias();
+                cargarProveedores();
+                cargarDashboard();
+                cargarFiltros();
+                
+            } catch (error) {
+                console.error('❌ Error cargando datos:', error);
+                mostrarMensaje('Error al cargar los datos', 'error');
+            }
+        }
+
+        // ===== FUNCIONES PARA PRODUCTOS =====
+        function cargarProductos() {
+            const tbody = document.getElementById('productos-content');
+            if (!tbody) return;
+            
+            tbody.innerHTML = '';
+            
+            if (productos.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="10" class="empty-state">
+                            <i class="fas fa-box-open"></i>
+                            <h3>No hay productos</h3>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            productos.forEach(producto => {
+                const estadoStock = producto.stock === 0 ? 
+                    '<span class="badge badge-danger">Sin Stock</span>' : 
+                    producto.stock <= 10 ? 
+                    '<span class="badge badge-warning">Stock Bajo</span>' : 
+                    '<span class="badge badge-success">Óptimo</span>';
+                
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td>${producto.id}</td>
+                    <td>
+                        <img src="${producto.imagen}" alt="${producto.nombre}" class="product-image">
+                    </td>
+                    <td>${producto.nombre}</td>
+                    <td>$${producto.precio?.toFixed(2) || '0.00'}</td>
+                    <td>${producto.categoria}</td>
+                    <td>${producto.proveedor}</td>
+                    <td>${producto.stock}</td>
+                    <td>No definida</td>
+                    <td>${estadoStock}</td>
+                    <td>
+                        <a href="/stock/productos/${producto.id}/editar/" class="btn-icon" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <button class="btn-icon delete" onclick="eliminarProducto(${producto.id}, '${producto.nombre.replace(/'/g, "\\'")}')" 
+                                title="Eliminar" ${producto.stock > 0 ? 'disabled' : ''}>
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(fila);
+            });
+        }
+
+        // ===== FUNCIONES PARA CATEGORÍAS =====
+        function cargarCategorias() {
+            const tbody = document.getElementById('categorias-content');
+            if (!tbody) return;
+            
+            tbody.innerHTML = '';
+            
+            if (categorias.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="empty-state">
+                            <i class="fas fa-tags"></i>
+                            <h3>No hay categorías</h3>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            categorias.forEach(categoria => {
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td>${categoria.id}</td>
+                    <td>${categoria.nombre}</td>
+                    <td>${categoria.descripcion}</td>
+                    <td>${categoria.productos_count}</td>
+                    <td>
+                        <a href="/stock/categorias/${categoria.id}/editar/" class="btn-icon" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <button class="btn-icon delete" onclick="eliminarCategoria(${categoria.id}, '${categoria.nombre.replace(/'/g, "\\'")}')" 
+                                title="Eliminar" ${categoria.productos_count > 0 ? 'disabled' : ''}>
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(fila);
+            });
+        }
+
+        // ===== FUNCIONES PARA PROVEEDORES =====
+        function cargarProveedores() {
+            const tbody = document.getElementById('proveedores-content');
+            if (!tbody) return;
+            
+            tbody.innerHTML = '';
+            
+            if (proveedores.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <i class="fas fa-truck"></i>
+                            <h3>No hay proveedores</h3>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            proveedores.forEach(proveedor => {
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td>${proveedor.id}</td>
+                    <td>${proveedor.nombre}</td>
+                    <td>${proveedor.telefono}</td>
+                    <td>${proveedor.email}</td>
+                    <td>${proveedor.productos_count} productos</td>
+                    <td>
+                        <a href="/stock/proveedores/${proveedor.id}/editar/" class="btn-icon" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <button class="btn-icon delete" onclick="eliminarProveedor(${proveedor.id}, '${proveedor.nombre.replace(/'/g, "\\'")}')" 
+                                title="Eliminar" ${proveedor.productos_count > 0 ? 'disabled' : ''}>
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(fila);
+            });
+        }
+
+        // ===== FUNCIONES DE ELIMINACIÓN =====
+        async function eliminarProducto(id, nombre) {
+            if (!confirm(`¿Eliminar producto "${nombre}"?`)) return;
+            
+            try {
+                const response = await fetch(`/stock/api/productos/${id}/eliminar/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCSRFToken(),
+                        'X-Requested-With': 'XMLHttpRequest',
+                    }
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    mostrarMensaje(`✅ Producto "${nombre}" eliminado`, 'success');
+                    await cargarDatosReales();
+                } else {
+                    mostrarMensaje(`❌ Error: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                mostrarMensaje('❌ Error de conexión', 'error');
+            }
+        }
+
+        async function eliminarCategoria(id, nombre) {
+            if (!confirm(`¿Eliminar categoría "${nombre}"?`)) return;
+            
+            try {
+                const response = await fetch(`/stock/api/categorias/${id}/eliminar/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCSRFToken(),
+                        'X-Requested-With': 'XMLHttpRequest',
+                    }
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    mostrarMensaje(`✅ Categoría "${nombre}" eliminada`, 'success');
+                    await cargarDatosReales();
+                } else {
+                    mostrarMensaje(`❌ Error: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                mostrarMensaje('❌ Error de conexión', 'error');
+            }
+        }
+
+        async function eliminarProveedor(id, nombre) {
+            if (!confirm(`¿Eliminar proveedor "${nombre}"?`)) return;
+            
+            try {
+                const response = await fetch(`/stock/api/proveedores/${id}/eliminar/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCSRFToken(),
+                        'X-Requested-With': 'XMLHttpRequest',
+                    }
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    mostrarMensaje(`✅ Proveedor "${nombre}" eliminado`, 'success');
+                    await cargarDatosReales();
+                } else {
+                    mostrarMensaje(`❌ Error: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                mostrarMensaje('❌ Error de conexión', 'error');
+            }
+        }
+
+        // ===== FUNCIONES AUXILIARES =====
+        function cargarFiltros() {
+            const filtroProveedor = document.getElementById('filtroProveedorProductos');
+            if (filtroProveedor) {
+                filtroProveedor.innerHTML = '<option value="">Todos los proveedores</option>';
+                proveedores.forEach(proveedor => {
+                    filtroProveedor.innerHTML += `<option value="${proveedor.id}">${proveedor.nombre}</option>`;
+                });
+            }
+
+            const filtroCategoria = document.getElementById('filtroCategoriaProductos');
+            if (filtroCategoria) {
+                filtroCategoria.innerHTML = '<option value="">Todas las categorías</option>';
+                categorias.forEach(categoria => {
+                    filtroCategoria.innerHTML += `<option value="${categoria.id}">${categoria.nombre}</option>`;
+                });
+            }
+        }
+
+        function cargarDashboard() {
+            if (!productos.length) return;
+
+            const totalProductos = productos.length;
+            const stockOptimo = productos.filter(p => p.stock > 10).length;
+            const stockBajo = productos.filter(p => p.stock <= 10 && p.stock > 0).length;
+            const sinStock = productos.filter(p => p.stock === 0).length;
+            
+            document.getElementById('total-productos').textContent = totalProductos;
+            document.getElementById('stock-optimo').textContent = stockOptimo;
+            document.getElementById('stock-bajo').textContent = stockBajo;
+            document.getElementById('sin-stock').textContent = sinStock;
+            document.getElementById('vencidos').textContent = '0';
+            document.getElementById('proximos-vencer').textContent = '0';
+        }
+
+        // ===== FUNCIONES DE FILTRADO =====
+        function filtrarProductos() {
+            const termino = document.getElementById('searchProductos').value.toLowerCase();
+            const filtroProveedor = document.getElementById('filtroProveedorProductos')?.value || '';
+            const filtroCategoria = document.getElementById('filtroCategoriaProductos')?.value || '';
+            const filtroEstado = document.getElementById('filtroEstadoProductos')?.value || '';
+            
+            const productosFiltrados = productos.filter(p => {
+                const coincideTermino = p.nombre.toLowerCase().includes(termino) || 
+                    p.categoria.toLowerCase().includes(termino);
+                
+                const coincideProveedor = !filtroProveedor || p.proveedor_id == filtroProveedor;
+                const coincideCategoria = !filtroCategoria || p.categoria_id == filtroCategoria;
+                
+                let coincideEstado = true;
+                if (filtroEstado === 'optimo') {
+                    coincideEstado = p.stock > 10;
+                } else if (filtroEstado === 'bajo') {
+                    coincideEstado = p.stock <= 10 && p.stock > 0;
+                } else if (filtroEstado === 'sin') {
+                    coincideEstado = p.stock === 0;
+                }
+                
+                return coincideTermino && coincideProveedor && coincideCategoria && coincideEstado;
+            });
+            
+            const tbody = document.getElementById('productos-content');
+            if (!tbody) return;
+            
+            tbody.innerHTML = '';
+            
+            if (productosFiltrados.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="10" class="empty-state">
+                            <i class="fas fa-search"></i>
+                            <h3>No se encontraron productos</h3>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            productosFiltrados.forEach(producto => {
+                const estadoStock = producto.stock === 0 ? 
+                    '<span class="badge badge-danger">Sin Stock</span>' : 
+                    producto.stock <= 10 ? 
+                    '<span class="badge badge-warning">Stock Bajo</span>' : 
+                    '<span class="badge badge-success">Óptimo</span>';
+                
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td>${producto.id}</td>
+                    <td>
+                        <img src="${producto.imagen}" alt="${producto.nombre}" class="product-image">
+                    </td>
+                    <td>${producto.nombre}</td>
+                    <td>$${producto.precio?.toFixed(2) || '0.00'}</td>
+                    <td>${producto.categoria}</td>
+                    <td>${producto.proveedor}</td>
+                    <td>${producto.stock}</td>
+                    <td>No definida</td>
+                    <td>${estadoStock}</td>
+                    <td>
+                        <a href="/stock/productos/${producto.id}/editar/" class="btn-icon" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <button class="btn-icon delete" onclick="eliminarProducto(${producto.id}, '${producto.nombre.replace(/'/g, "\\'")}')" 
+                                title="Eliminar" ${producto.stock > 0 ? 'disabled' : ''}>
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(fila);
+            });
+        }
+
+        function filtrarCategorias() {
+            const termino = document.getElementById('searchCategorias').value.toLowerCase();
+            const categoriasFiltradas = categorias.filter(cat => 
+                cat.nombre.toLowerCase().includes(termino) || 
+                (cat.descripcion && cat.descripcion.toLowerCase().includes(termino))
+            );
+            
+            const tbody = document.getElementById('categorias-content');
+            if (!tbody) return;
+            
+            tbody.innerHTML = '';
+            
+            if (categoriasFiltradas.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="empty-state">
+                            <i class="fas fa-search"></i>
+                            <h3>No se encontraron categorías</h3>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            categoriasFiltradas.forEach(categoria => {
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td>${categoria.id}</td>
+                    <td>${categoria.nombre}</td>
+                    <td>${categoria.descripcion}</td>
+                    <td>${categoria.productos_count}</td>
+                    <td>
+                        <a href="/stock/categorias/${categoria.id}/editar/" class="btn-icon" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <button class="btn-icon delete" onclick="eliminarCategoria(${categoria.id}, '${categoria.nombre.replace(/'/g, "\\'")}')" 
+                                title="Eliminar" ${categoria.productos_count > 0 ? 'disabled' : ''}>
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(fila);
+            });
+        }
+
+        function filtrarProveedores() {
+            const termino = document.getElementById('searchProveedores').value.toLowerCase();
+            const proveedoresFiltrados = proveedores.filter(prov => 
+                prov.nombre.toLowerCase().includes(termino) || 
+                prov.telefono.toLowerCase().includes(termino) ||
+                prov.email.toLowerCase().includes(termino)
+            );
+            
+            const tbody = document.getElementById('proveedores-content');
+            if (!tbody) return;
+            
+            tbody.innerHTML = '';
+            
+            if (proveedoresFiltrados.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <i class="fas fa-search"></i>
+                            <h3>No se encontraron proveedores</h3>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            proveedoresFiltrados.forEach(proveedor => {
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td>${proveedor.id}</td>
+                    <td>${proveedor.nombre}</td>
+                    <td>${proveedor.telefono}</td>
+                    <td>${proveedor.email}</td>
+                    <td>${proveedor.productos_count} productos</td>
+                    <td>
+                        <a href="/stock/proveedores/${proveedor.id}/editar/" class="btn-icon" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <button class="btn-icon delete" onclick="eliminarProveedor(${proveedor.id}, '${proveedor.nombre.replace(/'/g, "\\'")}')" 
+                                title="Eliminar" ${proveedor.productos_count > 0 ? 'disabled' : ''}>
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(fila);
+            });
+        }
+
+        // ===== INICIALIZACIÓN =====
         document.addEventListener('DOMContentLoaded', function() {
-            cargarDashboard();
-            cargarProductos();
-            cargarFiltrosProductos();
+            console.log('🚀 Inicializando Gestión de Stock...');
+            
+            // Cargar datos
+            cargarDatosReales();
+            
+            // Configurar búsquedas
+            document.getElementById('searchProductos')?.addEventListener('input', filtrarProductos);
+            document.getElementById('searchCategorias')?.addEventListener('input', filtrarCategorias);
+            document.getElementById('searchProveedores')?.addEventListener('input', filtrarProveedores);
+            
+            // Configurar filtros
+            document.getElementById('filtroProveedorProductos')?.addEventListener('change', filtrarProductos);
+            document.getElementById('filtroCategoriaProductos')?.addEventListener('change', filtrarProductos);
+            document.getElementById('filtroEstadoProductos')?.addEventListener('change', filtrarProductos);
+
+            // Configurar navegación
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                    document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
+                    
+                    this.classList.add('active');
+                    const sectionId = this.getAttribute('data-section');
+                    document.getElementById(sectionId)?.classList.add('active');
+                });
+            });
+
+            console.log('✅ Gestión de Stock inicializada');
         });
     </script>
 </body>
