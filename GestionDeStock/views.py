@@ -22,6 +22,8 @@ except ImportError:
     def registrar_actividad(request, tipo, desc, detalles=None, nivel='INFO'):
         print(f"Log: {tipo} - {desc}")
 
+# Importar la misma función que usa caja/views.py para obtener sucursal
+from caja.views import obtener_o_crear_sucursal_sistema
 
 def verificar_permisos_stock(request):
     """Verifica si el usuario tiene permisos para gestionar stock"""
@@ -42,7 +44,6 @@ def verificar_permisos_stock(request):
     
     return (is_admin or has_gestion_stock), usuario
 
-
 def gestion_de_stock(request):
     """Vista principal de gestión de stock"""
     tiene_permiso, usuario = verificar_permisos_stock(request)
@@ -52,7 +53,7 @@ def gestion_de_stock(request):
         return redirect('inicio')
     
     nombre_usuario = request.session.get('nombre_usuario', 'Usuario')
-    sucursal = Sucursales.objects.first()
+    sucursal = obtener_o_crear_sucursal_sistema()
     
     # Verificar si es admin
     roles_usuario = list(
@@ -66,22 +67,258 @@ def gestion_de_stock(request):
         'is_admin': is_admin
     }
     
-    return render(request, 'GestionDeStock/index.html', context)
+    return render(request, 'HTML/gestion_stock.html', context)
 
+# ===== VISTAS PARA FORMULARIOS (NUEVAS) =====
 
+def crear_producto_view(request):
+    """Vista para crear producto con formulario"""
+    tiene_permiso, usuario = verificar_permisos_stock(request)
+    
+    if not tiene_permiso:
+        messages.error(request, 'No tienes permisos para gestionar productos.')
+        return redirect('inicio')
+    
+    from .forms import ProductoForm
+    
+    if request.method == 'POST':
+        form = ProductoForm(request.POST, request.FILES)
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    producto = form.save(commit=False)
+                    
+                    # Asignar automáticamente la sucursal (misma lógica que caja/views.py)
+                    sucursal = obtener_o_crear_sucursal_sistema()
+                    
+                    # Verificar si el código de barras ya existe
+                    if Productos.objects.filter(codigobarraproducto=producto.codigobarraproducto).exists():
+                        messages.error(request, '❌ El código de barras ya existe.')
+                        return render(request, 'HTML/forms/crear_producto.html', {'form': form})
+                    
+                    producto.save()
+                    
+                    # Crear inventario inicial (stock 0 por defecto)
+                    stock_inicial = int(request.POST.get('stock_inicial', 0))
+                    Inventarios.objects.create(
+                        producto=producto,
+                        sucursal=sucursal,
+                        cantidad=stock_inicial
+                    )
+                    
+                    # Asociar proveedor si se especificó
+                    proveedor_id = request.POST.get('proveedor')
+                    if proveedor_id:
+                        try:
+                            proveedor = Proveedores.objects.get(idproveedor=proveedor_id)
+                            Provxprod.objects.create(
+                                idproducto=producto,
+                                idproveedor=proveedor
+                            )
+                        except Proveedores.DoesNotExist:
+                            pass
+                    
+                    messages.success(request, f'✅ Producto "{producto.nombreproductos}" creado correctamente.')
+                    registrar_actividad(
+                        request,
+                        'CREAR_PRODUCTO_FORM',
+                        f'Producto creado mediante formulario: {producto.nombreproductos}',
+                        detalles={
+                            'producto_id': producto.idproducto,
+                            'stock_inicial': stock_inicial,
+                            'precio': float(producto.precioproducto)
+                        }
+                    )
+                    return redirect('stock:gestion_de_stock')
+                    
+            except Exception as e:
+                messages.error(request, f'❌ Error al crear producto: {str(e)}')
+        else:
+            messages.error(request, '❌ Por favor corrige los errores en el formulario.')
+    else:
+        form = ProductoForm()
+    
+    # Obtener proveedores para el select
+    proveedores = Proveedores.objects.all()
+    
+    return render(request, 'HTML/forms/crear_producto.html', {
+        'form': form,
+        'proveedores': proveedores
+    })
+
+def crear_categoria_view(request):
+    """Vista para crear categoría con formulario"""
+    tiene_permiso, usuario = verificar_permisos_stock(request)
+    
+    if not tiene_permiso:
+        messages.error(request, 'No tienes permisos para gestionar categorías.')
+        return redirect('inicio')
+    
+    from .forms import CategoriaForm
+    
+    if request.method == 'POST':
+        form = CategoriaForm(request.POST)
+        if form.is_valid():
+            try:
+                categoria = form.save()
+                messages.success(request, f'✅ Categoría "{categoria.nombrecategoria}" creada correctamente.')
+                registrar_actividad(
+                    request,
+                    'CREAR_CATEGORIA_FORM',
+                    f'Categoría creada mediante formulario: {categoria.nombrecategoria}',
+                    detalles={'categoria_id': categoria.idcategoria}
+                )
+                return redirect('stock:gestion_de_stock')
+            except Exception as e:
+                messages.error(request, f'❌ Error al crear categoría: {str(e)}')
+        else:
+            messages.error(request, '❌ Por favor corrige los errores en el formulario.')
+    else:
+        form = CategoriaForm()
+    
+    return render(request, 'HTML/forms/crear_categoria.html', {'form': form})
+
+def crear_proveedor_view(request):
+    """Vista para crear proveedor con formulario"""
+    tiene_permiso, usuario = verificar_permisos_stock(request)
+    
+    if not tiene_permiso:
+        messages.error(request, 'No tienes permisos para gestionar proveedores.')
+        return redirect('inicio')
+    
+    from .forms import ProveedorForm
+    
+    if request.method == 'POST':
+        form = ProveedorForm(request.POST)
+        if form.is_valid():
+            try:
+                # Verificar si el CUIT ya existe
+                cuit = form.cleaned_data['cuitproveedor']
+                if Proveedores.objects.filter(cuitproveedor=cuit).exists():
+                    messages.error(request, '❌ El CUIT ya existe.')
+                    return render(request, 'HTML/forms/crear_proveedor.html', {'form': form})
+                
+                proveedor = form.save()
+                messages.success(request, f'✅ Proveedor "{proveedor.nombreproveedor}" creado correctamente.')
+                registrar_actividad(
+                    request,
+                    'CREAR_PROVEEDOR_FORM',
+                    f'Proveedor creado mediante formulario: {proveedor.nombreproveedor}',
+                    detalles={'proveedor_id': proveedor.idproveedor}
+                )
+                return redirect('stock:gestion_de_stock')
+            except Exception as e:
+                messages.error(request, f'❌ Error al crear proveedor: {str(e)}')
+        else:
+            messages.error(request, '❌ Por favor corrige los errores en el formulario.')
+    else:
+        form = ProveedorForm()
+    
+    return render(request, 'HTML/forms/crear_proveedor.html', {'form': form})
+
+def editar_producto_view(request, producto_id):
+    """Vista para editar producto con formulario"""
+    tiene_permiso, usuario = verificar_permisos_stock(request)
+    
+    if not tiene_permiso:
+        messages.error(request, 'No tienes permisos para gestionar productos.')
+        return redirect('inicio')
+    
+    try:
+        producto = Productos.objects.get(idproducto=producto_id)
+    except Productos.DoesNotExist:
+        messages.error(request, '❌ Producto no encontrado.')
+        return redirect('stock:gestion_de_stock')
+    
+    from .forms import ProductoForm
+    
+    # Obtener inventario actual
+    sucursal = obtener_o_crear_sucursal_sistema()
+    inventario = Inventarios.objects.filter(producto=producto, sucursal=sucursal).first()
+    stock_actual = inventario.cantidad if inventario else 0
+    
+    # Obtener proveedor actual
+    proveedor_actual = Provxprod.objects.filter(idproducto=producto).first()
+    
+    if request.method == 'POST':
+        form = ProductoForm(request.POST, request.FILES, instance=producto)
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    producto_editado = form.save()
+                    
+                    # Actualizar inventario
+                    nuevo_stock = int(request.POST.get('stock_actual', 0))
+                    if inventario:
+                        inventario.cantidad = nuevo_stock
+                        inventario.save()
+                    else:
+                        Inventarios.objects.create(
+                            producto=producto_editado,
+                            sucursal=sucursal,
+                            cantidad=nuevo_stock
+                        )
+                    
+                    # Actualizar proveedor
+                    nuevo_proveedor_id = request.POST.get('proveedor')
+                    Provxprod.objects.filter(idproducto=producto).delete()
+                    if nuevo_proveedor_id:
+                        try:
+                            proveedor = Proveedores.objects.get(idproveedor=nuevo_proveedor_id)
+                            Provxprod.objects.create(
+                                idproducto=producto_editado,
+                                idproveedor=proveedor
+                            )
+                        except Proveedores.DoesNotExist:
+                            pass
+                    
+                    messages.success(request, f'✅ Producto "{producto_editado.nombreproductos}" actualizado correctamente.')
+                    registrar_actividad(
+                        request,
+                        'EDITAR_PRODUCTO_FORM',
+                        f'Producto editado mediante formulario: {producto_editado.nombreproductos}',
+                        detalles={
+                            'producto_id': producto_editado.idproducto,
+                            'stock_anterior': stock_actual,
+                            'stock_nuevo': nuevo_stock
+                        }
+                    )
+                    return redirect('stock:gestion_de_stock')
+                    
+            except Exception as e:
+                messages.error(request, f'❌ Error al actualizar producto: {str(e)}')
+        else:
+            messages.error(request, '❌ Por favor corrige los errores en el formulario.')
+    else:
+        form = ProductoForm(instance=producto)
+    
+    proveedores = Proveedores.objects.all()
+    
+    return render(request, 'HTML/forms/editar_producto.html', {
+        'form': form,
+        'producto': producto,
+        'proveedores': proveedores,
+        'stock_actual': stock_actual,
+        'proveedor_actual': proveedor_actual.idproveedor if proveedor_actual else None
+    })
+
+# ... (las funciones API existentes se mantienen igual)
 # ===== API: PRODUCTOS =====
 
 @require_http_methods(['GET'])
 def api_listar_productos(request):
-    """API para listar todos los productos con su inventario"""
+    """API para listar todos los productos con su inventario - CORREGIDA"""
     try:
         tiene_permiso, _ = verificar_permisos_stock(request)
         if not tiene_permiso:
             return JsonResponse({'error': 'Sin permisos'}, status=403)
         
-        sucursal_id = request.GET.get('sucursal_id')
         search = request.GET.get('search', '').strip()
         
+        # Obtener sucursal automáticamente
+        sucursal = obtener_o_crear_sucursal_sistema()
+        
+        # Consulta base de productos
         productos_query = Productos.objects.select_related('idcategoria').all()
         
         if search:
@@ -93,41 +330,47 @@ def api_listar_productos(request):
         
         productos_list = []
         for producto in productos_query:
-            # Obtener inventario
-            if sucursal_id:
-                inventario = Inventarios.objects.filter(
-                    producto=producto,
-                    sucursal_id=sucursal_id
-                ).first()
-            else:
-                # Si no hay sucursal específica, sumar todo el inventario
-                inventario_total = Inventarios.objects.filter(
-                    producto=producto
-                ).aggregate(total=Sum('cantidad'))
-                stock_total = inventario_total['total'] or 0
-                inventario = type('obj', (object,), {'cantidad': stock_total})()
+            # Obtener inventario de la sucursal automática
+            inventario = Inventarios.objects.filter(
+                producto=producto,
+                sucursal=sucursal
+            ).first()
             
             # Obtener proveedor
             proveedor_rel = Provxprod.objects.filter(idproducto=producto).first()
             proveedor_nombre = proveedor_rel.idproveedor.nombreproveedor if proveedor_rel else 'Sin proveedor'
             proveedor_id = proveedor_rel.idproveedor.idproveedor if proveedor_rel else None
             
+            # Obtener categoría
+            categoria_nombre = producto.idcategoria.nombrecategoria if producto.idcategoria else 'Sin categoría'
+            categoria_id = producto.idcategoria.idcategoria if producto.idcategoria else None
+            
+            # 🔥 NUEVO: Imagen con placeholder online
+            if producto.imagenproducto and hasattr(producto.imagenproducto, 'url'):
+                imagen_url = producto.imagenproducto.url
+            else:
+                # Usar placeholder online con las iniciales del producto
+                texto_placeholder = producto.nombreproductos[:2].upper() if producto.nombreproductos else 'PR'
+                imagen_url = f"https://via.placeholder.com/50/e0e0e0/666666?text={texto_placeholder}"
+
             productos_list.append({
                 'id': producto.idproducto,
                 'nombre': producto.nombreproductos,
                 'precio': float(producto.precioproducto),
                 'marca': producto.marcaproducto,
                 'codigo': str(producto.codigobarraproducto),
-                'categoria': producto.idcategoria.nombrecategoria if producto.idcategoria else 'Sin categoría',
-                'categoria_id': producto.idcategoria.idcategoria if producto.idcategoria else None,
+                'categoria': categoria_nombre,
+                'categoria_id': categoria_id,
                 'proveedor': proveedor_nombre,
                 'proveedor_id': proveedor_id,
                 'stock': inventario.cantidad if inventario else 0,
-                'stockMinimo': 10,
-                'imagen': producto.imagenproducto if producto.imagenproducto else None
+                'stockMinimo': 10,  # Valor por defecto
+                'imagen': imagen_url,
+                'vencimiento': None  # Agregar si tienes campo de vencimiento
             })
         
         return JsonResponse(productos_list, safe=False)
+        
     except Exception as e:
         print(f"Error en api_listar_productos: {e}")
         import traceback
@@ -352,7 +595,7 @@ def api_eliminar_producto(request, producto_id):
 
 @require_http_methods(['GET'])
 def api_listar_categorias(request):
-    """API para listar todas las categorías"""
+    """API para listar todas las categorías - MEJORADA"""
     try:
         tiene_permiso, _ = verificar_permisos_stock(request)
         if not tiene_permiso:
@@ -362,7 +605,8 @@ def api_listar_categorias(request):
         categorias_list = [{
             'id': cat.idcategoria,
             'nombre': cat.nombrecategoria,
-            'descripcion': cat.descripcioncategoria or ''
+            'descripcion': cat.descripcioncategoria or '',
+            'productos_count': Productos.objects.filter(idcategoria=cat).count()
         } for cat in categorias]
         
         return JsonResponse(categorias_list, safe=False)
@@ -485,7 +729,7 @@ def api_eliminar_categoria(request, categoria_id):
 
 @require_http_methods(['GET'])
 def api_listar_proveedores(request):
-    """API para listar todos los proveedores"""
+    """API para listar todos los proveedores - MEJORADA"""
     try:
         tiene_permiso, _ = verificar_permisos_stock(request)
         if not tiene_permiso:
@@ -497,7 +741,8 @@ def api_listar_proveedores(request):
             'nombre': prov.nombreproveedor,
             'telefono': str(prov.telefonoproveedor),
             'email': prov.emailprov,
-            'cuit': str(prov.cuitproveedor)
+            'cuit': str(prov.cuitproveedor),
+            'productos_count': Provxprod.objects.filter(idproveedor=prov).count()
         } for prov in proveedores]
         
         return JsonResponse(proveedores_list, safe=False)
@@ -1031,3 +1276,93 @@ def api_alertas_stock(request):
         import traceback
         traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
+    
+
+
+def editar_categoria_view(request, categoria_id):
+    """Vista para editar categoría con formulario"""
+    tiene_permiso, usuario = verificar_permisos_stock(request)
+    
+    if not tiene_permiso:
+        messages.error(request, 'No tienes permisos para gestionar categorías.')
+        return redirect('inicio')
+    
+    try:
+        categoria = Categorias.objects.get(idcategoria=categoria_id)
+    except Categorias.DoesNotExist:
+        messages.error(request, '❌ Categoría no encontrada.')
+        return redirect('stock:gestion_de_stock')
+    
+    from .forms import CategoriaForm
+    
+    if request.method == 'POST':
+        form = CategoriaForm(request.POST, instance=categoria)
+        if form.is_valid():
+            try:
+                categoria_editada = form.save()
+                messages.success(request, f'✅ Categoría "{categoria_editada.nombrecategoria}" actualizada correctamente.')
+                registrar_actividad(
+                    request,
+                    'EDITAR_CATEGORIA_FORM',
+                    f'Categoría editada mediante formulario: {categoria_editada.nombrecategoria}',
+                    detalles={'categoria_id': categoria_editada.idcategoria}
+                )
+                return redirect('stock:gestion_de_stock')
+            except Exception as e:
+                messages.error(request, f'❌ Error al actualizar categoría: {str(e)}')
+        else:
+            messages.error(request, '❌ Por favor corrige los errores en el formulario.')
+    else:
+        form = CategoriaForm(instance=categoria)
+    
+    return render(request, 'HTML/forms/editar_categoria.html', {
+        'form': form,
+        'categoria': categoria
+    })
+
+def editar_proveedor_view(request, proveedor_id):
+    """Vista para editar proveedor con formulario"""
+    tiene_permiso, usuario = verificar_permisos_stock(request)
+    
+    if not tiene_permiso:
+        messages.error(request, 'No tienes permisos para gestionar proveedores.')
+        return redirect('inicio')
+    
+    try:
+        proveedor = Proveedores.objects.get(idproveedor=proveedor_id)
+    except Proveedores.DoesNotExist:
+        messages.error(request, '❌ Proveedor no encontrado.')
+        return redirect('stock:gestion_de_stock')
+    
+    from .forms import ProveedorForm
+    
+    if request.method == 'POST':
+        form = ProveedorForm(request.POST, instance=proveedor)
+        if form.is_valid():
+            try:
+                # Verificar si el CUIT ya existe (excluyendo el actual)
+                cuit = form.cleaned_data['cuitproveedor']
+                if Proveedores.objects.filter(cuitproveedor=cuit).exclude(idproveedor=proveedor_id).exists():
+                    messages.error(request, '❌ El CUIT ya existe.')
+                    return render(request, 'HTML/forms/editar_proveedor.html', {'form': form, 'proveedor': proveedor})
+                
+                proveedor_editado = form.save()
+                messages.success(request, f'✅ Proveedor "{proveedor_editado.nombreproveedor}" actualizado correctamente.')
+                registrar_actividad(
+                    request,
+                    'EDITAR_PROVEEDOR_FORM',
+                    f'Proveedor editado mediante formulario: {proveedor_editado.nombreproveedor}',
+                    detalles={'proveedor_id': proveedor_editado.idproveedor}
+                )
+                return redirect('stock:gestion_de_stock')
+            except Exception as e:
+                messages.error(request, f'❌ Error al actualizar proveedor: {str(e)}')
+        else:
+            messages.error(request, '❌ Por favor corrige los errores en el formulario.')
+    else:
+        form = ProveedorForm(instance=proveedor)
+    
+    return render(request, 'HTML/forms/editar_proveedor.html', {
+        'form': form,
+        'proveedor': proveedor
+    })
