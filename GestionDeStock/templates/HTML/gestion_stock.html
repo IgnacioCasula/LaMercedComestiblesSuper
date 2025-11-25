@@ -6,6 +6,8 @@
     <title>Gestión de Stock - La Merced Comestibles</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         /* ===== RESET Y BASE ===== */
         * { 
@@ -273,6 +275,7 @@
         .card-success { border-color: var(--success); }
         .card-info { border-color: var(--info); }
         .card-danger { border-color: var(--danger); }
+        .card-warning { border-color: var(--warning); }
 
         .card-icon {
             width: 70px;
@@ -302,6 +305,11 @@
         .card-danger .card-icon {
             background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
             color: white;
+        }
+
+        .card-warning .card-icon {
+            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+            color: var(--dark);
         }
 
         .card-info h3 { 
@@ -515,6 +523,17 @@
             background: rgba(220, 53, 69, 0.1);
         }
 
+        .btn-icon.delete:disabled {
+            color: #ccc;
+            cursor: not-allowed;
+            background: none;
+        }
+
+        .btn-icon.delete:disabled:hover {
+            color: #ccc;
+            background: none;
+        }
+
         /* ===== BADGES ===== */
         .badge {
             display: inline-block;
@@ -546,6 +565,12 @@
             background: linear-gradient(135deg, #f8d7da 0%, #f1b0b7 100%);
             color: #721c24;
             border: 1px solid var(--danger);
+        }
+
+        .badge-secondary {
+            background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+            color: #495057;
+            border: 1px solid var(--secondary);
         }
 
         /* ===== EMPTY STATE ===== */
@@ -593,7 +618,7 @@
             background: white;
             border-radius: 20px;
             width: 90%;
-            max-width: 600px;
+            max-width: 800px;
             box-shadow: var(--shadow-lg);
             overflow: hidden;
         }
@@ -622,6 +647,8 @@
 
         .modal-body {
             padding: 25px;
+            max-height: 70vh;
+            overflow-y: auto;
         }
 
         .form-group {
@@ -722,6 +749,171 @@
             font-size: 1.2rem;
         }
 
+        /* ===== FILTROS ===== */
+        .filtros {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filtro-select {
+            padding: 12px 15px;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            background: white;
+            font-size: 15px;
+            min-width: 200px;
+        }
+
+        /* ===== ALERTAS VENCIMIENTO ===== */
+        .vencimiento-proximo {
+            color: var(--warning);
+            font-weight: 600;
+        }
+
+        .vencimiento-critico {
+            color: var(--danger);
+            font-weight: 700;
+            background-color: rgba(220, 53, 69, 0.1);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .vencimiento-ok {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        /* ===== TABLA DE ITEMS DE PEDIDO ===== */
+        .items-pedido {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        .items-pedido th {
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--dark);
+            border-bottom: 1px solid #e1e5e9;
+        }
+
+        .items-pedido td {
+            padding: 12px;
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        .items-pedido .item-cantidad {
+            width: 100px;
+        }
+
+        .items-pedido .item-precio {
+            width: 120px;
+        }
+
+        .items-pedido .item-subtotal {
+            width: 120px;
+            font-weight: 600;
+        }
+
+        .items-pedido .item-acciones {
+            width: 80px;
+            text-align: center;
+        }
+
+        .total-pedido {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+
+        /* ===== PDF PREVIEW ===== */
+        .pdf-preview {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .pdf-header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 20px;
+        }
+
+        .pdf-header h1 {
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .pdf-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+
+        .pdf-info-section {
+            flex: 1;
+        }
+
+        .pdf-info-section h3 {
+            color: var(--primary);
+            margin-bottom: 10px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+
+        .pdf-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+
+        .pdf-table th {
+            background: var(--primary);
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+
+        .pdf-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .pdf-table tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        .pdf-total {
+            text-align: right;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+
+        .pdf-footer {
+            margin-top: 40px;
+            text-align: center;
+            color: var(--secondary);
+            font-size: 0.9rem;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+
         /* ===== RESPONSIVE ===== */
         @media (max-width: 768px) {
             .main-content {
@@ -770,6 +962,23 @@
             .form-row {
                 flex-direction: column;
                 gap: 0;
+            }
+
+            .filtros {
+                flex-direction: column;
+            }
+
+            .filtro-select {
+                width: 100%;
+            }
+
+            .items-pedido {
+                font-size: 0.85rem;
+            }
+
+            .pdf-info {
+                flex-direction: column;
+                gap: 20px;
             }
         }
 
@@ -836,6 +1045,14 @@
                             <i class="fas fa-truck"></i>
                             <span>Proveedores</span>
                         </li>
+                        <li class="nav-item" data-section="pedidos">
+                            <i class="fas fa-clipboard-list"></i>
+                            <span>Pedidos</span>
+                        </li>
+                        <li class="nav-item" data-section="vencimientos">
+                            <i class="fas fa-calendar-times"></i>
+                            <span>Vencimientos</span>
+                        </li>
                     </ul>
                 </nav>
             </aside>
@@ -884,6 +1101,24 @@
                                 <p id="sin-stock">0</p>
                             </div>
                         </div>
+                        <div class="card card-warning">
+                            <div class="card-icon">
+                                <i class="fas fa-calendar-times"></i>
+                            </div>
+                            <div class="card-info">
+                                <h3>Próximos a Vencer</h3>
+                                <p id="proximos-vencer">0</p>
+                            </div>
+                        </div>
+                        <div class="card card-danger">
+                            <div class="card-icon">
+                                <i class="fas fa-exclamation-circle"></i>
+                            </div>
+                            <div class="card-info">
+                                <h3>Vencidos</h3>
+                                <p id="vencidos">0</p>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
@@ -902,6 +1137,28 @@
                         </button>
                     </div>
 
+                    <!-- Filtros para productos -->
+                    <div class="filtros">
+                        <select class="filtro-select" id="filtroProveedorProductos">
+                            <option value="">Todos los proveedores</option>
+                        </select>
+                        <select class="filtro-select" id="filtroCategoriaProductos">
+                            <option value="">Todas las categorías</option>
+                        </select>
+                        <select class="filtro-select" id="filtroEstadoProductos">
+                            <option value="">Todos los estados</option>
+                            <option value="optimo">Stock Óptimo</option>
+                            <option value="bajo">Stock Bajo</option>
+                            <option value="sin">Sin Stock</option>
+                        </select>
+                        <select class="filtro-select" id="filtroVencimientoProductos">
+                            <option value="">Todos los vencimientos</option>
+                            <option value="vencido">Vencidos</option>
+                            <option value="proximo">Próximos a vencer</option>
+                            <option value="ok">Vigentes</option>
+                        </select>
+                    </div>
+
                     <div class="table-container">
                         <table class="data-table">
                             <thead>
@@ -910,7 +1167,9 @@
                                     <th>Imagen</th>
                                     <th>Nombre</th>
                                     <th>Categoría</th>
+                                    <th>Proveedor</th>
                                     <th>Stock</th>
+                                    <th>Vencimiento</th>
                                     <th>Estado</th>
                                     <th>Acciones</th>
                                 </tr>
@@ -988,6 +1247,114 @@
                         </table>
                     </div>
                 </section>
+
+                <!-- Pedidos Section -->
+                <section id="pedidos" class="section">
+                    <h2><i class="fas fa-clipboard-list"></i> Gestión de Pedidos</h2>
+                    
+                    <div class="section-header">
+                        <div class="search-box">
+                            <input type="text" placeholder="Buscar pedidos..." id="searchPedidos">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <button class="btn btn-primary" id="btnNuevoPedido">
+                            <i class="fas fa-plus"></i>
+                            Nuevo Pedido
+                        </button>
+                    </div>
+
+                    <!-- Filtros para pedidos -->
+                    <div class="filtros">
+                        <select class="filtro-select" id="filtroProveedorPedidos">
+                            <option value="">Todos los proveedores</option>
+                        </select>
+                        <select class="filtro-select" id="filtroEstadoPedidos">
+                            <option value="">Todos los estados</option>
+                            <option value="pendiente">Pendiente</option>
+                            <option value="confirmado">Confirmado</option>
+                            <option value="en_camino">En Camino</option>
+                            <option value="recibido">Recibido</option>
+                            <option value="cancelado">Cancelado</option>
+                        </select>
+                        <select class="filtro-select" id="filtroFechaPedidos">
+                            <option value="">Todas las fechas</option>
+                            <option value="hoy">Hoy</option>
+                            <option value="semana">Esta semana</option>
+                            <option value="mes">Este mes</option>
+                        </select>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Proveedor</th>
+                                    <th>Fecha</th>
+                                    <th>Productos</th>
+                                    <th>Total</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pedidos-content">
+                                <!-- Los pedidos se cargarán aquí dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Vencimientos Section -->
+                <section id="vencimientos" class="section">
+                    <h2><i class="fas fa-calendar-times"></i> Control de Vencimientos</h2>
+                    
+                    <div class="section-header">
+                        <div class="search-box">
+                            <input type="text" placeholder="Buscar productos..." id="searchVencimientos">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <button class="btn btn-warning" id="btnReporteVencimientos">
+                            <i class="fas fa-file-pdf"></i>
+                            Generar Reporte
+                        </button>
+                    </div>
+
+                    <!-- Filtros para vencimientos -->
+                    <div class="filtros">
+                        <select class="filtro-select" id="filtroEstadoVencimiento">
+                            <option value="">Todos los estados</option>
+                            <option value="vencido">Vencidos</option>
+                            <option value="proximo">Próximos a vencer</option>
+                            <option value="ok">Vigentes</option>
+                        </select>
+                        <select class="filtro-select" id="filtroDiasVencimiento">
+                            <option value="">Todos los rangos</option>
+                            <option value="7">Próximos 7 días</option>
+                            <option value="15">Próximos 15 días</option>
+                            <option value="30">Próximos 30 días</option>
+                        </select>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Producto</th>
+                                    <th>Categoría</th>
+                                    <th>Stock</th>
+                                    <th>Fecha Vencimiento</th>
+                                    <th>Días Restantes</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vencimientos-content">
+                                <!-- Los productos con vencimiento se cargarán aquí -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
             </main>
         </div>
     </div>
@@ -1027,6 +1394,14 @@
                         <select id="productoProveedor" class="form-control" required>
                             <option value="">Seleccione un proveedor</option>
                         </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="productoVencimiento">Fecha de Vencimiento</label>
+                        <input type="date" id="productoVencimiento" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="productoLote">Número de Lote (Opcional)</label>
+                        <input type="text" id="productoLote" class="form-control" placeholder="LOTE-001">
                     </div>
                     <div class="form-group">
                         <label for="productoImagen">URL de Imagen</label>
@@ -1103,14 +1478,175 @@
         </div>
     </div>
 
+    <!-- Modal para Pedidos -->
+    <div class="modal" id="modalPedido">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalPedidoTitulo">Nuevo Pedido</h3>
+                <button class="modal-close" id="modalPedidoCerrar">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="formPedido">
+                    <input type="hidden" id="pedidoId">
+                    <div class="form-group">
+                        <label for="pedidoProveedor">Proveedor</label>
+                        <select id="pedidoProveedor" class="form-control" required>
+                            <option value="">Seleccione un proveedor</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="pedidoFecha">Fecha de Entrega Esperada</label>
+                        <input type="date" id="pedidoFecha" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="pedidoEstado">Estado</label>
+                        <select id="pedidoEstado" class="form-control" required>
+                            <option value="pendiente">Pendiente</option>
+                            <option value="confirmado">Confirmado</option>
+                            <option value="en_camino">En Camino</option>
+                            <option value="recibido">Recibido</option>
+                            <option value="cancelado">Cancelado</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Productos del Pedido</label>
+                        <div class="form-row">
+                            <div class="form-group" style="flex: 2;">
+                                <select id="pedidoProducto" class="form-control">
+                                    <option value="">Seleccione un producto</option>
+                                </select>
+                            </div>
+                            <div class="form-group item-cantidad">
+                                <input type="number" id="pedidoCantidad" class="form-control" placeholder="Cantidad" min="1" value="1">
+                            </div>
+                            <div class="form-group item-precio">
+                                <input type="number" id="pedidoPrecio" class="form-control" placeholder="Precio" min="0" step="0.01">
+                            </div>
+                            <div class="form-group item-acciones">
+                                <button type="button" class="btn btn-success" id="btnAgregarProducto">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <table class="items-pedido">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th class="item-cantidad">Cantidad</th>
+                                <th class="item-precio">Precio Unit.</th>
+                                <th class="item-subtotal">Subtotal</th>
+                                <th class="item-acciones">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pedidoItems">
+                            <!-- Los items del pedido se agregarán aquí -->
+                        </tbody>
+                    </table>
+                    
+                    <div class="total-pedido">
+                        Total: $<span id="pedidoTotal">0.00</span>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="pedidoNotas">Notas (Opcional)</label>
+                        <textarea id="pedidoNotas" class="form-control" rows="3" placeholder="Notas adicionales sobre el pedido..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modalPedidoCancelar">Cancelar</button>
+                <button class="btn btn-primary" id="modalPedidoGuardar">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para PDF Preview -->
+    <div class="modal" id="modalPDF">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h3>Vista Previa del PDF - Pedido #<span id="pdfPedidoId"></span></h3>
+                <button class="modal-close" id="modalPDFCerrar">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="pdf-preview" id="pdfPreview">
+                    <!-- Contenido del PDF se generará aquí -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modalPDFCancelar">Cerrar</button>
+                <button class="btn btn-primary" id="modalPDFDescargar">
+                    <i class="fas fa-download"></i> Descargar PDF
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Datos de ejemplo para simular la aplicación
         let productos = JSON.parse(localStorage.getItem('productos')) || [
-            { id: 1, nombre: "Arroz Integral", categoria: "Granos", stock: 45, stockMinimo: 20, imagen: "https://via.placeholder.com/50", proveedor: 1 },
-            { id: 2, nombre: "Aceite de Oliva", categoria: "Aceites", stock: 12, stockMinimo: 15, imagen: "https://via.placeholder.com/50", proveedor: 2 },
-            { id: 3, nombre: "Azúcar Morena", categoria: "Endulzantes", stock: 8, stockMinimo: 10, imagen: "https://via.placeholder.com/50", proveedor: 1 },
-            { id: 4, nombre: "Harina de Trigo", categoria: "Harinas", stock: 32, stockMinimo: 25, imagen: "https://via.placeholder.com/50", proveedor: 3 },
-            { id: 5, nombre: "Leche Deslactosada", categoria: "Lácteos", stock: 5, stockMinimo: 15, imagen: "https://via.placeholder.com/50", proveedor: 2 }
+            { 
+                id: 1, 
+                nombre: "Arroz Integral", 
+                categoria: "Granos", 
+                stock: 45, 
+                stockMinimo: 20, 
+                imagen: "https://via.placeholder.com/50", 
+                proveedor: 1,
+                vencimiento: "2024-12-31",
+                lote: "LOTE-001",
+                precio: 2.50
+            },
+            { 
+                id: 2, 
+                nombre: "Aceite de Oliva", 
+                categoria: "Aceites", 
+                stock: 12, 
+                stockMinimo: 15, 
+                imagen: "https://via.placeholder.com/50", 
+                proveedor: 2,
+                vencimiento: "2024-06-15",
+                lote: "LOTE-002",
+                precio: 8.75
+            },
+            { 
+                id: 3, 
+                nombre: "Azúcar Morena", 
+                categoria: "Endulzantes", 
+                stock: 8, 
+                stockMinimo: 10, 
+                imagen: "https://via.placeholder.com/50", 
+                proveedor: 1,
+                vencimiento: "2025-03-20",
+                lote: "LOTE-003",
+                precio: 3.20
+            },
+            { 
+                id: 4, 
+                nombre: "Harina de Trigo", 
+                categoria: "Harinas", 
+                stock: 32, 
+                stockMinimo: 25, 
+                imagen: "https://via.placeholder.com/50", 
+                proveedor: 3,
+                vencimiento: "2024-05-01",
+                lote: "LOTE-004",
+                precio: 1.80
+            },
+            { 
+                id: 5, 
+                nombre: "Leche Deslactosada", 
+                categoria: "Lácteos", 
+                stock: 0, 
+                stockMinimo: 15, 
+                imagen: "https://via.placeholder.com/50", 
+                proveedor: 2,
+                vencimiento: "2024-04-10",
+                lote: "LOTE-005",
+                precio: 2.10
+            }
         ];
 
         let categorias = JSON.parse(localStorage.getItem('categorias')) || [
@@ -1127,11 +1663,103 @@
             { id: 3, nombre: "Suministros Naturales", contacto: "Carlos López", telefono: "+34 600 789 012", email: "carlos@naturales.com" }
         ];
 
+        let pedidos = JSON.parse(localStorage.getItem('pedidos')) || [
+            {
+                id: 1,
+                proveedor: 1,
+                fecha: "2024-03-15",
+                fechaEntrega: "2024-03-20",
+                estado: "recibido",
+                items: [
+                    { producto: 1, cantidad: 50, precio: 2.30 },
+                    { producto: 3, cantidad: 30, precio: 3.00 }
+                ],
+                notas: "Pedido regular de fin de mes",
+                total: 205.00
+            },
+            {
+                id: 2,
+                proveedor: 2,
+                fecha: "2024-03-18",
+                fechaEntrega: "2024-03-25",
+                estado: "en_camino",
+                items: [
+                    { producto: 2, cantidad: 20, precio: 8.50 },
+                    { producto: 5, cantidad: 40, precio: 2.00 }
+                ],
+                notas: "",
+                total: 250.00
+            },
+            {
+                id: 3,
+                proveedor: 3,
+                fecha: "2024-03-20",
+                fechaEntrega: "2024-03-27",
+                estado: "confirmado",
+                items: [
+                    { producto: 4, cantidad: 25, precio: 1.70 }
+                ],
+                notas: "Pedido urgente por bajo stock",
+                total: 42.50
+            }
+        ];
+
         // Guardar datos en localStorage
         function guardarDatos() {
             localStorage.setItem('productos', JSON.stringify(productos));
             localStorage.setItem('categorias', JSON.stringify(categorias));
             localStorage.setItem('proveedores', JSON.stringify(proveedores));
+            localStorage.setItem('pedidos', JSON.stringify(pedidos));
+        }
+
+        // Función para calcular días restantes hasta vencimiento
+        function calcularDiasRestantes(fechaVencimiento) {
+            if (!fechaVencimiento) return null;
+            
+            const hoy = new Date();
+            const vencimiento = new Date(fechaVencimiento);
+            const diferencia = vencimiento - hoy;
+            const dias = Math.ceil(diferencia / (1000 * 60 * 60 * 24));
+            
+            return dias;
+        }
+
+        // Función para determinar estado de vencimiento
+        function obtenerEstadoVencimiento(fechaVencimiento) {
+            if (!fechaVencimiento) return { estado: 'sin-fecha', texto: 'Sin fecha', clase: 'badge-secondary' };
+            
+            const dias = calcularDiasRestantes(fechaVencimiento);
+            
+            if (dias < 0) {
+                return { estado: 'vencido', texto: 'Vencido', clase: 'badge-danger' };
+            } else if (dias <= 7) {
+                return { estado: 'critico', texto: 'Crítico', clase: 'badge-danger' };
+            } else if (dias <= 30) {
+                return { estado: 'proximo', texto: 'Próximo', clase: 'badge-warning' };
+            } else {
+                return { estado: 'ok', texto: 'Vigente', clase: 'badge-success' };
+            }
+        }
+
+        // Función para formatear fecha
+        function formatearFecha(fecha) {
+            if (!fecha) return 'No definida';
+            
+            const opciones = { year: 'numeric', month: '2-digit', day: '2-digit' };
+            return new Date(fecha).toLocaleDateString('es-ES', opciones);
+        }
+
+        // Función para obtener texto de estado de pedido
+        function obtenerEstadoPedido(estado) {
+            const estados = {
+                'pendiente': { texto: 'Pendiente', clase: 'badge-warning' },
+                'confirmado': { texto: 'Confirmado', clase: 'badge-info' },
+                'en_camino': { texto: 'En Camino', clase: 'badge-primary' },
+                'recibido': { texto: 'Recibido', clase: 'badge-success' },
+                'cancelado': { texto: 'Cancelado', clase: 'badge-danger' }
+            };
+            
+            return estados[estado] || { texto: 'Desconocido', clase: 'badge-secondary' };
         }
 
         // Navegación entre secciones
@@ -1157,17 +1785,23 @@
                 // Cargar datos de la sección si es necesario
                 if (sectionId === 'productos') {
                     cargarProductos();
+                    cargarFiltrosProductos();
                 } else if (sectionId === 'categorias') {
                     cargarCategorias();
                 } else if (sectionId === 'proveedores') {
                     cargarProveedores();
+                } else if (sectionId === 'pedidos') {
+                    cargarPedidos();
+                    cargarFiltrosPedidos();
+                } else if (sectionId === 'vencimientos') {
+                    cargarVencimientos();
                 }
             });
         });
 
         // Funcionalidad de búsqueda
         document.getElementById('searchProductos')?.addEventListener('input', function(e) {
-            filtrarProductos(e.target.value);
+            filtrarProductos();
         });
 
         document.getElementById('searchCategorias')?.addEventListener('input', function(e) {
@@ -1178,10 +1812,59 @@
             filtrarProveedores(e.target.value);
         });
 
+        document.getElementById('searchPedidos')?.addEventListener('input', function(e) {
+            filtrarPedidos();
+        });
+
+        document.getElementById('searchVencimientos')?.addEventListener('input', function(e) {
+            filtrarVencimientos();
+        });
+
+        // Filtros para productos
+        document.getElementById('filtroProveedorProductos')?.addEventListener('change', function() {
+            filtrarProductos();
+        });
+
+        document.getElementById('filtroCategoriaProductos')?.addEventListener('change', function() {
+            filtrarProductos();
+        });
+
+        document.getElementById('filtroEstadoProductos')?.addEventListener('change', function() {
+            filtrarProductos();
+        });
+
+        document.getElementById('filtroVencimientoProductos')?.addEventListener('change', function() {
+            filtrarProductos();
+        });
+
+        // Filtros para pedidos
+        document.getElementById('filtroProveedorPedidos')?.addEventListener('change', function() {
+            filtrarPedidos();
+        });
+
+        document.getElementById('filtroEstadoPedidos')?.addEventListener('change', function() {
+            filtrarPedidos();
+        });
+
+        document.getElementById('filtroFechaPedidos')?.addEventListener('change', function() {
+            filtrarPedidos();
+        });
+
+        // Filtros para vencimientos
+        document.getElementById('filtroEstadoVencimiento')?.addEventListener('change', function() {
+            filtrarVencimientos();
+        });
+
+        document.getElementById('filtroDiasVencimiento')?.addEventListener('change', function() {
+            filtrarVencimientos();
+        });
+
         // Botones para abrir modales
         document.getElementById('btnNuevoProducto').addEventListener('click', () => abrirModalProducto());
         document.getElementById('btnNuevaCategoria').addEventListener('click', () => abrirModalCategoria());
         document.getElementById('btnNuevoProveedor').addEventListener('click', () => abrirModalProveedor());
+        document.getElementById('btnNuevoPedido').addEventListener('click', () => abrirModalPedido());
+        document.getElementById('btnReporteVencimientos').addEventListener('click', () => generarReporteVencimientos());
 
         // Cerrar modales
         document.getElementById('modalProductoCerrar').addEventListener('click', () => cerrarModalProducto());
@@ -1190,25 +1873,75 @@
         document.getElementById('modalCategoriaCancelar').addEventListener('click', () => cerrarModalCategoria());
         document.getElementById('modalProveedorCerrar').addEventListener('click', () => cerrarModalProveedor());
         document.getElementById('modalProveedorCancelar').addEventListener('click', () => cerrarModalProveedor());
+        document.getElementById('modalPedidoCerrar').addEventListener('click', () => cerrarModalPedido());
+        document.getElementById('modalPedidoCancelar').addEventListener('click', () => cerrarModalPedido());
+        document.getElementById('modalPDFCerrar').addEventListener('click', () => cerrarModalPDF());
+        document.getElementById('modalPDFCancelar').addEventListener('click', () => cerrarModalPDF());
 
         // Guardar en modales
         document.getElementById('modalProductoGuardar').addEventListener('click', () => guardarProducto());
         document.getElementById('modalCategoriaGuardar').addEventListener('click', () => guardarCategoria());
         document.getElementById('modalProveedorGuardar').addEventListener('click', () => guardarProveedor());
+        document.getElementById('modalPedidoGuardar').addEventListener('click', () => guardarPedido());
+        document.getElementById('modalPDFDescargar').addEventListener('click', () => descargarPDF());
+
+        // Agregar producto al pedido
+        document.getElementById('btnAgregarProducto').addEventListener('click', () => agregarProductoPedido());
 
         // Cargar datos del dashboard
         function cargarDashboard() {
-            // Calcular estadísticas
+            // Calcular estadísticas de stock
             const totalProductos = productos.length;
             const stockOptimo = productos.filter(p => p.stock > p.stockMinimo * 1.2).length;
             const stockBajo = productos.filter(p => p.stock <= p.stockMinimo && p.stock > 0).length;
             const sinStock = productos.filter(p => p.stock === 0).length;
+            
+            // Calcular estadísticas de vencimiento
+            const productosConVencimiento = productos.filter(p => p.vencimiento);
+            const vencidos = productosConVencimiento.filter(p => {
+                const dias = calcularDiasRestantes(p.vencimiento);
+                return dias < 0;
+            }).length;
+            
+            const proximosVencer = productosConVencimiento.filter(p => {
+                const dias = calcularDiasRestantes(p.vencimiento);
+                return dias >= 0 && dias <= 30;
+            }).length;
             
             // Actualizar UI
             document.getElementById('total-productos').textContent = totalProductos;
             document.getElementById('stock-optimo').textContent = stockOptimo;
             document.getElementById('stock-bajo').textContent = stockBajo;
             document.getElementById('sin-stock').textContent = sinStock;
+            document.getElementById('vencidos').textContent = vencidos;
+            document.getElementById('proximos-vencer').textContent = proximosVencer;
+        }
+
+        // Cargar filtros para productos
+        function cargarFiltrosProductos() {
+            // Cargar filtro de proveedores
+            const filtroProveedor = document.getElementById('filtroProveedorProductos');
+            filtroProveedor.innerHTML = '<option value="">Todos los proveedores</option>';
+            proveedores.forEach(proveedor => {
+                filtroProveedor.innerHTML += `<option value="${proveedor.id}">${proveedor.nombre}</option>`;
+            });
+
+            // Cargar filtro de categorías
+            const filtroCategoria = document.getElementById('filtroCategoriaProductos');
+            filtroCategoria.innerHTML = '<option value="">Todas las categorías</option>';
+            categorias.forEach(categoria => {
+                filtroCategoria.innerHTML += `<option value="${categoria.nombre}">${categoria.nombre}</option>`;
+            });
+        }
+
+        // Cargar filtros para pedidos
+        function cargarFiltrosPedidos() {
+            // Cargar filtro de proveedores
+            const filtroProveedor = document.getElementById('filtroProveedorPedidos');
+            filtroProveedor.innerHTML = '<option value="">Todos los proveedores</option>';
+            proveedores.forEach(proveedor => {
+                filtroProveedor.innerHTML += `<option value="${proveedor.id}">${proveedor.nombre}</option>`;
+            });
         }
 
         // Cargar productos
@@ -1219,7 +1952,7 @@
             if (productos.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="7" class="empty-state">
+                        <td colspan="9" class="empty-state">
                             <i class="fas fa-box-open"></i>
                             <h3>No hay productos</h3>
                             <p>Agrega tu primer producto para comenzar</p>
@@ -1230,11 +1963,28 @@
             }
             
             productos.forEach(producto => {
-                const estado = producto.stock === 0 ? 
+                const proveedor = proveedores.find(p => p.id === producto.proveedor);
+                
+                // Estado de stock
+                const estadoStock = producto.stock === 0 ? 
                     '<span class="badge badge-danger">Sin Stock</span>' : 
                     producto.stock <= producto.stockMinimo ? 
                     '<span class="badge badge-warning">Stock Bajo</span>' : 
                     '<span class="badge badge-success">Óptimo</span>';
+                
+                // Estado de vencimiento
+                const estadoVencimiento = obtenerEstadoVencimiento(producto.vencimiento);
+                const fechaFormateada = formatearFecha(producto.vencimiento);
+                
+                // Determinar si el botón de eliminar debe estar deshabilitado
+                const puedeEliminar = producto.stock === 0;
+                const botonEliminar = puedeEliminar ? 
+                    `<button class="btn-icon delete eliminar-producto" data-id="${producto.id}" title="Eliminar">
+                        <i class="fas fa-trash"></i>
+                    </button>` :
+                    `<button class="btn-icon delete" disabled title="No se puede eliminar productos con stock">
+                        <i class="fas fa-trash"></i>
+                    </button>`;
                 
                 const fila = document.createElement('tr');
                 fila.innerHTML = `
@@ -1242,15 +1992,18 @@
                     <td><img src="${producto.imagen}" alt="${producto.nombre}" class="product-image"></td>
                     <td>${producto.nombre}</td>
                     <td>${producto.categoria}</td>
+                    <td>${proveedor ? proveedor.nombre : 'N/A'}</td>
                     <td>${producto.stock}</td>
-                    <td>${estado}</td>
+                    <td>
+                        <div>${fechaFormateada}</div>
+                        <small class="${estadoVencimiento.clase}">${estadoVencimiento.texto}</small>
+                    </td>
+                    <td>${estadoStock}</td>
                     <td>
                         <button class="btn-icon editar-producto" data-id="${producto.id}" title="Editar">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn-icon delete eliminar-producto" data-id="${producto.id}" title="Eliminar">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                        ${botonEliminar}
                     </td>
                 `;
                 tbody.appendChild(fila);
@@ -1268,6 +2021,151 @@
                 btn.addEventListener('click', function() {
                     const id = parseInt(this.getAttribute('data-id'));
                     eliminarProducto(id);
+                });
+            });
+        }
+
+        // Cargar pedidos
+        function cargarPedidos() {
+            const tbody = document.getElementById('pedidos-content');
+            tbody.innerHTML = '';
+            
+            if (pedidos.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="empty-state">
+                            <i class="fas fa-clipboard-list"></i>
+                            <h3>No hay pedidos</h3>
+                            <p>Agrega tu primer pedido para comenzar</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            pedidos.forEach(pedido => {
+                const proveedor = proveedores.find(p => p.id === pedido.proveedor);
+                const estadoPedido = obtenerEstadoPedido(pedido.estado);
+                const fechaFormateada = formatearFecha(pedido.fecha);
+                const productosCount = pedido.items.length;
+                
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td>${pedido.id}</td>
+                    <td>${proveedor ? proveedor.nombre : 'N/A'}</td>
+                    <td>${fechaFormateada}</td>
+                    <td>${productosCount} producto(s)</td>
+                    <td>$${pedido.total.toFixed(2)}</td>
+                    <td><span class="${estadoPedido.clase}">${estadoPedido.texto}</span></td>
+                    <td>
+                        <button class="btn-icon editar-pedido" data-id="${pedido.id}" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-icon generar-pdf-pedido" data-id="${pedido.id}" title="Generar PDF">
+                            <i class="fas fa-file-pdf"></i>
+                        </button>
+                        <button class="btn-icon delete eliminar-pedido" data-id="${pedido.id}" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(fila);
+            });
+
+            // Agregar eventos a los botones de editar y eliminar
+            document.querySelectorAll('.editar-pedido').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    abrirModalPedido(id);
+                });
+            });
+
+            document.querySelectorAll('.generar-pdf-pedido').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    generarPDF(id);
+                });
+            });
+
+            document.querySelectorAll('.eliminar-pedido').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    eliminarPedido(id);
+                });
+            });
+        }
+
+        // Cargar vencimientos
+        function cargarVencimientos() {
+            const tbody = document.getElementById('vencimientos-content');
+            tbody.innerHTML = '';
+            
+            const productosConVencimiento = productos.filter(p => p.vencimiento);
+            
+            if (productosConVencimiento.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="empty-state">
+                            <i class="fas fa-calendar-times"></i>
+                            <h3>No hay productos con vencimiento</h3>
+                            <p>Agrega fechas de vencimiento a tus productos</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            productosConVencimiento.forEach(producto => {
+                const diasRestantes = calcularDiasRestantes(producto.vencimiento);
+                const estadoVencimiento = obtenerEstadoVencimiento(producto.vencimiento);
+                const fechaFormateada = formatearFecha(producto.vencimiento);
+                
+                let textoDias = '';
+                let claseDias = '';
+                
+                if (diasRestantes === null) {
+                    textoDias = 'N/A';
+                    claseDias = '';
+                } else if (diasRestantes < 0) {
+                    textoDias = `Vencido hace ${Math.abs(diasRestantes)} días`;
+                    claseDias = 'vencimiento-critico';
+                } else if (diasRestantes === 0) {
+                    textoDias = 'Vence hoy';
+                    claseDias = 'vencimiento-critico';
+                } else if (diasRestantes <= 7) {
+                    textoDias = `${diasRestantes} días`;
+                    claseDias = 'vencimiento-critico';
+                } else if (diasRestantes <= 30) {
+                    textoDias = `${diasRestantes} días`;
+                    claseDias = 'vencimiento-proximo';
+                } else {
+                    textoDias = `${diasRestantes} días`;
+                    claseDias = 'vencimiento-ok';
+                }
+                
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td>${producto.id}</td>
+                    <td>${producto.nombre}</td>
+                    <td>${producto.categoria}</td>
+                    <td>${producto.stock}</td>
+                    <td>${fechaFormateada}</td>
+                    <td class="${claseDias}">${textoDias}</td>
+                    <td><span class="${estadoVencimiento.clase}">${estadoVencimiento.texto}</span></td>
+                    <td>
+                        <button class="btn-icon editar-producto" data-id="${producto.id}" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(fila);
+            });
+
+            // Agregar eventos a los botones de editar
+            document.querySelectorAll('.editar-producto').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    abrirModalProducto(id);
                 });
             });
         }
@@ -1346,7 +2244,7 @@
             }
             
             proveedores.forEach(proveedor => {
-                const productosDelProveedor = productos.filter(p => p.proveedor === proveedor.id).length;
+                const productosDelProveedor = productos.filter(p => p.proveedor === proveedor.id);
                 
                 const fila = document.createElement('tr');
                 fila.innerHTML = `
@@ -1354,7 +2252,10 @@
                     <td>${proveedor.nombre}</td>
                     <td>${proveedor.contacto}</td>
                     <td>${proveedor.telefono}</td>
-                    <td>${productosDelProveedor}</td>
+                    <td>
+                        <div>${productosDelProveedor.length} productos</div>
+                        <small>${productosDelProveedor.map(p => p.nombre).join(', ')}</small>
+                    </td>
                     <td>
                         <button class="btn-icon editar-proveedor" data-id="${proveedor.id}" title="Editar">
                             <i class="fas fa-edit"></i>
@@ -1384,11 +2285,43 @@
         }
 
         // Funciones de filtrado
-        function filtrarProductos(termino) {
-            const productosFiltrados = productos.filter(p => 
-                p.nombre.toLowerCase().includes(termino.toLowerCase()) || 
-                p.categoria.toLowerCase().includes(termino.toLowerCase())
-            );
+        function filtrarProductos() {
+            const termino = document.getElementById('searchProductos').value.toLowerCase();
+            const filtroProveedor = document.getElementById('filtroProveedorProductos').value;
+            const filtroCategoria = document.getElementById('filtroCategoriaProductos').value;
+            const filtroEstado = document.getElementById('filtroEstadoProductos').value;
+            const filtroVencimiento = document.getElementById('filtroVencimientoProductos').value;
+            
+            const productosFiltrados = productos.filter(p => {
+                // Filtro por término de búsqueda
+                const coincideTermino = p.nombre.toLowerCase().includes(termino) || 
+                    p.categoria.toLowerCase().includes(termino);
+                
+                // Filtro por proveedor
+                const coincideProveedor = !filtroProveedor || p.proveedor == filtroProveedor;
+                
+                // Filtro por categoría
+                const coincideCategoria = !filtroCategoria || p.categoria === filtroCategoria;
+                
+                // Filtro por estado de stock
+                let coincideEstado = true;
+                if (filtroEstado === 'optimo') {
+                    coincideEstado = p.stock > p.stockMinimo * 1.2;
+                } else if (filtroEstado === 'bajo') {
+                    coincideEstado = p.stock <= p.stockMinimo && p.stock > 0;
+                } else if (filtroEstado === 'sin') {
+                    coincideEstado = p.stock === 0;
+                }
+                
+                // Filtro por estado de vencimiento
+                let coincideVencimiento = true;
+                if (filtroVencimiento) {
+                    const estado = obtenerEstadoVencimiento(p.vencimiento);
+                    coincideVencimiento = estado.estado === filtroVencimiento;
+                }
+                
+                return coincideTermino && coincideProveedor && coincideCategoria && coincideEstado && coincideVencimiento;
+            });
             
             const tbody = document.getElementById('productos-content');
             tbody.innerHTML = '';
@@ -1396,10 +2329,10 @@
             if (productosFiltrados.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="7" class="empty-state">
+                        <td colspan="9" class="empty-state">
                             <i class="fas fa-search"></i>
                             <h3>No se encontraron productos</h3>
-                            <p>Intenta con otro término de búsqueda</p>
+                            <p>Intenta con otros filtros o términos de búsqueda</p>
                         </td>
                     </tr>
                 `;
@@ -1407,11 +2340,28 @@
             }
             
             productosFiltrados.forEach(producto => {
-                const estado = producto.stock === 0 ? 
+                const proveedor = proveedores.find(p => p.id === producto.proveedor);
+                
+                // Estado de stock
+                const estadoStock = producto.stock === 0 ? 
                     '<span class="badge badge-danger">Sin Stock</span>' : 
                     producto.stock <= producto.stockMinimo ? 
                     '<span class="badge badge-warning">Stock Bajo</span>' : 
                     '<span class="badge badge-success">Óptimo</span>';
+                
+                // Estado de vencimiento
+                const estadoVencimiento = obtenerEstadoVencimiento(producto.vencimiento);
+                const fechaFormateada = formatearFecha(producto.vencimiento);
+                
+                // Determinar si el botón de eliminar debe estar deshabilitado
+                const puedeEliminar = producto.stock === 0;
+                const botonEliminar = puedeEliminar ? 
+                    `<button class="btn-icon delete eliminar-producto" data-id="${producto.id}" title="Eliminar">
+                        <i class="fas fa-trash"></i>
+                    </button>` :
+                    `<button class="btn-icon delete" disabled title="No se puede eliminar productos con stock">
+                        <i class="fas fa-trash"></i>
+                    </button>`;
                 
                 const fila = document.createElement('tr');
                 fila.innerHTML = `
@@ -1419,15 +2369,18 @@
                     <td><img src="${producto.imagen}" alt="${producto.nombre}" class="product-image"></td>
                     <td>${producto.nombre}</td>
                     <td>${producto.categoria}</td>
+                    <td>${proveedor ? proveedor.nombre : 'N/A'}</td>
                     <td>${producto.stock}</td>
-                    <td>${estado}</td>
+                    <td>
+                        <div>${fechaFormateada}</div>
+                        <small class="${estadoVencimiento.clase}">${estadoVencimiento.texto}</small>
+                    </td>
+                    <td>${estadoStock}</td>
                     <td>
                         <button class="btn-icon editar-producto" data-id="${producto.id}" title="Editar">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn-icon delete eliminar-producto" data-id="${producto.id}" title="Eliminar">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                        ${botonEliminar}
                     </td>
                 `;
                 tbody.appendChild(fila);
@@ -1445,6 +2398,213 @@
                 btn.addEventListener('click', function() {
                     const id = parseInt(this.getAttribute('data-id'));
                     eliminarProducto(id);
+                });
+            });
+        }
+
+        function filtrarPedidos() {
+            const termino = document.getElementById('searchPedidos').value.toLowerCase();
+            const filtroProveedor = document.getElementById('filtroProveedorPedidos').value;
+            const filtroEstado = document.getElementById('filtroEstadoPedidos').value;
+            const filtroFecha = document.getElementById('filtroFechaPedidos').value;
+            
+            const pedidosFiltrados = pedidos.filter(pedido => {
+                const proveedor = proveedores.find(p => p.id === pedido.proveedor);
+                
+                // Filtro por término de búsqueda
+                const coincideTermino = proveedor && proveedor.nombre.toLowerCase().includes(termino);
+                
+                // Filtro por proveedor
+                const coincideProveedor = !filtroProveedor || pedido.proveedor == filtroProveedor;
+                
+                // Filtro por estado
+                const coincideEstado = !filtroEstado || pedido.estado === filtroEstado;
+                
+                // Filtro por fecha
+                let coincideFecha = true;
+                if (filtroFecha) {
+                    const hoy = new Date();
+                    const fechaPedido = new Date(pedido.fecha);
+                    
+                    if (filtroFecha === 'hoy') {
+                        coincideFecha = fechaPedido.toDateString() === hoy.toDateString();
+                    } else if (filtroFecha === 'semana') {
+                        const inicioSemana = new Date(hoy);
+                        inicioSemana.setDate(hoy.getDate() - hoy.getDay());
+                        coincideFecha = fechaPedido >= inicioSemana;
+                    } else if (filtroFecha === 'mes') {
+                        coincideFecha = fechaPedido.getMonth() === hoy.getMonth() && 
+                                       fechaPedido.getFullYear() === hoy.getFullYear();
+                    }
+                }
+                
+                return coincideTermino && coincideProveedor && coincideEstado && coincideFecha;
+            });
+            
+            const tbody = document.getElementById('pedidos-content');
+            tbody.innerHTML = '';
+            
+            if (pedidosFiltrados.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="empty-state">
+                            <i class="fas fa-search"></i>
+                            <h3>No se encontraron pedidos</h3>
+                            <p>Intenta con otros filtros o términos de búsqueda</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            pedidosFiltrados.forEach(pedido => {
+                const proveedor = proveedores.find(p => p.id === pedido.proveedor);
+                const estadoPedido = obtenerEstadoPedido(pedido.estado);
+                const fechaFormateada = formatearFecha(pedido.fecha);
+                const productosCount = pedido.items.length;
+                
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td>${pedido.id}</td>
+                    <td>${proveedor ? proveedor.nombre : 'N/A'}</td>
+                    <td>${fechaFormateada}</td>
+                    <td>${productosCount} producto(s)</td>
+                    <td>$${pedido.total.toFixed(2)}</td>
+                    <td><span class="${estadoPedido.clase}">${estadoPedido.texto}</span></td>
+                    <td>
+                        <button class="btn-icon editar-pedido" data-id="${pedido.id}" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-icon generar-pdf-pedido" data-id="${pedido.id}" title="Generar PDF">
+                            <i class="fas fa-file-pdf"></i>
+                        </button>
+                        <button class="btn-icon delete eliminar-pedido" data-id="${pedido.id}" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(fila);
+            });
+
+            // Reagregar eventos a los botones
+            document.querySelectorAll('.editar-pedido').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    abrirModalPedido(id);
+                });
+            });
+
+            document.querySelectorAll('.generar-pdf-pedido').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    generarPDF(id);
+                });
+            });
+
+            document.querySelectorAll('.eliminar-pedido').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    eliminarPedido(id);
+                });
+            });
+        }
+
+        function filtrarVencimientos() {
+            const termino = document.getElementById('searchVencimientos').value.toLowerCase();
+            const filtroEstado = document.getElementById('filtroEstadoVencimiento').value;
+            const filtroDias = document.getElementById('filtroDiasVencimiento').value;
+            
+            const productosConVencimiento = productos.filter(p => p.vencimiento);
+            
+            const productosFiltrados = productosConVencimiento.filter(p => {
+                // Filtro por término de búsqueda
+                const coincideTermino = p.nombre.toLowerCase().includes(termino) || 
+                    p.categoria.toLowerCase().includes(termino);
+                
+                // Filtro por estado de vencimiento
+                let coincideEstado = true;
+                if (filtroEstado) {
+                    const estado = obtenerEstadoVencimiento(p.vencimiento);
+                    coincideEstado = estado.estado === filtroEstado;
+                }
+                
+                // Filtro por días
+                let coincideDias = true;
+                if (filtroDias) {
+                    const dias = calcularDiasRestantes(p.vencimiento);
+                    coincideDias = dias >= 0 && dias <= parseInt(filtroDias);
+                }
+                
+                return coincideTermino && coincideEstado && coincideDias;
+            });
+            
+            const tbody = document.getElementById('vencimientos-content');
+            tbody.innerHTML = '';
+            
+            if (productosFiltrados.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="empty-state">
+                            <i class="fas fa-search"></i>
+                            <h3>No se encontraron productos</h3>
+                            <p>Intenta con otros filtros o términos de búsqueda</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            productosFiltrados.forEach(producto => {
+                const diasRestantes = calcularDiasRestantes(producto.vencimiento);
+                const estadoVencimiento = obtenerEstadoVencimiento(producto.vencimiento);
+                const fechaFormateada = formatearFecha(producto.vencimiento);
+                
+                let textoDias = '';
+                let claseDias = '';
+                
+                if (diasRestantes === null) {
+                    textoDias = 'N/A';
+                    claseDias = '';
+                } else if (diasRestantes < 0) {
+                    textoDias = `Vencido hace ${Math.abs(diasRestantes)} días`;
+                    claseDias = 'vencimiento-critico';
+                } else if (diasRestantes === 0) {
+                    textoDias = 'Vence hoy';
+                    claseDias = 'vencimiento-critico';
+                } else if (diasRestantes <= 7) {
+                    textoDias = `${diasRestantes} días`;
+                    claseDias = 'vencimiento-critico';
+                } else if (diasRestantes <= 30) {
+                    textoDias = `${diasRestantes} días`;
+                    claseDias = 'vencimiento-proximo';
+                } else {
+                    textoDias = `${diasRestantes} días`;
+                    claseDias = 'vencimiento-ok';
+                }
+                
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td>${producto.id}</td>
+                    <td>${producto.nombre}</td>
+                    <td>${producto.categoria}</td>
+                    <td>${producto.stock}</td>
+                    <td>${fechaFormateada}</td>
+                    <td class="${claseDias}">${textoDias}</td>
+                    <td><span class="${estadoVencimiento.clase}">${estadoVencimiento.texto}</span></td>
+                    <td>
+                        <button class="btn-icon editar-producto" data-id="${producto.id}" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(fila);
+            });
+
+            // Reagregar eventos a los botones
+            document.querySelectorAll('.editar-producto').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    abrirModalProducto(id);
                 });
             });
         }
@@ -1531,7 +2691,7 @@
             }
             
             proveedoresFiltrados.forEach(proveedor => {
-                const productosDelProveedor = productos.filter(p => p.proveedor === proveedor.id).length;
+                const productosDelProveedor = productos.filter(p => p.proveedor === proveedor.id);
                 
                 const fila = document.createElement('tr');
                 fila.innerHTML = `
@@ -1539,7 +2699,10 @@
                     <td>${proveedor.nombre}</td>
                     <td>${proveedor.contacto}</td>
                     <td>${proveedor.telefono}</td>
-                    <td>${productosDelProveedor}</td>
+                    <td>
+                        <div>${productosDelProveedor.length} productos</div>
+                        <small>${productosDelProveedor.map(p => p.nombre).join(', ')}</small>
+                    </td>
                     <td>
                         <button class="btn-icon editar-proveedor" data-id="${proveedor.id}" title="Editar">
                             <i class="fas fa-edit"></i>
@@ -1598,6 +2761,8 @@
                 document.getElementById('productoStock').value = producto.stock;
                 document.getElementById('productoStockMinimo').value = producto.stockMinimo;
                 document.getElementById('productoProveedor').value = producto.proveedor;
+                document.getElementById('productoVencimiento').value = producto.vencimiento || '';
+                document.getElementById('productoLote').value = producto.lote || '';
                 document.getElementById('productoImagen').value = producto.imagen;
             } else {
                 // Modo nuevo
@@ -1655,6 +2820,69 @@
             modal.classList.add('active');
         }
 
+        function abrirModalPedido(id = null) {
+            const modal = document.getElementById('modalPedido');
+            const titulo = document.getElementById('modalPedidoTitulo');
+            const form = document.getElementById('formPedido');
+            
+            // Llenar select de proveedores
+            const selectProveedor = document.getElementById('pedidoProveedor');
+            selectProveedor.innerHTML = '<option value="">Seleccione un proveedor</option>';
+            proveedores.forEach(prov => {
+                selectProveedor.innerHTML += `<option value="${prov.id}">${prov.nombre}</option>`;
+            });
+            
+            // Llenar select de productos
+            const selectProducto = document.getElementById('pedidoProducto');
+            selectProducto.innerHTML = '<option value="">Seleccione un producto</option>';
+            productos.forEach(prod => {
+                selectProducto.innerHTML += `<option value="${prod.id}" data-precio="${prod.precio || 0}">${prod.nombre}</option>`;
+            });
+            
+            // Limpiar items del pedido
+            document.getElementById('pedidoItems').innerHTML = '';
+            document.getElementById('pedidoTotal').textContent = '0.00';
+            
+            if (id) {
+                // Modo edición
+                titulo.textContent = 'Editar Pedido';
+                const pedido = pedidos.find(p => p.id === id);
+                document.getElementById('pedidoId').value = pedido.id;
+                document.getElementById('pedidoProveedor').value = pedido.proveedor;
+                document.getElementById('pedidoFecha').value = pedido.fechaEntrega;
+                document.getElementById('pedidoEstado').value = pedido.estado;
+                document.getElementById('pedidoNotas').value = pedido.notas || '';
+                
+                // Cargar items del pedido
+                pedido.items.forEach(item => {
+                    const producto = productos.find(p => p.id === item.producto);
+                    if (producto) {
+                        agregarItemPedido(producto.id, producto.nombre, item.cantidad, item.precio);
+                    }
+                });
+                
+                actualizarTotalPedido();
+            } else {
+                // Modo nuevo
+                titulo.textContent = 'Nuevo Pedido';
+                form.reset();
+                document.getElementById('pedidoId').value = '';
+                document.getElementById('pedidoFecha').valueAsDate = new Date();
+            }
+            
+            modal.classList.add('active');
+        }
+
+        function abrirModalPDF(pedidoId) {
+            const modal = document.getElementById('modalPDF');
+            document.getElementById('pdfPedidoId').textContent = pedidoId;
+            
+            // Generar vista previa del PDF
+            generarVistaPreviaPDF(pedidoId);
+            
+            modal.classList.add('active');
+        }
+
         // Funciones para cerrar modales
         function cerrarModalProducto() {
             document.getElementById('modalProducto').classList.remove('active');
@@ -1668,6 +2896,14 @@
             document.getElementById('modalProveedor').classList.remove('active');
         }
 
+        function cerrarModalPedido() {
+            document.getElementById('modalPedido').classList.remove('active');
+        }
+
+        function cerrarModalPDF() {
+            document.getElementById('modalPDF').classList.remove('active');
+        }
+
         // Funciones para guardar datos
         function guardarProducto() {
             const id = document.getElementById('productoId').value;
@@ -1676,6 +2912,8 @@
             const stock = parseInt(document.getElementById('productoStock').value);
             const stockMinimo = parseInt(document.getElementById('productoStockMinimo').value);
             const proveedor = parseInt(document.getElementById('productoProveedor').value);
+            const vencimiento = document.getElementById('productoVencimiento').value;
+            const lote = document.getElementById('productoLote').value;
             const imagen = document.getElementById('productoImagen').value || 'https://via.placeholder.com/50';
             
             if (!nombre || !categoria || isNaN(stock) || isNaN(stockMinimo) || !proveedor) {
@@ -1693,7 +2931,10 @@
                     stock, 
                     stockMinimo, 
                     proveedor, 
-                    imagen 
+                    vencimiento,
+                    lote,
+                    imagen,
+                    precio: productos[index].precio || 0
                 };
                 mostrarMensaje('Producto actualizado correctamente', 'success');
             } else {
@@ -1706,7 +2947,10 @@
                     stock, 
                     stockMinimo, 
                     proveedor, 
-                    imagen 
+                    vencimiento,
+                    lote,
+                    imagen,
+                    precio: 0
                 });
                 mostrarMensaje('Producto creado correctamente', 'success');
             }
@@ -1793,8 +3037,89 @@
             cargarProveedores();
         }
 
+        function guardarPedido() {
+            const id = document.getElementById('pedidoId').value;
+            const proveedor = parseInt(document.getElementById('pedidoProveedor').value);
+            const fechaEntrega = document.getElementById('pedidoFecha').value;
+            const estado = document.getElementById('pedidoEstado').value;
+            const notas = document.getElementById('pedidoNotas').value;
+            
+            // Obtener items del pedido
+            const items = [];
+            const filasItems = document.querySelectorAll('#pedidoItems tr');
+            
+            if (filasItems.length === 0) {
+                mostrarMensaje('Debe agregar al menos un producto al pedido', 'error');
+                return;
+            }
+            
+            filasItems.forEach(fila => {
+                const productoId = parseInt(fila.getAttribute('data-producto-id'));
+                const cantidad = parseInt(fila.querySelector('.item-cantidad-input').value);
+                const precio = parseFloat(fila.querySelector('.item-precio-input').value);
+                
+                items.push({
+                    producto: productoId,
+                    cantidad: cantidad,
+                    precio: precio
+                });
+            });
+            
+            // Calcular total
+            const total = items.reduce((sum, item) => sum + (item.cantidad * item.precio), 0);
+            
+            if (!proveedor || !fechaEntrega || !estado) {
+                mostrarMensaje('Por favor, complete todos los campos obligatorios', 'error');
+                return;
+            }
+            
+            if (id) {
+                // Actualizar pedido existente
+                const index = pedidos.findIndex(p => p.id === parseInt(id));
+                pedidos[index] = { 
+                    id: parseInt(id), 
+                    proveedor, 
+                    fecha: pedidos[index].fecha, // Mantener la fecha original
+                    fechaEntrega, 
+                    estado, 
+                    items, 
+                    notas, 
+                    total 
+                };
+                mostrarMensaje('Pedido actualizado correctamente', 'success');
+            } else {
+                // Crear nuevo pedido
+                const nuevoId = pedidos.length > 0 ? Math.max(...pedidos.map(p => p.id)) + 1 : 1;
+                const fechaActual = new Date().toISOString().split('T')[0];
+                
+                pedidos.push({ 
+                    id: nuevoId, 
+                    proveedor, 
+                    fecha: fechaActual,
+                    fechaEntrega, 
+                    estado, 
+                    items, 
+                    notas, 
+                    total 
+                });
+                mostrarMensaje('Pedido creado correctamente', 'success');
+            }
+            
+            guardarDatos();
+            cerrarModalPedido();
+            cargarPedidos();
+        }
+
         // Funciones para eliminar elementos
         function eliminarProducto(id) {
+            const producto = productos.find(p => p.id === id);
+            
+            // Verificar si el producto tiene stock
+            if (producto.stock > 0) {
+                mostrarMensaje('No se puede eliminar un producto que tiene stock', 'error');
+                return;
+            }
+            
             if (confirm('¿Está seguro de que desea eliminar este producto?')) {
                 productos = productos.filter(p => p.id !== id);
                 guardarDatos();
@@ -1835,6 +3160,364 @@
                 cargarProveedores();
                 mostrarMensaje('Proveedor eliminado correctamente', 'success');
             }
+        }
+
+        function eliminarPedido(id) {
+            if (confirm('¿Está seguro de que desea eliminar este pedido?')) {
+                pedidos = pedidos.filter(p => p.id !== id);
+                guardarDatos();
+                cargarPedidos();
+                mostrarMensaje('Pedido eliminado correctamente', 'success');
+            }
+        }
+
+        // Funciones para gestionar items del pedido
+        function agregarProductoPedido() {
+            const productoSelect = document.getElementById('pedidoProducto');
+            const productoId = parseInt(productoSelect.value);
+            const cantidad = parseInt(document.getElementById('pedidoCantidad').value) || 1;
+            const precio = parseFloat(document.getElementById('pedidoPrecio').value) || 0;
+            
+            if (!productoId) {
+                mostrarMensaje('Por favor, seleccione un producto', 'error');
+                return;
+            }
+            
+            if (cantidad <= 0) {
+                mostrarMensaje('La cantidad debe ser mayor a cero', 'error');
+                return;
+            }
+            
+            if (precio < 0) {
+                mostrarMensaje('El precio no puede ser negativo', 'error');
+                return;
+            }
+            
+            const producto = productos.find(p => p.id === productoId);
+            if (!producto) {
+                mostrarMensaje('Producto no encontrado', 'error');
+                return;
+            }
+            
+            // Verificar si el producto ya está en el pedido
+            const itemsTable = document.getElementById('pedidoItems');
+            const itemExistente = itemsTable.querySelector(`tr[data-producto-id="${productoId}"]`);
+            
+            if (itemExistente) {
+                // Actualizar cantidad y precio del producto existente
+                const cantidadInput = itemExistente.querySelector('.item-cantidad-input');
+                const precioInput = itemExistente.querySelector('.item-precio-input');
+                
+                cantidadInput.value = parseInt(cantidadInput.value) + cantidad;
+                precioInput.value = precio;
+                
+                // Actualizar subtotal
+                const subtotalCell = itemExistente.querySelector('.item-subtotal');
+                const nuevoSubtotal = (parseInt(cantidadInput.value) * parseFloat(precioInput.value)).toFixed(2);
+                subtotalCell.textContent = `$${nuevoSubtotal}`;
+            } else {
+                // Agregar nuevo producto al pedido
+                agregarItemPedido(productoId, producto.nombre, cantidad, precio);
+            }
+            
+            // Limpiar campos de entrada
+            document.getElementById('pedidoCantidad').value = 1;
+            document.getElementById('pedidoPrecio').value = '';
+            
+            // Actualizar total
+            actualizarTotalPedido();
+        }
+
+        function agregarItemPedido(productoId, productoNombre, cantidad, precio) {
+            const itemsTable = document.getElementById('pedidoItems');
+            const subtotal = (cantidad * precio).toFixed(2);
+            
+            const fila = document.createElement('tr');
+            fila.setAttribute('data-producto-id', productoId);
+            fila.innerHTML = `
+                <td>${productoNombre}</td>
+                <td class="item-cantidad">
+                    <input type="number" class="form-control item-cantidad-input" value="${cantidad}" min="1" onchange="actualizarSubtotal(this)">
+                </td>
+                <td class="item-precio">
+                    <input type="number" class="form-control item-precio-input" value="${precio.toFixed(2)}" min="0" step="0.01" onchange="actualizarSubtotal(this)">
+                </td>
+                <td class="item-subtotal">$${subtotal}</td>
+                <td class="item-acciones">
+                    <button type="button" class="btn-icon delete" onclick="eliminarItemPedido(this)">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            
+            itemsTable.appendChild(fila);
+        }
+
+        function eliminarItemPedido(boton) {
+            const fila = boton.closest('tr');
+            fila.remove();
+            actualizarTotalPedido();
+        }
+
+        function actualizarSubtotal(input) {
+            const fila = input.closest('tr');
+            const cantidad = parseInt(fila.querySelector('.item-cantidad-input').value) || 0;
+            const precio = parseFloat(fila.querySelector('.item-precio-input').value) || 0;
+            const subtotal = (cantidad * precio).toFixed(2);
+            
+            fila.querySelector('.item-subtotal').textContent = `$${subtotal}`;
+            actualizarTotalPedido();
+        }
+
+        function actualizarTotalPedido() {
+            const filas = document.querySelectorAll('#pedidoItems tr');
+            let total = 0;
+            
+            filas.forEach(fila => {
+                const subtotalText = fila.querySelector('.item-subtotal').textContent;
+                const subtotal = parseFloat(subtotalText.replace('$', '')) || 0;
+                total += subtotal;
+            });
+            
+            document.getElementById('pedidoTotal').textContent = total.toFixed(2);
+        }
+
+        // Generar PDF
+        function generarPDF(pedidoId) {
+            const pedido = pedidos.find(p => p.id === pedidoId);
+            if (!pedido) {
+                mostrarMensaje('Pedido no encontrado', 'error');
+                return;
+            }
+            
+            abrirModalPDF(pedidoId);
+        }
+
+        function generarVistaPreviaPDF(pedidoId) {
+            const pedido = pedidos.find(p => p.id === pedidoId);
+            const proveedor = proveedores.find(p => p.id === pedido.proveedor);
+            const estadoPedido = obtenerEstadoPedido(pedido.estado);
+            
+            let itemsHTML = '';
+            pedido.items.forEach(item => {
+                const producto = productos.find(p => p.id === item.producto);
+                const subtotal = item.cantidad * item.precio;
+                
+                itemsHTML += `
+                    <tr>
+                        <td>${producto ? producto.nombre : 'Producto no encontrado'}</td>
+                        <td>${item.cantidad}</td>
+                        <td>$${item.precio.toFixed(2)}</td>
+                        <td>$${subtotal.toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+            
+            const pdfPreview = document.getElementById('pdfPreview');
+            pdfPreview.innerHTML = `
+                <div class="pdf-header">
+                    <h1>La Merced Comestibles</h1>
+                    <p>Sistema de Gestión de Pedidos</p>
+                    <h2>PEDIDO #${pedido.id}</h2>
+                </div>
+                
+                <div class="pdf-info">
+                    <div class="pdf-info-section">
+                        <h3>Información del Pedido</h3>
+                        <p><strong>Número de Pedido:</strong> ${pedido.id}</p>
+                        <p><strong>Fecha de Creación:</strong> ${formatearFecha(pedido.fecha)}</p>
+                        <p><strong>Fecha de Entrega Esperada:</strong> ${formatearFecha(pedido.fechaEntrega)}</p>
+                        <p><strong>Estado:</strong> <span class="${estadoPedido.clase}">${estadoPedido.texto}</span></p>
+                    </div>
+                    
+                    <div class="pdf-info-section">
+                        <h3>Información del Proveedor</h3>
+                        <p><strong>Proveedor:</strong> ${proveedor ? proveedor.nombre : 'N/A'}</p>
+                        <p><strong>Contacto:</strong> ${proveedor ? proveedor.contacto : 'N/A'}</p>
+                        <p><strong>Teléfono:</strong> ${proveedor ? proveedor.telefono : 'N/A'}</p>
+                        <p><strong>Email:</strong> ${proveedor ? proveedor.email : 'N/A'}</p>
+                    </div>
+                </div>
+                
+                <table class="pdf-table">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Cantidad</th>
+                            <th>Precio Unitario</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${itemsHTML}
+                    </tbody>
+                </table>
+                
+                <div class="pdf-total">
+                    <strong>TOTAL: $${pedido.total.toFixed(2)}</strong>
+                </div>
+                
+                ${pedido.notas ? `
+                <div class="form-group">
+                    <h3>Notas Adicionales</h3>
+                    <p>${pedido.notas}</p>
+                </div>
+                ` : ''}
+                
+                <div class="pdf-footer">
+                    <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} - La Merced Comestibles</p>
+                </div>
+            `;
+        }
+
+        function descargarPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const pedidoId = document.getElementById('pdfPedidoId').textContent;
+            const pedido = pedidos.find(p => p.id === parseInt(pedidoId));
+            const proveedor = proveedores.find(p => p.id === pedido.proveedor);
+            
+            // Configuración del documento
+            doc.setFontSize(20);
+            doc.setTextColor(40, 40, 40);
+            doc.text('La Merced Comestibles', 105, 20, { align: 'center' });
+            
+            doc.setFontSize(14);
+            doc.text('Sistema de Gestión de Pedidos', 105, 30, { align: 'center' });
+            
+            doc.setFontSize(16);
+            doc.text(`PEDIDO #${pedido.id}`, 105, 45, { align: 'center' });
+            
+            // Información del pedido
+            doc.setFontSize(12);
+            doc.text('INFORMACIÓN DEL PEDIDO', 20, 65);
+            doc.line(20, 67, 80, 67);
+            
+            doc.text(`Número de Pedido: ${pedido.id}`, 20, 75);
+            doc.text(`Fecha de Creación: ${formatearFecha(pedido.fecha)}`, 20, 82);
+            doc.text(`Fecha de Entrega Esperada: ${formatearFecha(pedido.fechaEntrega)}`, 20, 89);
+            doc.text(`Estado: ${obtenerEstadoPedido(pedido.estado).texto}`, 20, 96);
+            
+            // Información del proveedor
+            doc.text('INFORMACIÓN DEL PROVEEDOR', 110, 65);
+            doc.line(110, 67, 190, 67);
+            
+            doc.text(`Proveedor: ${proveedor ? proveedor.nombre : 'N/A'}`, 110, 75);
+            doc.text(`Contacto: ${proveedor ? proveedor.contacto : 'N/A'}`, 110, 82);
+            doc.text(`Teléfono: ${proveedor ? proveedor.telefono : 'N/A'}`, 110, 89);
+            doc.text(`Email: ${proveedor ? proveedor.email : 'N/A'}`, 110, 96);
+            
+            // Tabla de productos
+            let yPosition = 115;
+            doc.text('DETALLE DEL PEDIDO', 20, yPosition);
+            doc.line(20, yPosition + 2, 80, yPosition + 2);
+            yPosition += 10;
+            
+            // Encabezados de la tabla
+            doc.setFillColor(102, 126, 234);
+            doc.setTextColor(255, 255, 255);
+            doc.rect(20, yPosition, 170, 10, 'F');
+            doc.text('Producto', 25, yPosition + 7);
+            doc.text('Cantidad', 100, yPosition + 7);
+            doc.text('Precio', 130, yPosition + 7);
+            doc.text('Subtotal', 160, yPosition + 7);
+            
+            yPosition += 10;
+            doc.setTextColor(0, 0, 0);
+            
+            // Items del pedido
+            pedido.items.forEach(item => {
+                const producto = productos.find(p => p.id === item.producto);
+                const subtotal = item.cantidad * item.precio;
+                
+                if (yPosition > 250) {
+                    doc.addPage();
+                    yPosition = 20;
+                }
+                
+                doc.text(producto ? producto.nombre : 'Producto no encontrado', 25, yPosition + 7);
+                doc.text(item.cantidad.toString(), 100, yPosition + 7);
+                doc.text(`$${item.precio.toFixed(2)}`, 130, yPosition + 7);
+                doc.text(`$${subtotal.toFixed(2)}`, 160, yPosition + 7);
+                
+                yPosition += 10;
+            });
+            
+            // Total
+            yPosition += 10;
+            doc.setFontSize(14);
+            doc.text(`TOTAL: $${pedido.total.toFixed(2)}`, 160, yPosition, { align: 'right' });
+            
+            // Notas
+            if (pedido.notas) {
+                yPosition += 15;
+                doc.setFontSize(12);
+                doc.text('NOTAS ADICIONALES', 20, yPosition);
+                doc.line(20, yPosition + 2, 80, yPosition + 2);
+                yPosition += 10;
+                
+                const splitNotes = doc.splitTextToSize(pedido.notas, 170);
+                doc.text(splitNotes, 20, yPosition);
+            }
+            
+            // Pie de página
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(10);
+                doc.setTextColor(128, 128, 128);
+                doc.text(`Página ${i} de ${pageCount}`, 105, 285, { align: 'center' });
+                doc.text(`Generado el ${new Date().toLocaleDateString('es-ES')}`, 105, 290, { align: 'center' });
+            }
+            
+            // Descargar el PDF
+            doc.save(`pedido-${pedido.id}-${new Date().toISOString().split('T')[0]}.pdf`);
+            mostrarMensaje('PDF generado y descargado correctamente', 'success');
+            cerrarModalPDF();
+        }
+
+        // Generar reporte de vencimientos
+        function generarReporteVencimientos() {
+            const productosConVencimiento = productos.filter(p => p.vencimiento);
+            const vencidos = productosConVencimiento.filter(p => {
+                const dias = calcularDiasRestantes(p.vencimiento);
+                return dias < 0;
+            });
+            
+            const proximosVencer = productosConVencimiento.filter(p => {
+                const dias = calcularDiasRestantes(p.vencimiento);
+                return dias >= 0 && dias <= 30;
+            });
+            
+            let reporte = `REPORTE DE VENCIMIENTOS - ${new Date().toLocaleDateString('es-ES')}\n\n`;
+            reporte += `PRODUCTOS VENCIDOS (${vencidos.length}):\n`;
+            reporte += '----------------------------------------\n';
+            
+            vencidos.forEach(producto => {
+                const dias = calcularDiasRestantes(producto.vencimiento);
+                reporte += `${producto.nombre} - Vencido hace ${Math.abs(dias)} días - Stock: ${producto.stock}\n`;
+            });
+            
+            reporte += `\nPRODUCTOS PRÓXIMOS A VENCER (${proximosVencer.length}):\n`;
+            reporte += '----------------------------------------\n';
+            
+            proximosVencer.forEach(producto => {
+                const dias = calcularDiasRestantes(producto.vencimiento);
+                reporte += `${producto.nombre} - Vence en ${dias} días - Stock: ${producto.stock}\n`;
+            });
+            
+            // Crear y descargar archivo de texto
+            const blob = new Blob([reporte], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `reporte-vencimientos-${new Date().toISOString().split('T')[0]}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            mostrarMensaje('Reporte generado correctamente', 'success');
         }
 
         // Función para mostrar mensajes
@@ -1891,6 +3574,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             cargarDashboard();
             cargarProductos();
+            cargarFiltrosProductos();
         });
     </script>
 </body>
