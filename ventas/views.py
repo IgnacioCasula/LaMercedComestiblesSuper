@@ -9,8 +9,6 @@ from caja.models import Caja, Productos, Ventas, Movimientosdecaja, DetalleDeVen
 from .forms import VentaForm, RecargoForm
 from caja.views import actualizar_saldo_caja
 
-
-
 def registrar_venta(request):
     """Vista para registrar una nueva venta"""
     
@@ -314,3 +312,35 @@ def procesar_venta(request):
             })
     
     return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+# ✅ NUEVA VISTA: OBTENER STOCK ACTUALIZADO
+def obtener_stock_actualizado(request):
+    """API para obtener stock actualizado de productos"""
+    try:
+        # USAR LA MISMA LÓGICA DE CAJA ACTIVA
+        id_caja = request.session.get('id_caja')
+        caja_activa = None
+        
+        if id_caja:
+            try:
+                caja_activa = Caja.objects.get(idcaja=id_caja)
+            except Caja.DoesNotExist:
+                return JsonResponse({})
+        
+        if not caja_activa:
+            return JsonResponse({})
+        
+        # Obtener todos los productos con su stock actual
+        inventarios = Inventarios.objects.filter(
+            sucursal=caja_activa.idsucursal
+        ).select_related('producto')
+        
+        stocks_actualizados = {}
+        for inventario in inventarios:
+            stocks_actualizados[str(inventario.producto.idproducto)] = inventario.cantidad
+        
+        return JsonResponse(stocks_actualizados)
+        
+    except Exception as e:
+        print(f"❌ Error obteniendo stock actualizado: {e}")
+        return JsonResponse({})
