@@ -60,6 +60,13 @@ class GestorVenta {
        
         if (!inputValue) return;
 
+        // ✅ CORRECCIÓN 1: Validar mínimo 3 caracteres
+        if (inputValue.length < 3) {
+            alert("❌ El producto no existe o no tiene stock.");
+            input.value = ""; // Limpiar el input
+            return;
+        }
+
         console.log('🔍 Buscando producto con input:', inputValue);
 
         let nombreBuscado = inputValue;
@@ -318,6 +325,62 @@ class GestorVenta {
         }
     }
 
+    // ✅ NUEVO MÉTODO: LIMPIAR VENTA COMPLETA
+    limpiarVentaCompleta() {
+        console.log('🧹 Limpiando venta completa...');
+        
+        // 1. Limpiar tabla de productos
+        document.getElementById("tablaBody").innerHTML = "";
+        
+        // 2. Resetear totales
+        document.getElementById('subtotal').value = "$0";
+        document.getElementById('total').value = "$0";
+        
+        // 3. Resetear recargo (IMPORTANTE para crédito)
+        document.getElementById('recargo').value = "0";
+        
+        // 4. Resetear método de pago a EFECTIVO
+        document.getElementById('metodoPago').value = "EFECTIVO";
+        
+        // 5. Limpiar input de búsqueda
+        document.getElementById('productoInput').value = "";
+        
+        // 6. Limpiar vista previa
+        this.limpiarVistaPrevia();
+        
+        console.log('✅ Venta limpiada completamente');
+    }
+
+    // ✅ NUEVO MÉTODO: ACTUALIZAR STOCK EN TIEMPO REAL
+    async actualizarStockProductos() {
+        console.log('🔄 Actualizando stock de productos...');
+        
+        try {
+            // Hacer una petición para obtener los stocks actualizados
+            const response = await fetch(`/ventas/obtener-stock-actualizado/`, {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': csrfToken
+                }
+            });
+            
+            if (response.ok) {
+                const stocksActualizados = await response.json();
+                
+                // Actualizar el catálogo en memoria
+                Object.keys(stocksActualizados).forEach(productoId => {
+                    if (this.catalogo[productoId]) {
+                        this.catalogo[productoId].stock = stocksActualizados[productoId];
+                    }
+                });
+                
+                console.log('✅ Stock actualizado en tiempo real');
+            }
+        } catch (error) {
+            console.warn('⚠️ No se pudo actualizar el stock automáticamente:', error);
+        }
+    }
+
     async procesarVenta() {
         console.log('💾 Procesando venta...');
         const filas = document.querySelectorAll('#tablaBody tr');
@@ -367,9 +430,11 @@ class GestorVenta {
                
                 this.actualizarTicketConDatos(datosVenta, result);
                
-                // ✅ LIMPIAR VISTA PREVIA DESPUÉS DE VENTA EXITOSA
-                this.cancelarTodo();
-                document.getElementById('recargo').value = '0';
+                // ✅ CORRECCIÓN 2: LIMPIEZA COMPLETA DESPUÉS DE VENTA EXITOSA
+                this.limpiarVentaCompleta();
+               
+                // ✅ CORRECCIÓN 3: ACTUALIZAR STOCK EN TIEMPO REAL
+                await this.actualizarStockProductos();
                
                 setTimeout(() => {
                     this.generarPDF(result);
