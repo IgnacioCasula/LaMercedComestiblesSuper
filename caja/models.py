@@ -164,6 +164,7 @@ class Caja(models.Model):
     saldo_actual = models.FloatField(db_column='SaldoActual', default=0.0)  # Todos los métodos de pago
     efectivo_actual = models.FloatField(db_column='EfectivoActual', default=0.0)  # Solo efectivo
     observacionapertura = models.CharField(db_column='Observacionapertura', max_length=100, blank=True, null=True)
+    observacioncierre = models.CharField(db_column='Observacioncierre', max_length=100, blank=True, null=True)
     idsucursal = models.ForeignKey(Sucursales, on_delete=models.CASCADE, db_column='IdSucursal')
     idusuarios = models.ForeignKey(Usuarios, on_delete=models.CASCADE, db_column='IdUsuarios')
 
