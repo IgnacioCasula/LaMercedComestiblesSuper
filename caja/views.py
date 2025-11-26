@@ -293,11 +293,11 @@ def cierre_caja_view(request):
                     models.Q(metodopago__icontains='TARJETA')
                 ).aggregate(total=models.Sum('totalventa'))['total'] or 0.0
                 
-                ventas_transferencia = ventas_dia.filter(
-                    models.Q(metodopago='TRANSFERENCIA')
-                ).aggregate(total=models.Sum('totalventa'))['total'] or 0.0
+                #ventas_transferencia = ventas_dia.filter(
+                #    models.Q(metodopago='TRANSFERENCIA')
+                #).aggregate(total=models.Sum('totalventa'))['total'] or 0.0
                 
-                total_sistema = ventas_efectivo + ventas_tarjeta + ventas_transferencia
+                total_sistema = ventas_efectivo + ventas_tarjeta
                 
                 # Obtener TODOS los movimientos del día (incluyendo ventas)
                 movimientos_caja = Movimientosdecaja.objects.filter(
@@ -325,7 +325,7 @@ def cierre_caja_view(request):
             caja.horacierrecaja = ahora.time()
             caja.fechacierrecaja = ahora.date()
             caja.montofinalcaja = monto_final_efectivo
-            
+            caja.observacioncierre = observacion_cierre 
             # Guardar observación si existe
             if hasattr(caja, 'observacioncierre'):
                 caja.observacioncierre = observacion_cierre
@@ -372,7 +372,7 @@ def cierre_caja_view(request):
         "caja": caja,
         "ventas_efectivo": ventas_efectivo,
         "ventas_tarjeta": ventas_tarjeta,
-        "ventas_transferencia": ventas_transferencia,
+        #"ventas_transferencia": ventas_transferencia,
         "total_sistema": total_sistema,
         "movimientos_caja": movimientos_caja,
         "saldo_actual_sistema": caja.saldo_actual if caja else 0,
@@ -614,6 +614,17 @@ def ver_movimientos_caja_view(request):
             movimientos = movimientos.filter(fechamovcaja__year=int(año_filter))
         except (ValueError, TypeError):
             pass  # Ignorar si el valor no es válido
+
+    for movimiento in movimientos:
+        if movimiento.idcaja:
+            if movimiento.tipomovcaja == 'APERTURA':
+                movimiento.observaciones = movimiento.idcaja.observacionapertura
+            elif movimiento.tipomovcaja == 'CIERRE':
+                movimiento.observaciones = movimiento.idcaja.observacioncierre
+            else:
+                movimiento.observaciones = '-'
+        else:
+            movimiento.observaciones = '-'   
     
     # Obtener valores únicos para los filtros (excluyendo valores vacíos o nulos)
     usuarios = Movimientosdecaja.objects.exclude(

@@ -158,6 +158,7 @@
                             <th>Concepto</th>
                             <th>Valor</th>
                             <th>Saldo</th>
+                            <th>Observaciones</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-movimientos">
@@ -179,10 +180,20 @@
                             <td class="saldo-movimiento">
                                 ${{ mov.saldomovcaja|floatformat:2 }}
                             </td>
+                            <td class="observaciones-movimiento">
+                                {% if mov.observaciones and mov.observaciones != '-' %}
+                                    <span class="observacion-texto" title="{{ mov.observaciones }}">
+                                        {{ mov.observaciones|truncatewords:5 }}
+                                    </span>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="8" class="text-center no-data">
+                            <td colspan="9" class="text-center no-data">
                                 <i class="fas fa-inbox"></i>
                                 No se encontraron movimientos
                             </td>
