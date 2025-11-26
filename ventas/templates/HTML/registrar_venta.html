@@ -15,7 +15,7 @@
   <div class="frame">
     <div class="d-flex align-items-center gap-2 mb-2">
       <!-- BOTÓN VOLVER AL INICIO REPOSICIONADO -->
-      <a href="{% url 'inicio' %}" class="pill btn-purple text-decoration-none text-center">Volver al inicio</a>
+      <a href="{% url 'inicio' %}" class="pill botonvolver vol">Volver al inicio</a>
       <span class="pill">🧾 Registrar Venta - Comestibles la Merced</span>
       <span class="pill">Cajero: {{ usuario_nombre }}</span>
       <span class="pill">Sucursal: {{ sucursal.nombresucursal }}</span>
@@ -25,13 +25,6 @@
     <div class="workarea">
       <!-- tabla -->
       <div class="gridwrap">
-        <div class="gridhead">
-          <span class="pill w-100 text-center">Cantidad</span>
-          <span class="pill w-100 text-center">Producto</span>
-          <span class="pill w-100 text-center">Precio</span>
-          <span class="pill w-100 text-center">Total</span>
-        </div>
-
         <table class="sheet" id="tabla">
           <thead>
             <tr>
