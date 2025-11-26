@@ -34,6 +34,56 @@ body {
     letter-spacing:.2px;
     color:#495057; /* Texto gris oscuro */
 }
+.botonvolver.vol {
+    background:#6f42c1;
+    color:#fff;
+    border:none;
+    border-radius:999px;
+    padding: 4px 10px; /* ✅ REDUCIDO: era 6px 14px */
+    font-weight:600;
+    letter-spacing:.2px;
+    text-decoration: none;
+    display: inline-block;
+    transition: background-color 0.2s ease;
+    white-space: nowrap;
+    font-size: 0.85rem;
+    text-align: center !important;
+    align-items: center !important;
+}
+
+.botonvolver {
+    background:#6f42c1;
+    color:#fff;
+    border:none;
+    border-radius:10px;
+    text-decoration: none;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    text-align: center !important;
+     width: auto !important; /* Cambiado de 20% a auto */
+    min-width: 120px; /* Ancho mínimo para mantener proporción */
+    padding: 8px 16px !important;
+    box-sizing: border-box;
+}
+
+.botonvolver a {
+    
+    text-align: center;
+    
+    text-align: center !important;
+    align-items: center !important;
+    
+}
+
+
+.d-flex.align-items-center.gap-2.mb-2 a {
+    text-align: center;
+    
+    text-align: center !important;
+    align-items: center !important;
+    
+}
 
 /* ===== BOTÓN VOLVER AL INICIO - TAMAÑO REDUCIDO ===== */
 .btn-purple.pill {
@@ -48,7 +98,10 @@ body {
     display: inline-block;
     transition: background-color 0.2s ease;
     white-space: nowrap;
-    font-size: 0.85rem; /* ✅ Tamaño de fuente ligeramente reducido */
+    font-size: 0.85rem;
+    text-align: center !important;
+    align-items: center !important;
+    /* ✅ Tamaño de fuente ligeramente reducido */
 }
 
 .btn-purple.pill:hover{
@@ -67,7 +120,10 @@ body {
     display: inline-block;
     text-align: center;
     padding: 12px 18px;
-    width: 100%;
+    text-align: center !important;
+    align-items: center !important;
+    width: 20%;
+    height: 43px;
     box-sizing: border-box;
 }
 .btn-purple:hover{
@@ -462,4 +518,6 @@ datalist option:hover {
     padding: 10px 0;
     border-bottom: 1px solid var(--line);
     margin-bottom: 20px !important;
+    justify-content: flex-start;
+        flex-wrap: wrap;
 }
