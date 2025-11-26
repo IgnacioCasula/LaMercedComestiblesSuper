@@ -13,6 +13,10 @@
         <header class="page-header">
             <h1><i class="fas fa-money-bill-wave"></i> Gestión de Nóminas y Pagos</h1>
             <div class="header-actions">
+                <div class="info-periodo" id="info-periodo">
+                    <i class="fas fa-calendar-week"></i>
+                    <strong>Cargando...</strong>
+                </div>
                 <a href="{% url 'inicio' %}" class="back-btn">
                     <i class="fas fa-arrow-left"></i> Volver
                 </a>
@@ -30,9 +34,10 @@
                     <label>Estado de Pago:</label>
                     <select id="filter-estado" class="filter-select">
                         <option value="all">Todos</option>
-                        <option value="pendiente">Con Saldo Pendiente</option>
-                        <option value="pagado">Al Día</option>
-                        <option value="adelanto">Con Adelanto</option>
+                        <option value="pagado">✓ Al Día (Verde)</option>
+                        <option value="pendiente">○ Pendiente (Amarillo)</option>
+                        <option value="alerta">⚠ Alerta (Naranja)</option>
+                        <option value="critico">✖ Crítico (Rojo)</option>
                     </select>
                 </div>
 
@@ -42,23 +47,6 @@
                         <option value="all">Todas las áreas</option>
                     </select>
                 </div>
-
-                <div class="filter-group">
-                    <label>Período:</label>
-                    <select id="filter-periodo" class="filter-select">
-                        <option value="mes_actual">Mes Actual</option>
-                        <option value="mes_anterior">Mes Anterior</option>
-                        <option value="ultimos_30">Últimos 30 días</option>
-                        <option value="personalizado">Personalizado</option>
-                    </select>
-                </div>
-            </div>
-
-            <div id="fecha-personalizada" class="fecha-personalizada" style="display: none;">
-                <input type="date" id="fecha-inicio" class="form-control">
-                <span>hasta</span>
-                <input type="date" id="fecha-fin" class="form-control">
-                <button class="btn btn-primary btn-sm" id="btn-aplicar-fechas">Aplicar</button>
             </div>
         </div>
 
@@ -73,22 +61,15 @@
             <div class="stat-card stat-horas">
                 <div class="stat-icon"><i class="fas fa-clock"></i></div>
                 <div class="stat-info">
-                    <h3 id="stat-horas">0</h3>
-                    <p>Horas Totales</p>
+                    <h3 id="stat-horas">0h</h3>
+                    <p>Horas Esta Semana</p>
                 </div>
             </div>
-            <div class="stat-card stat-salarios">
-                <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
-                <div class="stat-info">
-                    <h3 id="stat-salarios">$0</h3>
-                    <p>Total a Pagar</p>
-                </div>
-            </div>
-            <div class="stat-card stat-pendiente">
+            <div class="stat-card stat-deuda">
                 <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
                 <div class="stat-info">
-                    <h3 id="stat-pendiente">$0</h3>
-                    <p>Saldo Pendiente</p>
+                    <h3 id="stat-deuda">$0</h3>
+                    <p>Total a Pagar</p>
                 </div>
             </div>
         </div>
@@ -97,6 +78,12 @@
             <div class="table-header">
                 <div class="table-title">
                     <i class="fas fa-list"></i> Lista de Empleados
+                </div>
+                <div class="table-legend">
+                    <span class="legend-item"><span class="legend-dot green"></span> Al día</span>
+                    <span class="legend-item"><span class="legend-dot yellow"></span> Pendiente</span>
+                    <span class="legend-item"><span class="legend-dot orange"></span> Alerta</span>
+                    <span class="legend-item"><span class="legend-dot red"></span> Crítico</span>
                 </div>
             </div>
 
@@ -112,54 +99,141 @@
     <div id="modal-detalle" class="modal-overlay">
         <div class="modal-content modal-xlarge">
             <h2 id="modal-detalle-titulo">
-                <i class="fas fa-user"></i> <span>Detalle de Empleado</span>
+                <i class="fas fa-user"></i> Detalle de Empleado
             </h2>
 
             <div class="modal-body-grid">
-                <div class="info-section">
-                    <h3><i class="fas fa-id-card"></i> Información Personal</h3>
-                    <div class="info-grid">
-                        <div class="info-item">
-                            <label>Nombre Completo:</label>
-                            <span id="detalle-nombre">-</span>
+                <!-- COLUMNA IZQUIERDA -->
+                <div class="modal-col">
+                    <!-- Información Personal -->
+                    <div class="info-section">
+                        <h3><i class="fas fa-id-card"></i> Información Personal</h3>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <label>Nombre Completo:</label>
+                                <span id="detalle-nombre">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>DNI:</label>
+                                <span id="detalle-dni">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Período:</label>
+                                <span id="detalle-periodo">-</span>
+                            </div>
                         </div>
-                        <div class="info-item">
-                            <label>DNI:</label>
-                            <span id="detalle-dni">-</span>
+                    </div>
+
+                    <!-- Resumen Financiero -->
+                    <div class="info-section">
+                        <h3><i class="fas fa-calculator"></i> Resumen Financiero</h3>
+                        <div class="resumen-financiero">
+                            <div class="resumen-item semana">
+                                <label><i class="fas fa-clock"></i> Horas Esta Semana:</label>
+                                <span id="detalle-horas-semana">0h</span>
+                            </div>
+                            <div class="resumen-item semana">
+                                <label><i class="fas fa-coins"></i> Devengado Esta Semana:</label>
+                                <span id="detalle-devengado-semana">$0</span>
+                            </div>
+                            <div class="resumen-item deuda">
+                                <label><i class="fas fa-exclamation-triangle"></i> Deuda Acumulada:</label>
+                                <span id="detalle-deuda-acumulada">$0</span>
+                            </div>
+                            <div class="resumen-item total">
+                                <label><i class="fas fa-dollar-sign"></i> TOTAL A PAGAR:</label>
+                                <span id="detalle-total-pagar">$0</span>
+                            </div>
                         </div>
-                        <div class="info-item">
-                            <label>Puesto(s):</label>
-                            <div id="detalle-puestos">-</div>
-                        </div>
+                        <button class="btn btn-success btn-block" id="btn-detalle-pagar">
+                            <i class="fas fa-hand-holding-usd"></i> Registrar Pago
+                        </button>
+                    </div>
+
+                    <!-- Historial Semanal -->
+                    <div class="info-section">
+                        <h3><i class="fas fa-history"></i> Historial Semanal</h3>
+                        <div id="historial-semanal" class="historial-container"></div>
                     </div>
                 </div>
 
-                <div class="info-section">
-                    <h3><i class="fas fa-calculator"></i> Resumen Financiero</h3>
-                    <div class="resumen-financiero">
-                        <div class="resumen-item positivo">
-                            <label>Horas Trabajadas:</label>
-                            <span id="detalle-horas">0h</span>
-                        </div>
-                        <div class="resumen-item positivo">
-                            <label>Total Devengado:</label>
-                            <span id="detalle-devengado">$0</span>
-                        </div>
-                        <div class="resumen-item total">
-                            <label>SALDO PENDIENTE:</label>
-                            <span id="detalle-pendiente">$0</span>
-                        </div>
+                <!-- COLUMNA DERECHA -->
+                <div class="modal-col">
+                    <!-- Roles -->
+                    <div class="info-section">
+                        <h3><i class="fas fa-briefcase"></i> Roles / Puestos</h3>
+                        <p class="info-text">Haz clic en un rol para ver sus asistencias específicas</p>
+                        <div id="detalle-roles" class="roles-container"></div>
+                        <button class="btn btn-light btn-sm btn-block" onclick="filtrarPorRol(null)">
+                            <i class="fas fa-list"></i> Ver Todos los Roles
+                        </button>
+                    </div>
+
+                    <!-- Asistencias -->
+                    <div class="info-section">
+                        <h3><i class="fas fa-calendar-check"></i> Asistencias (Semana Actual)</h3>
+                        <div id="historial-asistencias" class="historial-container"></div>
+                    </div>
+
+                    <!-- Pagos Recientes -->
+                    <div class="info-section">
+                        <h3><i class="fas fa-receipt"></i> Pagos Recientes</h3>
+                        <div id="pagos-recientes" class="historial-container"></div>
                     </div>
                 </div>
-            </div>
-
-            <div class="info-section">
-                <h3><i class="fas fa-calendar-check"></i> Historial de Asistencias (Período Seleccionado)</h3>
-                <div id="historial-asistencias" class="historial-container"></div>
             </div>
 
             <div class="modal-actions">
-                <button type="button" class="btn btn-light" id="btn-detalle-cerrar">Cerrar</button>
+                <button type="button" class="btn btn-light" id="btn-detalle-cerrar">
+                    <i class="fas fa-times"></i> Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: REGISTRAR PAGO -->
+    <div id="modal-pago" class="modal-overlay">
+        <div class="modal-content">
+            <h2><i class="fas fa-hand-holding-usd"></i> Registrar Pago</h2>
+            
+            <div class="modal-body">
+                <div class="alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    Monto máximo a pagar: <strong>$<span id="pago-monto-max">0.00</span></strong>
+                </div>
+
+                <div class="form-group">
+                    <label for="pago-monto">Monto a Pagar: *</label>
+                    <input type="number" id="pago-monto" class="form-control" step="0.01" min="0" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="pago-metodo">Método de Pago: *</label>
+                    <select id="pago-metodo" class="form-control" required>
+                        <option value="Efectivo">Efectivo</option>
+                        <option value="Transferencia">Transferencia</option>
+                        <option value="Cheque">Cheque</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="pago-comprobante">Número de Comprobante:</label>
+                    <input type="text" id="pago-comprobante" class="form-control" placeholder="Opcional">
+                </div>
+
+                <div class="form-group">
+                    <label for="pago-observacion">Observación:</label>
+                    <textarea id="pago-observacion" class="form-control" rows="3" placeholder="Opcional"></textarea>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-light" id="btn-pago-cancelar">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-success" id="btn-pago-confirmar">
+                    <i class="fas fa-check"></i> Confirmar Pago
+                </button>
             </div>
         </div>
     </div>

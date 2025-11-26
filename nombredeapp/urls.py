@@ -67,6 +67,11 @@ urlpatterns = [
     # Vista principal de nóminas
     path('gestion-nominas/', views.gestion_nominas_view, name='gestion_nominas'),
     
+    # APIs de nóminas V2 (mejoradas)
+    path('api/nominas/lista-v2/', views.api_nominas_lista_v2, name='api_nominas_lista_v2'),
+    path('api/nominas/detalle-v2/<int:empleado_id>/', views.api_nominas_detalle_v2, name='api_nominas_detalle_v2'),
+    path('api/nominas/registrar-pago-v2/', views.api_nominas_registrar_pago_v2, name='api_nominas_registrar_pago_v2'),
+    
     # APIs de nóminas
     path('api/nominas/lista/', views.api_nominas_lista, name='api_nominas_lista'),
     path('api/nominas/detalle/<int:empleado_id>/', views.api_nominas_detalle, name='api_nominas_detalle'),

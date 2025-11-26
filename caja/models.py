@@ -297,3 +297,74 @@ class Movimientosdecaja(models.Model):
 
     class Meta:
         db_table = 'movimientosdecaja'
+
+#nombredeapp
+#Tablas para Gestion de Nominas
+
+class PeriodoNomina(models.Model):
+    """Registra los períodos de nómina semanales"""
+    idperiodo = models.AutoField(primary_key=True)
+    fecha_inicio = models.DateField()
+    fecha_fin = models.DateField()
+    cerrado = models.BooleanField(default=False)
+    fecha_cierre = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        db_table = 'periodos_nomina'
+        ordering = ['-fecha_inicio']
+    
+    def __str__(self):
+        return f"Período {self.fecha_inicio} - {self.fecha_fin}"
+
+
+class DeudaNomina(models.Model):
+    """Acumula la deuda total de cada empleado"""
+    iddeuda = models.AutoField(primary_key=True)
+    empleado = models.OneToOneField(Empleados, on_delete=models.CASCADE, related_name='deuda_nomina')
+    total_adeudado = models.FloatField(default=0.0)
+    ultima_actualizacion = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'deuda_nomina'
+    
+    def __str__(self):
+        return f"Deuda de {self.empleado.idusuarios.nombreusuario}: ${self.total_adeudado}"
+
+
+class RegistroNominaSemanal(models.Model):
+    """Registra el resumen de cada semana antes de cerrarla"""
+    idregistro = models.AutoField(primary_key=True)
+    empleado = models.ForeignKey(Empleados, on_delete=models.CASCADE)
+    periodo = models.ForeignKey(PeriodoNomina, on_delete=models.CASCADE)
+    rol = models.ForeignKey(Roles, on_delete=models.SET_NULL, null=True, blank=True)
+    horas_trabajadas = models.FloatField(default=0.0)
+    monto_devengado = models.FloatField(default=0.0)
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'registro_nomina_semanal'
+        unique_together = ['empleado', 'periodo', 'rol']
+
+
+class PagoNomina(models.Model):
+    """Registra los pagos realizados a empleados"""
+    idpago = models.AutoField(primary_key=True)
+    empleado = models.ForeignKey(Empleados, on_delete=models.CASCADE)
+    monto = models.FloatField()
+    metodo_pago = models.CharField(max_length=50, choices=[
+        ('Efectivo', 'Efectivo'),
+        ('Transferencia', 'Transferencia'),
+        ('Cheque', 'Cheque'),
+    ])
+    fecha_pago = models.DateTimeField(auto_now_add=True)
+    usuario_registro = models.ForeignKey(Usuarios, on_delete=models.SET_NULL, null=True)
+    observacion = models.TextField(blank=True)
+    comprobante = models.CharField(max_length=100, blank=True)  # Número de comprobante
+    
+    class Meta:
+        db_table = 'pagos_nomina'
+        ordering = ['-fecha_pago']
+    
+    def __str__(self):
+        return f"Pago ${self.monto} a {self.empleado.idusuarios.nombreusuario}"
+#Fin
