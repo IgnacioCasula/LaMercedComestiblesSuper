@@ -16,18 +16,136 @@ from datetime import datetime, time
 from caja.models import (
     Usuarios, Roles, UsuxRoles, Empleados, Horario, Caja, Asistencias
 )
+from django.db.models import Sum, Q, F
+from caja.models import PeriodoNomina, DeudaNomina, RegistroNominaSemanal, PagoNomina
 
 MAX_INTENTOS = 3
 BLOQUEO_MINUTOS = 5
 CODIGO_EXPIRA_MINUTOS = 5
 
+def _debe_tomar_asistencia(empleado):
+    """
+    ✅ FUNCIÓN CORREGIDA: Verifica si un empleado debe registrar asistencia HOY.
+    
+    CAMBIO: Ahora permite registrar asistencia si:
+    1. NO tiene fecha de contratación (se asume que puede trabajar)
+    2. O si la fecha actual es >= a su fecha de inicio
+    """
+    hoy = timezone.localdate()
+    fecha_contratado = empleado.fechacontratado
+    
+    # ✅ CAMBIO: Si no tiene fecha, permitir registro
+    if not fecha_contratado:
+        print(f"⚠️ Empleado {empleado.idusuarios.nombreusuario} sin fecha de contratación - SE PERMITE registro")
+        return True
+    
+    # Solo puede registrar si YA pasó su fecha de inicio
+    puede_registrar = hoy >= fecha_contratado
+    
+    if not puede_registrar:
+        print(f"📅 Empleado {empleado.idusuarios.nombreusuario} aún no inicia (fecha: {fecha_contratado})")
+    else:
+        print(f"✅ Empleado {empleado.idusuarios.nombreusuario} puede registrar asistencia")
+    
+    return puede_registrar
+
+
+def _registrar_entrada_automatica(usuario_id):
+    """
+    ✅ FUNCIÓN CORREGIDA: Registra automáticamente la entrada de un empleado al hacer login.
+    CAMBIO: Más permisiva con fechas de inicio
+    """
+    try:
+        empleado = Empleados.objects.get(idusuarios_id=usuario_id)
+        hoy = timezone.localdate()
+        
+        # ✅ VALIDACIÓN: Verificar fecha de inicio (ahora más permisiva)
+        if not _debe_tomar_asistencia(empleado):
+            fecha_inicio = empleado.fechacontratado
+            if fecha_inicio:
+                print(f"ℹ️ Empleado {empleado.idusuarios.nombreusuario} inicia el {fecha_inicio.strftime('%d/%m/%Y')}")
+            return False
+        
+        # Verificar si ya tiene entrada hoy
+        asistencia_hoy = Asistencias.objects.filter(
+            idempleado=empleado,
+            fechaasistencia=hoy,
+            horaentrada__isnull=False  # ✅ CAMBIO: Verificar que tenga entrada
+        ).first()
+        
+        if asistencia_hoy:
+            print(f"ℹ️ Empleado {empleado.idusuarios.nombreusuario} ya tiene entrada registrada hoy")
+            return False
+        
+        # Obtener el rol actual del usuario
+        rol = Roles.objects.filter(usuxroles__idusuarios_id=usuario_id).first()
+        
+        # Crear registro de asistencia (entrada)
+        hora_actual = timezone.localtime().time()
+        Asistencias.objects.create(
+            idempleado=empleado,
+            fechaasistencia=hoy,
+            horaentrada=hora_actual,
+            horasalida=None,
+            rol=rol
+        )
+        
+        print(f"✅ Entrada automática registrada: {empleado.idusuarios.nombreusuario} a las {hora_actual}")
+        return True
+        
+    except Empleados.DoesNotExist:
+        print(f"❌ No existe empleado para usuario_id: {usuario_id}")
+        return False
+    except Exception as e:
+        print(f"❌ Error registrando entrada automática: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
+def _registrar_salida_automatica(usuario_id):
+    """
+    ✅ FUNCIÓN CORREGIDA: Registra automáticamente la salida de un empleado al hacer logout.
+    CAMBIO: Verifica correctamente la última asistencia sin salida
+    """
+    try:
+        empleado = Empleados.objects.get(idusuarios_id=usuario_id)
+        hoy = timezone.localdate()
+        
+        # Buscar la última asistencia SIN salida de hoy
+        asistencia = Asistencias.objects.filter(
+            idempleado=empleado,
+            fechaasistencia=hoy,
+            horaentrada__isnull=False,  # ✅ DEBE tener entrada
+            horasalida__isnull=True      # ✅ NO debe tener salida
+        ).order_by('-horaentrada').first()  # ✅ La más reciente
+        
+        if not asistencia:
+            print(f"ℹ️ No hay asistencia sin salida para {empleado.idusuarios.nombreusuario}")
+            return False
+        
+        hora_actual = timezone.localtime().time()
+        asistencia.horasalida = hora_actual
+        asistencia.save()
+        
+        print(f"✅ Salida automática registrada: {empleado.idusuarios.nombreusuario} a las {hora_actual}")
+        return True
+        
+    except Empleados.DoesNotExist:
+        print(f"❌ No existe empleado para usuario_id: {usuario_id}")
+        return False
+    except Exception as e:
+        print(f"❌ Error registrando salida automática: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 def _verificar_y_restaurar_sesion_gracia(request):
     """
-    Verifica si el usuario está dentro del período de gracia de 2 minutos
+    ✅ FUNCIÓN CORREGIDA: Verifica si el usuario está dentro del período de gracia de 2 minutos
     y restaura la sesión sin registrar salida.
     
-    Retorna el usuario_id si está en período de gracia, None si no.
+    CAMBIO CRÍTICO: Ya NO elimina la salida, solo restaura la sesión
     """
     try:
         grace_cookie = request.get_signed_cookie(
@@ -55,22 +173,46 @@ def _verificar_y_restaurar_sesion_gracia(request):
                             empleado = Empleados.objects.get(idusuarios_id=usuario_id)
                             hoy = timezone.localdate()
                             
+                            # ✅ CAMBIO CRÍTICO: Buscar la última asistencia CON salida de hoy
                             asistencia = Asistencias.objects.filter(
                                 idempleado=empleado,
                                 fechaasistencia=hoy,
-                                horasalida__isnull=False
+                                horasalida__isnull=False  # Que TENGA salida
                             ).order_by('-horasalida').first()
                             
                             if asistencia:
+                                # ✅ Eliminar la salida para que continúe el turno
                                 asistencia.horasalida = None
                                 asistencia.save()
-                                print(f"✅ Salida eliminada para usuario {usuario_id}")
+                                print(f"✅ Salida eliminada para usuario {usuario_id} - continúa en turno")
+                        except Empleados.DoesNotExist:
+                            print(f"⚠️ No se encontró empleado para usuario_id: {usuario_id}")
                         except Exception as e:
                             print(f"⚠️ Error al eliminar salida: {e}")
                         
                         return usuario_id
                     else:
                         print(f"⏰ Período de gracia expirado para usuario {usuario_id}")
+                        # ✅ NUEVO: Si expiró el período, asegurar que se registre la salida
+                        try:
+                            empleado = Empleados.objects.get(idusuarios_id=usuario_id)
+                            hoy = timezone.localdate()
+                            
+                            # Buscar asistencia sin salida
+                            asistencia_sin_salida = Asistencias.objects.filter(
+                                idempleado=empleado,
+                                fechaasistencia=hoy,
+                                horasalida__isnull=True
+                            ).first()
+                            
+                            if asistencia_sin_salida:
+                                # Registrar salida con la hora actual
+                                asistencia_sin_salida.horasalida = timezone.localtime().time()
+                                asistencia_sin_salida.save()
+                                print(f"✅ Salida registrada después de período de gracia para {usuario_id}")
+                        except Exception as e:
+                            print(f"⚠️ Error al registrar salida después de período de gracia: {e}")
+                        
                 except Exception as e:
                     print(f"⚠️ Error parseando cookie de gracia: {e}")
         
@@ -78,115 +220,6 @@ def _verificar_y_restaurar_sesion_gracia(request):
         print(f"⚠️ Error verificando período de gracia: {e}")
     
     return None
-
-
-def _debe_tomar_asistencia(empleado):
-    """
-    ⭐ FUNCIÓN CRÍTICA: Verifica si un empleado debe registrar asistencia HOY.
-    
-    Retorna True solo si:
-    1. Tiene fecha de contratación definida
-    2. La fecha actual es >= a su fecha de inicio
-    
-    Retorna False si:
-    - No tiene fecha de contratación
-    - Aún no ha llegado su fecha de inicio
-    """
-    hoy = timezone.localdate()
-    fecha_contratado = empleado.fechacontratado
-    
-    if not fecha_contratado:
-        # Sin fecha de contratación = no puede registrar asistencia
-        print(f"⚠️ Empleado {empleado.idusuarios.nombreusuario} sin fecha de contratación")
-        return False
-    
-    # Solo puede registrar si YA pasó su fecha de inicio
-    puede_registrar = hoy >= fecha_contratado
-    
-    if not puede_registrar:
-        print(f"📅 Empleado {empleado.idusuarios.nombreusuario} aún no inicia (fecha: {fecha_contratado})")
-    
-    return puede_registrar
-
-
-def _registrar_entrada_automatica(usuario_id):
-    """
-    Registra automáticamente la entrada de un empleado al hacer login.
-    ⭐ AHORA SINCRONIZADO CON FECHA DE INICIO
-    """
-    try:
-        empleado = Empleados.objects.get(idusuarios_id=usuario_id)
-        hoy = timezone.localdate()
-        
-        # ⭐ VALIDACIÓN CRÍTICA: Verificar fecha de inicio
-        if not _debe_tomar_asistencia(empleado):
-            fecha_inicio = empleado.fechacontratado
-            if fecha_inicio:
-                print(f"ℹ️ Empleado {empleado.idusuarios.nombreusuario} inicia el {fecha_inicio.strftime('%d/%m/%Y')}")
-            return False
-        
-        # Verificar si ya tiene entrada hoy
-        asistencia_hoy = Asistencias.objects.filter(
-            idempleado=empleado,
-            fechaasistencia=hoy
-        ).first()
-        
-        if asistencia_hoy:
-            return False
-        
-        # Obtener el rol actual del usuario
-        rol = Roles.objects.filter(usuxroles__idusuarios_id=usuario_id).first()
-        
-        # Crear registro de asistencia (entrada)
-        hora_actual = timezone.localtime().time()
-        Asistencias.objects.create(
-            idempleado=empleado,
-            fechaasistencia=hoy,
-            horaentrada=hora_actual,
-            horasalida=None,
-            rol=rol
-        )
-        
-        print(f"✅ Entrada automática registrada: {empleado.idusuarios.nombreusuario} a las {hora_actual}")
-        return True
-        
-    except Empleados.DoesNotExist:
-        return False
-    except Exception as e:
-        print(f"❌ Error registrando entrada automática: {e}")
-        return False
-
-
-def _registrar_salida_automatica(usuario_id):
-    """
-    Registra automáticamente la salida de un empleado al hacer logout.
-    """
-    try:
-        empleado = Empleados.objects.get(idusuarios_id=usuario_id)
-        hoy = timezone.localdate()
-        
-        asistencia = Asistencias.objects.filter(
-            idempleado=empleado,
-            fechaasistencia=hoy,
-            horasalida__isnull=True
-        ).first()
-        
-        if not asistencia:
-            return False
-        
-        hora_actual = timezone.localtime().time()
-        asistencia.horasalida = hora_actual
-        asistencia.save()
-        
-        print(f"✅ Salida automática registrada: {empleado.idusuarios.nombreusuario} a las {hora_actual}")
-        return True
-        
-    except Empleados.DoesNotExist:
-        return False
-    except Exception as e:
-        print(f"❌ Error registrando salida automática: {e}")
-        return False
-
 
 def _verificar_autenticacion(request: HttpRequest) -> bool:
     """Verifica si el usuario está autenticado"""
@@ -484,9 +517,13 @@ def login_view(request: HttpRequest) -> HttpResponse:
         )
 
         # 🔥 REGISTRAR ENTRADA AUTOMÁTICA
+        print(f"🔄 Intentando registrar entrada automática para {usuario.nombreusuario}...")
         entrada_registrada = _registrar_entrada_automatica(usuario.idusuarios)
         if entrada_registrada:
             messages.success(request, f'¡Bienvenido! Tu entrada fue registrada a las {timezone.localtime().strftime("%H:%M")}')
+            print(f"✅ ENTRADA REGISTRADA para {usuario.nombreusuario}")
+        else:
+            print(f"⚠️ NO se registró entrada para {usuario.nombreusuario}")
 
         roles_ids = list(UsuxRoles.objects.filter(idusuarios=usuario).values_list('idroles', flat=True))
         if len(roles_ids) <= 1:
@@ -743,11 +780,16 @@ def api_caja_status(request: HttpRequest) -> JsonResponse:
 
 
 def logout_view(request: HttpRequest) -> HttpResponse:
-    """Cierra la sesión y registra la salida automática."""
+    """
+    ✅ FUNCIÓN CORREGIDA: Cierra la sesión y registra la salida automática.
+    CAMBIO: Más logs para debug
+    """
     usuario_id = request.session.get('usuario_id')
     respuesta = redirect('login')
 
     if usuario_id:
+        print(f"🔄 Cerrando sesión para usuario {usuario_id}...")
+        
         # 🔥 REGISTRAR SALIDA AUTOMÁTICA ANTES DE CERRAR SESIÓN
         registrar_actividad(
             request,
@@ -755,9 +797,13 @@ def logout_view(request: HttpRequest) -> HttpResponse:
             'Usuario cerró sesión',
             detalles={'usuario_id': usuario_id}
         )
+        
+        print(f"🔄 Intentando registrar salida automática...")
         salida_registrada = _registrar_salida_automatica(usuario_id)
         if salida_registrada:
-            print(f"✅ Salida registrada automáticamente para usuario {usuario_id}")
+            print(f"✅ SALIDA REGISTRADA automáticamente para usuario {usuario_id}")
+        else:
+            print(f"⚠️ NO se registró salida para usuario {usuario_id}")
         
         # Período de gracia de 2 minutos
         expira = timezone.now() + timedelta(minutes=2)
@@ -2433,4 +2479,437 @@ def api_nominas_registrar_descuento(request: HttpRequest) -> JsonResponse:
         return JsonResponse({'error': 'Empleado no encontrado'}, status=404)
     except Exception as e:
         print(f"Error en api_nominas_registrar_descuento: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+def obtener_inicio_semana(fecha=None):
+    """Retorna el lunes de la semana actual o de la fecha dada"""
+    if fecha is None:
+        fecha = timezone.now().date()
+    return fecha - timedelta(days=fecha.weekday())
+
+def obtener_fin_semana(fecha=None):
+    """Retorna el domingo de la semana actual o de la fecha dada"""
+    inicio = obtener_inicio_semana(fecha)
+    return inicio + timedelta(days=6)
+
+def obtener_periodo_actual():
+    """Obtiene o crea el período de nómina actual"""
+    inicio_semana = obtener_inicio_semana()
+    fin_semana = obtener_fin_semana()
+    
+    periodo, created = PeriodoNomina.objects.get_or_create(
+        fecha_inicio=inicio_semana,
+        fecha_fin=fin_semana,
+        defaults={'cerrado': False}
+    )
+    return periodo
+
+def cerrar_periodo_anterior():
+    """Cierra el período anterior y acumula deudas"""
+    hoy = timezone.now().date()
+    inicio_semana_actual = obtener_inicio_semana(hoy)
+    
+    # Buscar períodos no cerrados anteriores a esta semana
+    periodos_pendientes = PeriodoNomina.objects.filter(
+        cerrado=False,
+        fecha_fin__lt=inicio_semana_actual
+    )
+    
+    for periodo in periodos_pendientes:
+        # Obtener todas las asistencias del período
+        asistencias = Asistencias.objects.filter(
+            fechaasistencia__range=[periodo.fecha_inicio, periodo.fecha_fin]
+        ).select_related('idempleado', 'rol')
+        
+        # Agrupar por empleado y rol
+        empleados_data = {}
+        for asistencia in asistencias:
+            empleado = asistencia.idempleado
+            rol = asistencia.rol
+            
+            if asistencia.horaentrada and asistencia.horasalida:
+                entrada_dt = datetime.combine(asistencia.fechaasistencia, asistencia.horaentrada)
+                salida_dt = datetime.combine(asistencia.fechaasistencia, asistencia.horasalida)
+                horas = (salida_dt - entrada_dt).total_seconds() / 3600
+                
+                key = (empleado.idempleado, rol.idroles if rol else None)
+                if key not in empleados_data:
+                    empleados_data[key] = {
+                        'empleado': empleado,
+                        'rol': rol,
+                        'horas': 0,
+                        'monto': 0
+                    }
+                
+                empleados_data[key]['horas'] += horas
+                empleados_data[key]['monto'] += horas * empleado.salarioempleado
+        
+        # Crear registros semanales y actualizar deudas
+        for data in empleados_data.values():
+            empleado = data['empleado']
+            
+            # Crear registro semanal
+            RegistroNominaSemanal.objects.create(
+                empleado=empleado,
+                periodo=periodo,
+                rol=data['rol'],
+                horas_trabajadas=data['horas'],
+                monto_devengado=data['monto']
+            )
+            
+            # Actualizar deuda acumulada
+            deuda, created = DeudaNomina.objects.get_or_create(
+                empleado=empleado,
+                defaults={'total_adeudado': 0}
+            )
+            deuda.total_adeudado += data['monto']
+            deuda.save()
+        
+        # Cerrar período
+        periodo.cerrado = True
+        periodo.fecha_cierre = timezone.now()
+        periodo.save()
+
+
+# ===== API ENDPOINTS ACTUALIZADAS =====
+
+@require_http_methods(['GET'])
+def api_nominas_lista_v2(request: HttpRequest) -> JsonResponse:
+    """API mejorada para obtener lista de empleados con deudas acumuladas"""
+    usuario_id = request.session.get('usuario_id')
+    if not usuario_id:
+        return JsonResponse({'error': 'No autenticado'}, status=401)
+    
+    # Verificar permisos
+    roles_usuario = list(
+        Roles.objects.filter(usuxroles__idusuarios_id=usuario_id).values_list('nombrerol', flat=True)
+    )
+    
+    tiene_permiso = any(
+        'administrador' in rol.lower() or 
+        'recursos humanos' in rol.lower() or
+        'nómina' in rol.lower() or
+        'nomina' in rol.lower()
+        for rol in roles_usuario
+    )
+    
+    if not tiene_permiso:
+        return JsonResponse({'error': 'Sin permisos'}, status=403)
+    
+    try:
+        # Cerrar períodos anteriores automáticamente
+        cerrar_periodo_anterior()
+        
+        # Obtener período actual
+        periodo_actual = obtener_periodo_actual()
+        
+        # Obtener todos los empleados activos
+        empleados = Empleados.objects.filter(
+            estado='Trabajando'
+        ).select_related('idusuarios').prefetch_related('deuda_nomina')
+        
+        empleados_data = []
+        total_horas_semana = 0
+        total_deuda = 0
+        
+        for empleado in empleados:
+            usuario = empleado.idusuarios
+            
+            # Obtener roles
+            roles = Roles.objects.filter(usuxroles__idusuarios=usuario)
+            puestos = [{'id': r.idroles, 'nombre': r.nombrerol} for r in roles]
+            areas = list(set([rol.nombrearea for rol in roles]))
+            
+            # Calcular horas de esta semana
+            asistencias_semana = Asistencias.objects.filter(
+                idempleado=empleado,
+                fechaasistencia__range=[periodo_actual.fecha_inicio, periodo_actual.fecha_fin]
+            )
+            
+            horas_semana = 0
+            for asistencia in asistencias_semana:
+                if asistencia.horaentrada and asistencia.horasalida:
+                    entrada_dt = datetime.combine(asistencia.fechaasistencia, asistencia.horaentrada)
+                    salida_dt = datetime.combine(asistencia.fechaasistencia, asistencia.horasalida)
+                    horas = (salida_dt - entrada_dt).total_seconds() / 3600
+                    horas_semana += max(0, horas)
+            
+            # Calcular devengado de esta semana
+            devengado_semana = horas_semana * empleado.salarioempleado
+            
+            # Obtener deuda acumulada
+            try:
+                deuda_obj = empleado.deuda_nomina
+                deuda_total = deuda_obj.total_adeudado
+            except:
+                deuda_total = 0
+            
+            # Deuda total = deuda acumulada + lo de esta semana
+            deuda_total_con_semana = deuda_total + devengado_semana
+            
+            # Determinar estado según deuda
+            if deuda_total_con_semana == 0:
+                estado = 'pagado'  # Verde
+            elif deuda_total_con_semana < empleado.salarioempleado * 40:  # Menos de 1 semana
+                estado = 'pendiente'  # Amarillo
+            elif deuda_total_con_semana < empleado.salarioempleado * 80:  # 1-2 semanas
+                estado = 'alerta'  # Naranja
+            else:
+                estado = 'critico'  # Rojo
+            
+            empleados_data.append({
+                'id': empleado.idempleado,
+                'nombre': usuario.nombreusuario,
+                'apellido': usuario.apellidousuario,
+                'dni': usuario.dniusuario,
+                'imagen': usuario.imagenusuario,
+                'puestos': puestos,
+                'areas': areas,
+                'horas_semana_actual': round(horas_semana, 2),
+                'devengado_semana_actual': round(devengado_semana, 2),
+                'deuda_acumulada': round(deuda_total, 2),
+                'total_adeudado': round(deuda_total_con_semana, 2),
+                'estado': estado
+            })
+            
+            total_horas_semana += horas_semana
+            total_deuda += deuda_total_con_semana
+        
+        return JsonResponse({
+            'empleados': empleados_data,
+            'periodo_actual': {
+                'inicio': periodo_actual.fecha_inicio.strftime('%Y-%m-%d'),
+                'fin': periodo_actual.fecha_fin.strftime('%Y-%m-%d')
+            },
+            'estadisticas': {
+                'total_empleados': len(empleados_data),
+                'total_horas_semana': round(total_horas_semana, 2),
+                'total_deuda': round(total_deuda, 2)
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error en api_nominas_lista_v2: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@require_http_methods(['GET'])
+def api_nominas_detalle_v2(request: HttpRequest, empleado_id: int) -> JsonResponse:
+    """API mejorada para detalle completo de empleado con desglose por rol"""
+    usuario_id = request.session.get('usuario_id')
+    if not usuario_id:
+        return JsonResponse({'error': 'No autenticado'}, status=401)
+    
+    try:
+        empleado = Empleados.objects.select_related('idusuarios').get(idempleado=empleado_id)
+        usuario = empleado.idusuarios
+        
+        # Obtener período actual
+        periodo_actual = obtener_periodo_actual()
+        
+        # Obtener roles
+        roles = Roles.objects.filter(usuxroles__idusuarios=usuario)
+        
+        # Calcular datos de semana actual por rol
+        roles_data = []
+        horas_semana_total = 0
+        devengado_semana_total = 0
+        
+        for rol in roles:
+            asistencias_rol = Asistencias.objects.filter(
+                idempleado=empleado,
+                rol=rol,
+                fechaasistencia__range=[periodo_actual.fecha_inicio, periodo_actual.fecha_fin]
+            ).order_by('-fechaasistencia')
+            
+            horas_rol = 0
+            asistencias_list = []
+            
+            for asistencia in asistencias_rol:
+                horas_dia = 0
+                if asistencia.horaentrada and asistencia.horasalida:
+                    entrada_dt = datetime.combine(asistencia.fechaasistencia, asistencia.horaentrada)
+                    salida_dt = datetime.combine(asistencia.fechaasistencia, asistencia.horasalida)
+                    horas_dia = (salida_dt - entrada_dt).total_seconds() / 3600
+                    horas_rol += max(0, horas_dia)
+                
+                asistencias_list.append({
+                    'fecha': asistencia.fechaasistencia.strftime('%d/%m/%Y'),
+                    'entrada': asistencia.horaentrada.strftime('%H:%M') if asistencia.horaentrada else '-',
+                    'salida': asistencia.horasalida.strftime('%H:%M') if asistencia.horasalida else 'En turno',
+                    'horas': round(horas_dia, 2)
+                })
+            
+            devengado_rol = horas_rol * empleado.salarioempleado
+            
+            roles_data.append({
+                'id': rol.idroles,
+                'nombre': rol.nombrerol,
+                'area': rol.nombrearea,
+                'horas_semana': round(horas_rol, 2),
+                'devengado_semana': round(devengado_rol, 2),
+                'asistencias': asistencias_list
+            })
+            
+            horas_semana_total += horas_rol
+            devengado_semana_total += devengado_rol
+        
+        # Obtener deuda acumulada
+        try:
+            deuda_obj = empleado.deuda_nomina
+            deuda_acumulada = deuda_obj.total_adeudado
+        except:
+            deuda_acumulada = 0
+        
+        total_adeudado = deuda_acumulada + devengado_semana_total
+        
+        # Obtener historial de pagos
+        pagos = PagoNomina.objects.filter(empleado=empleado).order_by('-fecha_pago')[:10]
+        pagos_list = [{
+            'id': pago.idpago,
+            'monto': round(pago.monto, 2),
+            'metodo': pago.metodo_pago,
+            'fecha': pago.fecha_pago.strftime('%d/%m/%Y %H:%M'),
+            'observacion': pago.observacion,
+            'usuario': pago.usuario_registro.nombreusuario if pago.usuario_registro else 'Sistema'
+        } for pago in pagos]
+        
+        # Obtener historial semanal (últimas 8 semanas)
+        registros_semanales = RegistroNominaSemanal.objects.filter(
+            empleado=empleado
+        ).select_related('periodo', 'rol').order_by('-periodo__fecha_inicio')[:8]
+        
+        historial_semanal = [{
+            'periodo': f"{reg.periodo.fecha_inicio.strftime('%d/%m')} - {reg.periodo.fecha_fin.strftime('%d/%m')}",
+            'rol': reg.rol.nombrerol if reg.rol else 'General',
+            'horas': round(reg.horas_trabajadas, 2),
+            'monto': round(reg.monto_devengado, 2)
+        } for reg in registros_semanales]
+        
+        return JsonResponse({
+            'id': empleado.idempleado,
+            'nombre': usuario.nombreusuario,
+            'apellido': usuario.apellidousuario,
+            'dni': usuario.dniusuario,
+            'imagen': usuario.imagenusuario,
+            'periodo_actual': {
+                'inicio': periodo_actual.fecha_inicio.strftime('%d/%m/%Y'),
+                'fin': periodo_actual.fecha_fin.strftime('%d/%m/%Y')
+            },
+            'semana_actual': {
+                'horas_total': round(horas_semana_total, 2),
+                'devengado_total': round(devengado_semana_total, 2)
+            },
+            'deuda_acumulada': round(deuda_acumulada, 2),
+            'total_adeudado': round(total_adeudado, 2),
+            'roles': roles_data,
+            'pagos_recientes': pagos_list,
+            'historial_semanal': historial_semanal
+        })
+        
+    except Empleados.DoesNotExist:
+        return JsonResponse({'error': 'Empleado no encontrado'}, status=404)
+    except Exception as e:
+        print(f"Error en api_nominas_detalle_v2: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@require_http_methods(['POST'])
+@transaction.atomic
+def api_nominas_registrar_pago_v2(request: HttpRequest) -> JsonResponse:
+    """API mejorada para registrar un pago y actualizar deuda"""
+    usuario_id = request.session.get('usuario_id')
+    if not usuario_id:
+        return JsonResponse({'error': 'No autenticado'}, status=401)
+    
+    try:
+        data = json.loads(request.body)
+        
+        empleado_id = data.get('empleado_id')
+        monto = float(data.get('monto', 0))
+        metodo = data.get('metodo', 'Efectivo')
+        observacion = data.get('observacion', '')
+        comprobante = data.get('comprobante', '')
+        
+        if not empleado_id or monto <= 0:
+            return JsonResponse({'error': 'Datos inválidos'}, status=400)
+        
+        # Verificar que el empleado existe
+        empleado = Empleados.objects.get(idempleado=empleado_id)
+        usuario_registro = Usuarios.objects.get(idusuarios=usuario_id)
+        
+        # Obtener/crear deuda
+        deuda, created = DeudaNomina.objects.get_or_create(
+            empleado=empleado,
+            defaults={'total_adeudado': 0}
+        )
+        
+        # Validar que no se pague más de lo adeudado
+        # Calcular total adeudado incluyendo semana actual
+        periodo_actual = obtener_periodo_actual()
+        asistencias_semana = Asistencias.objects.filter(
+            idempleado=empleado,
+            fechaasistencia__range=[periodo_actual.fecha_inicio, periodo_actual.fecha_fin]
+        )
+        
+        horas_semana = 0
+        for asistencia in asistencias_semana:
+            if asistencia.horaentrada and asistencia.horasalida:
+                entrada_dt = datetime.combine(asistencia.fechaasistencia, asistencia.horaentrada)
+                salida_dt = datetime.combine(asistencia.fechaasistencia, asistencia.horasalida)
+                horas = (salida_dt - entrada_dt).total_seconds() / 3600
+                horas_semana += max(0, horas)
+        
+        devengado_semana = horas_semana * empleado.salarioempleado
+        total_adeudado_actual = deuda.total_adeudado + devengado_semana
+        
+        if monto > total_adeudado_actual:
+            return JsonResponse({
+                'error': f'El monto ${monto:.2f} excede lo adeudado (${total_adeudado_actual:.2f})'
+            }, status=400)
+        
+        # Registrar pago
+        pago = PagoNomina.objects.create(
+            empleado=empleado,
+            monto=monto,
+            metodo_pago=metodo,
+            usuario_registro=usuario_registro,
+            observacion=observacion,
+            comprobante=comprobante
+        )
+        
+        # Actualizar deuda
+        deuda.total_adeudado -= monto
+        deuda.save()
+        
+        # Registrar actividad
+        registrar_actividad(
+            request,
+            'PAGO_NOMINA',
+            f'Pago de ${monto} a {empleado.idusuarios.nombreusuario}',
+            detalles={
+                'empleado_id': empleado_id,
+                'monto': monto,
+                'metodo': metodo,
+                'saldo_restante': deuda.total_adeudado
+            }
+        )
+        
+        return JsonResponse({
+            'message': 'Pago registrado correctamente',
+            'pago_id': pago.idpago,
+            'monto': monto,
+            'nuevo_saldo': round(deuda.total_adeudado, 2)
+        })
+        
+    except Empleados.DoesNotExist:
+        return JsonResponse({'error': 'Empleado no encontrado'}, status=404)
+    except Exception as e:
+        print(f"Error en api_nominas_registrar_pago_v2: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)

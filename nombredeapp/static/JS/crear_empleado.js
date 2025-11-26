@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const photoUploader = document.getElementById('photo-uploader');
     const photoInput = document.getElementById('photo-input');
     const photoButton = document.getElementById('photo-button');
-    
+
     if (photoUploader && photoInput && photoButton) {
         photoUploader.addEventListener('click', () => {
             window.audioSystem.play('select');
@@ -30,12 +30,42 @@ document.addEventListener('DOMContentLoaded', function() {
         photoInput.addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (file) {
+                // Validar que sea una imagen
+                const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+                
+                if (!validTypes.includes(file.type)) {
+                    window.audioSystem.play('error');
+                    alert('⚠️ Por favor selecciona un archivo de imagen válido (JPG, JPEG, PNG, GIF o WEBP)');
+                    photoInput.value = ''; // Limpiar el input
+                    return;
+                }
+                
+                // Validar tamaño (máximo 5MB)
+                const maxSize = 2 * 1024 * 1024; // 5MB en bytes
+                if (file.size > maxSize) {
+                    window.audioSystem.play('error');
+                    alert('⚠️ La imagen es demasiado grande. El tamaño máximo permitido es 5MB');
+                    photoInput.value = ''; // Limpiar el input
+                    return;
+                }
+                
                 window.audioSystem.play('positive');
                 const reader = new FileReader();
+                
                 reader.onload = (e) => {
                     photoUploader.style.backgroundImage = `url('${e.target.result}')`;
+                    photoUploader.style.backgroundSize = 'cover';
+                    photoUploader.style.backgroundPosition = 'center';
                     photoButton.textContent = 'Cambiar Foto';
                 };
+                
+                reader.onerror = (error) => {
+                    console.error('Error al leer el archivo:', error);
+                    window.audioSystem.play('error');
+                    alert('❌ Error al cargar la imagen. Intenta con otra imagen.');
+                    photoInput.value = '';
+                };
+                
                 reader.readAsDataURL(file);
             }
         });
