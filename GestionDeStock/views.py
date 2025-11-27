@@ -344,7 +344,7 @@ def editar_producto_view(request, producto_id):
 
 @require_http_methods(['GET'])
 def api_listar_productos(request):
-    """API para listar todos los productos con su inventario - CORREGIDA"""
+    """API para listar todos los productos con su inventario - MODIFICADO: solo fecha vencimiento"""
     try:
         tiene_permiso, _ = verificar_permisos_stock(request)
         if not tiene_permiso:
@@ -390,23 +390,7 @@ def api_listar_productos(request):
                 texto_placeholder = producto.nombreproductos[:2].upper() if producto.nombreproductos else 'PR'
                 imagen_url = f"https://via.placeholder.com/50/e0e0e0/666666?text={texto_placeholder}"
 
-            # 🔥 NUEVO: Calcular días restantes para vencimiento
-            dias_restantes = None
-            estado_vencimiento = None
-            
-            if producto.fechavencimiento:
-                hoy = timezone.now().date()
-                dias_restantes = (producto.fechavencimiento - hoy).days
-                
-                if dias_restantes < 0:
-                    estado_vencimiento = 'vencido'
-                elif dias_restantes <= 7:
-                    estado_vencimiento = 'proximo'
-                elif dias_restantes <= 30:
-                    estado_vencimiento = 'advertencia'
-                else:
-                    estado_vencimiento = 'ok'
-
+            # 🔥 MODIFICADO: Solo fecha de vencimiento, sin estados
             productos_list.append({
                 'id': producto.idproducto,
                 'nombre': producto.nombreproductos,
@@ -421,8 +405,8 @@ def api_listar_productos(request):
                 'stockMinimo': 10,  # Valor por defecto
                 'imagen': imagen_url,
                 'fechavencimiento': producto.fechavencimiento.strftime('%Y-%m-%d') if producto.fechavencimiento else None,
-                'dias_restantes': dias_restantes,
-                'estado_vencimiento': estado_vencimiento
+                # ❌ ELIMINADO: 'dias_restantes': dias_restantes,
+                # ❌ ELIMINADO: 'estado_vencimiento': estado_vencimiento
             })
         
         return JsonResponse(productos_list, safe=False)
@@ -641,11 +625,15 @@ def api_editar_producto(request, producto_id):
 
 @require_http_methods(['GET'])
 def api_listar_vencimientos(request):
-    """API para listar productos con información de vencimientos"""
+    """API para listar productos con información de vencimientos - CON PAGINACIÓN"""
     try:
         tiene_permiso, _ = verificar_permisos_stock(request)
         if not tiene_permiso:
             return JsonResponse({'error': 'Sin permisos'}, status=403)
+        
+        # Parámetros de paginación
+        page = int(request.GET.get('page', 1))
+        page_size = int(request.GET.get('page_size', 10))
         
         # Parámetros de filtrado
         estado = request.GET.get('estado')  # 'vencido', 'proximo', 'advertencia', 'ok'
@@ -712,7 +700,19 @@ def api_listar_vencimientos(request):
         # Ordenar por fecha de vencimiento (más próximos primero)
         vencimientos_list.sort(key=lambda x: x['dias_restantes'])
         
-        return JsonResponse(vencimientos_list, safe=False)
+        # Paginación
+        total = len(vencimientos_list)
+        start = (page - 1) * page_size
+        end = start + page_size
+        vencimientos_paginados = vencimientos_list[start:end]
+        
+        return JsonResponse({
+            'productos': vencimientos_paginados,
+            'total': total,
+            'page': page,
+            'page_size': page_size,
+            'total_pages': (total + page_size - 1) // page_size
+        }, safe=False)
         
     except Exception as e:
         print(f"Error en api_listar_vencimientos: {e}")

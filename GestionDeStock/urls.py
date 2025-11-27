@@ -53,4 +53,6 @@ urlpatterns = [
 
     path('api/productos/<int:producto_id>/actualizar-vencimiento/', views.api_actualizar_vencimiento, name='api_actualizar_vencimiento'),
 
+    path('api/vencimientos/', views.api_listar_vencimientos, name='api_listar_vencimientos'),
+
 ]

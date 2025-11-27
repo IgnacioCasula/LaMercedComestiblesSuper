@@ -1512,6 +1512,14 @@
                                 <!-- Los productos con vencimiento se cargarán aquí -->
                             </tbody>
                         </table>
+                        <div class="pagination-container" id="pagination-vencimientos">
+                            <div class="pagination-info" id="pagination-info-vencimientos">
+                                Mostrando 0 de 0 productos
+                            </div>
+                            <div class="pagination" id="pagination-buttons-vencimientos">
+                                <!-- Los botones de paginación se generarán aquí -->
+                            </div>
+                        </div>
                     </div>
                 </section>
             </main>
@@ -1525,6 +1533,11 @@
         const API_CATEGORIAS = '/stock/api/categorias/';
         const API_PROVEEDORES = '/stock/api/proveedores/';
         const API_PEDIDOS = '/stock/api/pedidos/';
+
+        let productosConVencimiento = [];
+        let productosPorPaginaVencimientos = 10;
+        let paginaActualVencimientos = 1;
+        let totalPaginasVencimientos = 1;
 
         // Variables globales para los datos
         let productos = [];
@@ -1540,10 +1553,7 @@
         let totalPaginasProductos = 1;
 
         // Variables para vencimientos
-        let productosConVencimiento = [];
-        let productosPorPaginaVencimientos = 10;
-        let paginaActualVencimientos = 1;
-        let totalPaginasVencimientos = 1;
+        
 
         // Datos de ejemplo para pedidos
         const pedidosEjemplo = [
@@ -1700,7 +1710,7 @@
             filtrarVencimientos(); // Cargar todos los productos con vencimiento inicialmente
         }
 
-        function filtrarVencimientos() {
+        async function filtrarVencimientos() {
             const tbody = document.getElementById('vencimientos-content');
             if (!tbody) return;
             
@@ -1708,130 +1718,104 @@
             const filtroEstado = document.getElementById('filtroEstadoVencimiento').value;
             const filtroDias = document.getElementById('filtroDiasVencimiento').value;
             
-            // Filtrar productos que tienen fecha de vencimiento
-            const productosConFechaVencimiento = productos.filter(p => p.fechavencimiento);
+            // Mostrar loading
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="loading-cell">
+                        <div class="loading-spinner">
+                            <i class="fas fa-spinner"></i>
+                            Cargando...
+                        </div>
+                    </td>
+                </tr>
+            `;
             
-            // Aplicar filtros
-            const productosFiltrados = productosConFechaVencimiento.filter(producto => {
-                const coincideTermino = 
-                    producto.nombre.toLowerCase().includes(termino) ||
-                    producto.categoria.toLowerCase().includes(termino);
+            try {
+                // Construir URL con parámetros
+                let url = `/stock/api/vencimientos/?page=${paginaActualVencimientos}&page_size=${productosPorPaginaVencimientos}`;
+                if (termino) url += `&search=${encodeURIComponent(termino)}`;
+                if (filtroEstado) url += `&estado=${filtroEstado}`;
+                if (filtroDias) url += `&dias=${filtroDias}`;
                 
-                // Calcular días restantes
-                const fechaVenc = new Date(producto.fechavencimiento);
-                const hoy = new Date();
-                const diffTime = fechaVenc - hoy;
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                const response = await fetch(url);
+                const data = await response.json();
                 
-                // Filtro por estado
-                let coincideEstado = true;
-                if (filtroEstado === 'vencido') {
-                    coincideEstado = diffDays < 0;
-                } else if (filtroEstado === 'proximo') {
-                    coincideEstado = diffDays >= 0 && diffDays <= 30;
-                } else if (filtroEstado === 'ok') {
-                    coincideEstado = diffDays > 30;
+                if (!response.ok) throw new Error(data.error || 'Error al cargar vencimientos');
+                
+                const productos = data.productos;
+                const total = data.total;
+                totalPaginasVencimientos = data.total_pages;
+                
+                tbody.innerHTML = '';
+                
+                if (productos.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="8" class="empty-state">
+                                <i class="fas fa-search"></i>
+                                <h3>No se encontraron productos</h3>
+                                <p>Intente con otros criterios de búsqueda</p>
+                            </td>
+                        </tr>
+                    `;
+                    return;
                 }
                 
-                // Filtro por días
-                let coincideDias = true;
-                if (filtroDias) {
-                    const dias = parseInt(filtroDias);
-                    coincideDias = diffDays >= 0 && diffDays <= dias;
-                }
+                productos.forEach(producto => {
+                    const fechaVenc = new Date(producto.fecha_vencimiento);
+                    const hoy = new Date();
+                    const diffTime = fechaVenc - hoy;
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    // Determinar clase para días restantes
+                    let diasClass = '';
+                    if (diffDays < 0) {
+                        diasClass = 'stock-critico';
+                    } else if (diffDays <= 7) {
+                        diasClass = 'stock-bajo';
+                    } else if (diffDays <= 30) {
+                        diasClass = 'stock-optimo';
+                    }
+                    
+                    const fila = document.createElement('tr');
+                    fila.innerHTML = `
+                        <td>${producto.id}</td>
+                        <td>${producto.nombre}</td>
+                        <td>${producto.categoria}</td>
+                        <td>${producto.stock}</td>
+                        <td>${fechaVenc.toLocaleDateString('es-ES')}</td>
+                        <td class="${diasClass}">${diffDays} días</td>
+                        <td>
+                            <span class="${producto.estado_clase}">${producto.estado_texto}</span>
+                        </td>
+                        <td>
+                            <a href="/stock/productos/${producto.id}/editar/" class="btn-icon" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button class="btn-icon delete" onclick="eliminarProducto(${producto.id}, '${producto.nombre.replace(/'/g, "\\'")}')" 
+                                    title="Eliminar" ${producto.stock > 0 ? 'disabled' : ''}>
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(fila);
+                });
                 
-                return coincideTermino && coincideEstado && coincideDias;
-            });
-            
-            // Ordenar por fecha de vencimiento (más próximos primero)
-            productosFiltrados.sort((a, b) => {
-                const fechaA = new Date(a.fechavencimiento);
-                const fechaB = new Date(b.fechavencimiento);
-                return fechaA - fechaB;
-            });
-            
-            // Paginar resultados
-            const productosPagina = paginarVencimientos(productosFiltrados);
-            
-            // Mostrar productos filtrados
-            tbody.innerHTML = '';
-            
-            if (productosPagina.length === 0) {
+                // Actualizar paginación
+                actualizarPaginacionVencimientos(total);
+                
+            } catch (error) {
+                console.error('Error cargando vencimientos:', error);
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="8" class="empty-state">
-                            <i class="fas fa-search"></i>
-                            <h3>No se encontraron productos</h3>
-                            <p>Intente con otros criterios de búsqueda</p>
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <h3>Error al cargar los datos</h3>
+                            <p>${error.message}</p>
                         </td>
                     </tr>
                 `;
-                return;
             }
-            
-            productosPagina.forEach(producto => {
-                const fechaVenc = new Date(producto.fechavencimiento);
-                const hoy = new Date();
-                const diffTime = fechaVenc - hoy;
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                
-                // Determinar estado de vencimiento
-                let estadoVencimiento = '';
-                let estadoClass = '';
-                
-                if (diffDays < 0) {
-                    estadoVencimiento = 'Vencido';
-                    estadoClass = 'vencimiento-critico';
-                } else if (diffDays <= 7) {
-                    estadoVencimiento = 'Crítico';
-                    estadoClass = 'vencimiento-critico';
-                } else if (diffDays <= 15) {
-                    estadoVencimiento = 'Próximo';
-                    estadoClass = 'vencimiento-proximo';
-                } else if (diffDays <= 30) {
-                    estadoVencimiento = 'Alerta';
-                    estadoClass = 'vencimiento-proximo';
-                } else {
-                    estadoVencimiento = 'Vigente';
-                    estadoClass = 'vencimiento-ok';
-                }
-                
-                // Determinar clase para días restantes
-                let diasClass = '';
-                if (diffDays < 0) {
-                    diasClass = 'stock-critico';
-                } else if (diffDays <= 7) {
-                    diasClass = 'stock-bajo';
-                } else if (diffDays <= 30) {
-                    diasClass = 'stock-optimo';
-                }
-                
-                const fila = document.createElement('tr');
-                fila.innerHTML = `
-                    <td>${producto.id}</td>
-                    <td>${producto.nombre}</td>
-                    <td>${producto.categoria}</td>
-                    <td>${producto.stock}</td>
-                    <td>${fechaVenc.toLocaleDateString('es-ES')}</td>
-                    <td class="${diasClass}">${diffDays} días</td>
-                    <td>
-                        <span class="${estadoClass}">${estadoVencimiento}</span>
-                    </td>
-                    <td>
-                        <a href="/stock/productos/${producto.id}/editar/" class="btn-icon" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </a>
-                        <button class="btn-icon delete" onclick="eliminarProducto(${producto.id}, '${producto.nombre.replace(/'/g, "\\'")}')" 
-                                title="Eliminar" ${producto.stock > 0 ? 'disabled' : ''}>
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(fila);
-            });
-            
-            // Actualizar paginación
-            actualizarPaginacionVencimientos();
         }
 
         function paginarVencimientos(productosFiltrados) {
@@ -1851,7 +1835,7 @@
             return productosPagina;
         }
 
-        function actualizarPaginacionVencimientos() {
+        function actualizarPaginacionVencimientos(total) {
             const paginationInfo = document.getElementById('pagination-info-vencimientos');
             const paginationButtons = document.getElementById('pagination-buttons-vencimientos');
             
@@ -1859,8 +1843,7 @@
             
             // Actualizar información de paginación
             const inicio = (paginaActualVencimientos - 1) * productosPorPaginaVencimientos + 1;
-            const fin = Math.min(paginaActualVencimientos * productosPorPaginaVencimientos, productosConVencimiento.length);
-            const total = productosConVencimiento.length;
+            const fin = Math.min(paginaActualVencimientos * productosPorPaginaVencimientos, total);
             
             paginationInfo.textContent = `Mostrando ${inicio}-${fin} de ${total} productos`;
             
