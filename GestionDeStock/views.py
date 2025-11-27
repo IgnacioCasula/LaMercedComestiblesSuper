@@ -72,7 +72,7 @@ def gestion_de_stock(request):
 # ===== VISTAS PARA FORMULARIOS (NUEVAS) =====
 
 def crear_producto_view(request):
-    """Vista para crear producto con formulario"""
+    """Vista para crear producto con formulario - ACTUALIZADA para fecha de vencimiento"""
     tiene_permiso, usuario = verificar_permisos_stock(request)
     
     if not tiene_permiso:
@@ -88,13 +88,28 @@ def crear_producto_view(request):
                 with transaction.atomic():
                     producto = form.save(commit=False)
                     
+                    # 🔥 NUEVO: Procesar fecha de vencimiento del formulario
+                    fechavencimiento_str = request.POST.get('fechavencimiento')
+                    if fechavencimiento_str:
+                        try:
+                            producto.fechavencimiento = datetime.strptime(fechavencimiento_str, '%Y-%m-%d').date()
+                        except ValueError:
+                            messages.error(request, '❌ Formato de fecha de vencimiento inválido.')
+                            return render(request, 'HTML/forms/crear_producto.html', {
+                                'form': form,
+                                'proveedores': Proveedores.objects.all()
+                            })
+                    
                     # Asignar automáticamente la sucursal (misma lógica que caja/views.py)
                     sucursal = obtener_o_crear_sucursal_sistema()
                     
                     # Verificar si el código de barras ya existe
                     if Productos.objects.filter(codigobarraproducto=producto.codigobarraproducto).exists():
                         messages.error(request, '❌ El código de barras ya existe.')
-                        return render(request, 'HTML/forms/crear_producto.html', {'form': form})
+                        return render(request, 'HTML/forms/crear_producto.html', {
+                            'form': form,
+                            'proveedores': Proveedores.objects.all()
+                        })
                     
                     producto.save()
                     
@@ -126,7 +141,8 @@ def crear_producto_view(request):
                         detalles={
                             'producto_id': producto.idproducto,
                             'stock_inicial': stock_inicial,
-                            'precio': float(producto.precioproducto)
+                            'precio': float(producto.precioproducto),
+                            'fecha_vencimiento': producto.fechavencimiento.strftime('%Y-%m-%d') if producto.fechavencimiento else None
                         }
                     )
                     return redirect('stock:gestion_de_stock')
@@ -215,9 +231,8 @@ def crear_proveedor_view(request):
         form = ProveedorForm()
     
     return render(request, 'HTML/forms/crear_proveedor.html', {'form': form})
-
 def editar_producto_view(request, producto_id):
-    """Vista para editar producto con formulario"""
+    """Vista para editar producto con formulario - ACTUALIZADA para fecha de vencimiento"""
     tiene_permiso, usuario = verificar_permisos_stock(request)
     
     if not tiene_permiso:
@@ -245,7 +260,26 @@ def editar_producto_view(request, producto_id):
         if form.is_valid():
             try:
                 with transaction.atomic():
-                    producto_editado = form.save()
+                    producto_editado = form.save(commit=False)
+                    
+                    # 🔥 NUEVO: Procesar fecha de vencimiento del formulario
+                    fechavencimiento_str = request.POST.get('fechavencimiento')
+                    if fechavencimiento_str:
+                        try:
+                            producto_editado.fechavencimiento = datetime.strptime(fechavencimiento_str, '%Y-%m-%d').date()
+                        except ValueError:
+                            messages.error(request, '❌ Formato de fecha de vencimiento inválido.')
+                            return render(request, 'HTML/forms/editar_producto.html', {
+                                'form': form,
+                                'producto': producto,
+                                'proveedores': Proveedores.objects.all(),
+                                'stock_actual': stock_actual,
+                                'proveedor_actual': proveedor_actual.idproveedor if proveedor_actual else None
+                            })
+                    else:
+                        producto_editado.fechavencimiento = None
+                    
+                    producto_editado.save()
                     
                     # Actualizar inventario
                     nuevo_stock = int(request.POST.get('stock_actual', 0))
@@ -280,7 +314,8 @@ def editar_producto_view(request, producto_id):
                         detalles={
                             'producto_id': producto_editado.idproducto,
                             'stock_anterior': stock_actual,
-                            'stock_nuevo': nuevo_stock
+                            'stock_nuevo': nuevo_stock,
+                            'fecha_vencimiento': producto_editado.fechavencimiento.strftime('%Y-%m-%d') if producto_editado.fechavencimiento else None
                         }
                     )
                     return redirect('stock:gestion_de_stock')
@@ -299,7 +334,9 @@ def editar_producto_view(request, producto_id):
         'producto': producto,
         'proveedores': proveedores,
         'stock_actual': stock_actual,
-        'proveedor_actual': proveedor_actual.idproveedor if proveedor_actual else None
+        'proveedor_actual': proveedor_actual.idproveedor if proveedor_actual else None,
+        # 🔥 NUEVO: Pasar la fecha de vencimiento formateada para el template
+        'fechavencimiento_actual': producto.fechavencimiento.strftime('%Y-%m-%d') if producto.fechavencimiento else ''
     })
 
 # ... (las funciones API existentes se mantienen igual)
@@ -353,6 +390,23 @@ def api_listar_productos(request):
                 texto_placeholder = producto.nombreproductos[:2].upper() if producto.nombreproductos else 'PR'
                 imagen_url = f"https://via.placeholder.com/50/e0e0e0/666666?text={texto_placeholder}"
 
+            # 🔥 NUEVO: Calcular días restantes para vencimiento
+            dias_restantes = None
+            estado_vencimiento = None
+            
+            if producto.fechavencimiento:
+                hoy = timezone.now().date()
+                dias_restantes = (producto.fechavencimiento - hoy).days
+                
+                if dias_restantes < 0:
+                    estado_vencimiento = 'vencido'
+                elif dias_restantes <= 7:
+                    estado_vencimiento = 'proximo'
+                elif dias_restantes <= 30:
+                    estado_vencimiento = 'advertencia'
+                else:
+                    estado_vencimiento = 'ok'
+
             productos_list.append({
                 'id': producto.idproducto,
                 'nombre': producto.nombreproductos,
@@ -366,7 +420,9 @@ def api_listar_productos(request):
                 'stock': inventario.cantidad if inventario else 0,
                 'stockMinimo': 10,  # Valor por defecto
                 'imagen': imagen_url,
-                'vencimiento': None  # Agregar si tienes campo de vencimiento
+                'fechavencimiento': producto.fechavencimiento.strftime('%Y-%m-%d') if producto.fechavencimiento else None,
+                'dias_restantes': dias_restantes,
+                'estado_vencimiento': estado_vencimiento
             })
         
         return JsonResponse(productos_list, safe=False)
@@ -376,7 +432,7 @@ def api_listar_productos(request):
         import traceback
         traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
-
+    
 
 @require_http_methods(['POST'])
 @transaction.atomic
@@ -404,6 +460,14 @@ def api_crear_producto(request):
         except Categorias.DoesNotExist:
             return JsonResponse({'error': 'Categoría no encontrada'}, status=404)
         
+        # Procesar fecha de vencimiento
+        fechavencimiento = None
+        if data.get('fechavencimiento'):
+            try:
+                fechavencimiento = datetime.strptime(data['fechavencimiento'], '%Y-%m-%d').date()
+            except ValueError:
+                return JsonResponse({'error': 'Formato de fecha inválido'}, status=400)
+        
         # Crear producto
         producto = Productos.objects.create(
             nombreproductos=data['nombre'],
@@ -411,9 +475,11 @@ def api_crear_producto(request):
             marcaproducto=data['marca'],
             codigobarraproducto=int(data['codigo']),
             imagenproducto=data.get('imagen'),
-            idcategoria=categoria
+            idcategoria=categoria,
+            fechavencimiento=fechavencimiento  # NUEVO CAMPO
         )
         
+        # ... resto del código igual ...        
         # Asociar proveedor si existe
         if data.get('proveedor_id'):
             try:
@@ -461,11 +527,10 @@ def api_crear_producto(request):
         traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
 
-
 @require_http_methods(['POST'])
 @transaction.atomic
 def api_editar_producto(request, producto_id):
-    """API para editar un producto"""
+    """API para editar un producto - ACTUALIZADA para manejar fecha de vencimiento"""
     try:
         tiene_permiso, _ = verificar_permisos_stock(request)
         if not tiene_permiso:
@@ -478,7 +543,7 @@ def api_editar_producto(request, producto_id):
         except Productos.DoesNotExist:
             return JsonResponse({'error': 'Producto no encontrado'}, status=404)
         
-        # Actualizar campos
+        # Actualizar campos básicos
         if data.get('nombre'):
             producto.nombreproductos = data['nombre']
         if data.get('precio') is not None:
@@ -497,6 +562,18 @@ def api_editar_producto(request, producto_id):
                 producto.idcategoria = categoria
             except Categorias.DoesNotExist:
                 pass
+        
+        # 🔥 NUEVO: Actualizar fecha de vencimiento
+        if 'fechavencimiento' in data:
+            if data['fechavencimiento']:
+                try:
+                    # Convertir string a objeto date
+                    producto.fechavencimiento = datetime.strptime(data['fechavencimiento'], '%Y-%m-%d').date()
+                except ValueError:
+                    return JsonResponse({'error': 'Formato de fecha de vencimiento inválido. Use YYYY-MM-DD'}, status=400)
+            else:
+                # Si se envía null o string vacío, establecer como None
+                producto.fechavencimiento = None
         
         producto.save()
         
@@ -535,9 +612,26 @@ def api_editar_producto(request, producto_id):
                     }
                 )
         
+        # Registrar actividad específica para fecha de vencimiento
+        if 'fechavencimiento' in data:
+            registrar_actividad(
+                request,
+                'ACTUALIZAR_VENCIMIENTO',
+                f'Fecha de vencimiento actualizada: {producto.nombreproductos}',
+                detalles={
+                    'producto_id': producto.idproducto,
+                    'fecha_vencimiento': data['fechavencimiento']
+                }
+            )
+        
         return JsonResponse({
             'success': True,
-            'message': 'Producto actualizado correctamente'
+            'message': 'Producto actualizado correctamente',
+            'producto_actualizado': {
+                'id': producto.idproducto,
+                'nombre': producto.nombreproductos,
+                'fechavencimiento': producto.fechavencimiento.strftime('%Y-%m-%d') if producto.fechavencimiento else None
+            }
         })
     except Exception as e:
         print(f"Error en api_editar_producto: {e}")
@@ -545,6 +639,86 @@ def api_editar_producto(request, producto_id):
         traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
 
+@require_http_methods(['GET'])
+def api_listar_vencimientos(request):
+    """API para listar productos con información de vencimientos"""
+    try:
+        tiene_permiso, _ = verificar_permisos_stock(request)
+        if not tiene_permiso:
+            return JsonResponse({'error': 'Sin permisos'}, status=403)
+        
+        # Parámetros de filtrado
+        estado = request.GET.get('estado')  # 'vencido', 'proximo', 'advertencia', 'ok'
+        dias = request.GET.get('dias')  # '7', '15', '30'
+        
+        # Obtener sucursal automáticamente
+        sucursal = obtener_o_crear_sucursal_sistema()
+        
+        productos_query = Productos.objects.select_related('idcategoria').filter(
+            fechavencimiento__isnull=False
+        )
+        
+        hoy = timezone.now().date()
+        vencimientos_list = []
+        
+        for producto in productos_query:
+            # Obtener inventario
+            inventario = Inventarios.objects.filter(
+                producto=producto,
+                sucursal=sucursal
+            ).first()
+            
+            dias_restantes = (producto.fechavencimiento - hoy).days
+            
+            # Aplicar filtros
+            if estado:
+                if estado == 'vencido' and dias_restantes >= 0:
+                    continue
+                elif estado == 'proximo' and not (0 <= dias_restantes <= 7):
+                    continue
+                elif estado == 'advertencia' and not (8 <= dias_restantes <= 30):
+                    continue
+                elif estado == 'ok' and dias_restantes <= 30:
+                    continue
+            
+            if dias and dias_restantes > int(dias):
+                continue
+            
+            # Determinar clase CSS para el estado
+            if dias_restantes < 0:
+                estado_clase = 'vencimiento-critico'
+                estado_texto = 'Vencido'
+            elif dias_restantes <= 7:
+                estado_clase = 'vencimiento-proximo'
+                estado_texto = 'Próximo'
+            elif dias_restantes <= 30:
+                estado_clase = 'vencimiento-ok'
+                estado_texto = 'Vigente'
+            else:
+                estado_clase = 'vencimiento-lejano'
+                estado_texto = 'Lejano'
+            
+            vencimientos_list.append({
+                'id': producto.idproducto,
+                'nombre': producto.nombreproductos,
+                'categoria': producto.idcategoria.nombrecategoria if producto.idcategoria else 'Sin categoría',
+                'stock': inventario.cantidad if inventario else 0,
+                'fecha_vencimiento': producto.fechavencimiento.strftime('%Y-%m-%d'),
+                'dias_restantes': dias_restantes,
+                'estado_clase': estado_clase,
+                'estado_texto': estado_texto
+            })
+        
+        # Ordenar por fecha de vencimiento (más próximos primero)
+        vencimientos_list.sort(key=lambda x: x['dias_restantes'])
+        
+        return JsonResponse(vencimientos_list, safe=False)
+        
+    except Exception as e:
+        print(f"Error en api_listar_vencimientos: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': str(e)}, status=500)
 
 @require_http_methods(['DELETE'])
 @transaction.atomic
@@ -1366,3 +1540,98 @@ def editar_proveedor_view(request, proveedor_id):
         'form': form,
         'proveedor': proveedor
     })
+def gestion_pedidos(request):
+    """Vista temporal para gestión de pedidos"""
+    return render(request, 'HTML/gestion_pedidos.html')
+
+def crear_pedido(request):
+    """Vista temporal para crear pedidos"""
+    messages.info(request, "Módulo de pedidos en desarrollo")
+    return redirect('stock:gestion_pedidos')
+
+def editar_pedido(request, pedido_id):
+    """Vista temporal para editar pedidos"""
+    messages.info(request, f"Editar pedido #{pedido_id} - Módulo en desarrollo")
+    return redirect('stock:gestion_pedidos')
+
+def eliminar_pedido(request, pedido_id):
+    """Vista temporal para eliminar pedidos"""
+    messages.info(request, f"Eliminar pedido #{pedido_id} - Módulo en desarrollo")
+    return redirect('stock:gestion_pedidos')
+
+
+
+@require_http_methods(['POST'])
+@transaction.atomic
+def api_actualizar_vencimiento(request, producto_id):
+    """API para actualizar solo la fecha de vencimiento de un producto"""
+    try:
+        tiene_permiso, _ = verificar_permisos_stock(request)
+        if not tiene_permiso:
+            return JsonResponse({'error': 'Sin permisos'}, status=403)
+        
+        data = json.loads(request.body)
+        
+        try:
+            producto = Productos.objects.get(idproducto=producto_id)
+        except Productos.DoesNotExist:
+            return JsonResponse({'error': 'Producto no encontrado'}, status=404)
+        
+        # Procesar fecha de vencimiento
+        if 'fechavencimiento' in data:
+            if data['fechavencimiento']:
+                try:
+                    nueva_fecha = datetime.strptime(data['fechavencimiento'], '%Y-%m-%d').date()
+                    fecha_anterior = producto.fechavencimiento
+                    producto.fechavencimiento = nueva_fecha
+                    producto.save()
+                    
+                    # Registrar actividad
+                    registrar_actividad(
+                        request,
+                        'ACTUALIZAR_VENCIMIENTO_API',
+                        f'Fecha de vencimiento actualizada: {producto.nombreproductos}',
+                        detalles={
+                            'producto_id': producto.idproducto,
+                            'fecha_anterior': fecha_anterior.strftime('%Y-%m-%d') if fecha_anterior else None,
+                            'fecha_nueva': nueva_fecha.strftime('%Y-%m-%d')
+                        }
+                    )
+                    
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Fecha de vencimiento actualizada correctamente',
+                        'fecha_actualizada': nueva_fecha.strftime('%Y-%m-%d')
+                    })
+                    
+                except ValueError:
+                    return JsonResponse({'error': 'Formato de fecha inválido. Use YYYY-MM-DD'}, status=400)
+            else:
+                # Si se envía null o string vacío, establecer como None
+                fecha_anterior = producto.fechavencimiento
+                producto.fechavencimiento = None
+                producto.save()
+                
+                registrar_actividad(
+                    request,
+                    'ELIMINAR_VENCIMIENTO_API',
+                    f'Fecha de vencimiento eliminada: {producto.nombreproductos}',
+                    detalles={
+                        'producto_id': producto.idproducto,
+                        'fecha_anterior': fecha_anterior.strftime('%Y-%m-%d') if fecha_anterior else None
+                    }
+                )
+                
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Fecha de vencimiento eliminada correctamente'
+                })
+        else:
+            return JsonResponse({'error': 'Campo fechavencimiento es requerido'}, status=400)
+            
+    except Exception as e:
+        print(f"Error en api_actualizar_vencimiento: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': str(e)}, status=500)
+

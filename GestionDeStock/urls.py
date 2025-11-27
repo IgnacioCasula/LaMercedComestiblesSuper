@@ -44,4 +44,13 @@ urlpatterns = [
     # API Estadísticas y Alertas
     path('api/estadisticas/', views.api_estadisticas_stock, name='api_estadisticas_stock'),
     path('api/alertas/', views.api_alertas_stock, name='api_alertas_stock'),
+
+    # URLs para Pedidos
+    path('pedidos/', views.gestion_pedidos, name='gestion_pedidos'),
+    path('pedidos/crear/', views.crear_pedido, name='crear_pedido'),
+    path('pedidos/<int:pedido_id>/editar/', views.editar_pedido, name='editar_pedido'),
+    path('pedidos/<int:pedido_id>/eliminar/', views.eliminar_pedido, name='eliminar_pedido'),
+
+    path('api/productos/<int:producto_id>/actualizar-vencimiento/', views.api_actualizar_vencimiento, name='api_actualizar_vencimiento'),
+
 ]

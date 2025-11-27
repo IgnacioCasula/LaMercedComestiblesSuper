@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -5,106 +6,312 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Crear Producto - La Merced Comestibles</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .container { max-width: 800px; }
-        .form-container { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+        .form-container {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            padding: 2.5rem;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            border-left: 5px solid #667eea;
+        }
+        .form-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px solid #f1f1f1;
+        }
+        .form-header h1 {
+            color: #2c3e50;
+            font-size: 2.2rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        .form-header h1 i {
+            color: #667eea;
+            font-size: 2.5rem;
+        }
+        .form-header p {
+            color: #6c757d;
+            font-size: 1.1rem;
+            margin: 0;
+        }
+        .form-label {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .form-label i {
+            color: #667eea;
+            font-size: 1.1rem;
+        }
+        .form-control, .form-select {
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+            transform: translateY(-2px);
+        }
+        .btn-custom {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+        .btn-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        }
+        .alert-custom {
+            border-radius: 12px;
+            border: none;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .alert-custom i {
+            font-size: 1.2rem;
+        }
+        /* Estilo específico para campo de fecha */
+        input[type="date"] {
+            position: relative;
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            background: transparent;
+            bottom: 0;
+            color: transparent;
+            cursor: pointer;
+            height: auto;
+            left: 0;
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: auto;
+        }
     </style>
 </head>
 <body>
-    <div class="container mt-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1>Crear Nuevo Producto</h1>
-            <a href="{% url 'stock:gestion_de_stock' %}" class="btn btn-secondary">← Volver al Stock</a>
-        </div>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-12">
+                <div class="form-container">
+                    <!-- Header -->
+                    <div class="form-header">
+                        <h1><i class="fas fa-box"></i> Nuevo Producto</h1>
+                        <p>Complete la información del producto</p>
+                    </div>
 
-        <div class="form-container">
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
+                    <!-- Mensajes -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-custom alert-dismissible fade show" role="alert">
+                                <i class="fas fa-{% if message.tags == 'error' %}exclamation-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
 
-            <form method="POST" enctype="multipart/form-data">
-                {% csrf_token %}
-                
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label for="id_nombreproductos" class="form-label">Nombre del Producto *</label>
-                        {{ form.nombreproductos }}
-                        {% if form.nombreproductos.errors %}
-                            <div class="text-danger">{{ form.nombreproductos.errors }}</div>
-                        {% endif %}
-                    </div>
-                    <div class="col-md-6">
-                        <label for="id_precioproducto" class="form-label">Precio *</label>
-                        {{ form.precioproducto }}
-                        {% if form.precioproducto.errors %}
-                            <div class="text-danger">{{ form.precioproducto.errors }}</div>
-                        {% endif %}
-                    </div>
+                    <!-- Formulario -->
+                    <form method="POST" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <!-- Fila 1: Nombre y Precio -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label for="id_nombreproductos" class="form-label">
+                                    <i class="fas fa-tag"></i> Nombre del Producto *
+                                </label>
+                                {{ form.nombreproductos }}
+                                {% if form.nombreproductos.errors %}
+                                    <div class="text-danger small mt-2">
+                                        <i class="fas fa-exclamation-circle me-1"></i>
+                                        {{ form.nombreproductos.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="id_precioproducto" class="form-label">
+                                    <i class="fas fa-dollar-sign"></i> Precio *
+                                </label>
+                                {{ form.precioproducto }}
+                                {% if form.precioproducto.errors %}
+                                    <div class="text-danger small mt-2">
+                                        <i class="fas fa-exclamation-circle me-1"></i>
+                                        {{ form.precioproducto.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Fila 2: Marca y Código de Barras -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label for="id_marcaproducto" class="form-label">
+                                    <i class="fas fa-industry"></i> Marca *
+                                </label>
+                                {{ form.marcaproducto }}
+                                {% if form.marcaproducto.errors %}
+                                    <div class="text-danger small mt-2">
+                                        <i class="fas fa-exclamation-circle me-1"></i>
+                                        {{ form.marcaproducto.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="id_codigobarraproducto" class="form-label">
+                                    <i class="fas fa-barcode"></i> Código de Barras *
+                                </label>
+                                {{ form.codigobarraproducto }}
+                                {% if form.codigobarraproducto.errors %}
+                                    <div class="text-danger small mt-2">
+                                        <i class="fas fa-exclamation-circle me-1"></i>
+                                        {{ form.codigobarraproducto.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Fila 3: Categoría y Fecha de Vencimiento -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label for="id_idcategoria" class="form-label">
+                                    <i class="fas fa-tags"></i> Categoría *
+                                </label>
+                                {{ form.idcategoria }}
+                                {% if form.idcategoria.errors %}
+                                    <div class="text-danger small mt-2">
+                                        <i class="fas fa-exclamation-circle me-1"></i>
+                                        {{ form.idcategoria.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="id_fechavencimiento" class="form-label">
+                                    <i class="fas fa-calendar-alt"></i> Fecha de Vencimiento
+                                </label>
+                                <!-- Campo de fecha manual si no funciona el widget -->
+                                {% if form.fechavencimiento %}
+                                    {{ form.fechavencimiento }}
+                                {% else %}
+                                    <input type="date" name="fechavencimiento" id="id_fechavencimiento" class="form-control">
+                                {% endif %}
+                                {% if form.fechavencimiento.errors %}
+                                    <div class="text-danger small mt-2">
+                                        <i class="fas fa-exclamation-circle me-1"></i>
+                                        {{ form.fechavencimiento.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Fila 4: Proveedor y Stock -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label for="proveedor" class="form-label">
+                                    <i class="fas fa-truck"></i> Proveedor
+                                </label>
+                                <select name="proveedor" id="proveedor" class="form-select">
+                                    <option value="">Seleccionar proveedor</option>
+                                    {% for proveedor in proveedores %}
+                                        <option value="{{ proveedor.idproveedor }}">{{ proveedor.nombreproveedor }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="stock_inicial" class="form-label">
+                                    <i class="fas fa-boxes"></i> Stock Inicial
+                                </label>
+                                <input type="number" name="stock_inicial" id="stock_inicial" class="form-control" value="0" min="0">
+                            </div>
+                        </div>
+
+                        <!-- Fila 5: Imagen -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <label for="id_imagenproducto" class="form-label">
+                                    <i class="fas fa-image"></i> Imagen del Producto
+                                </label>
+                                {{ form.imagenproducto }}
+                                {% if form.imagenproducto.errors %}
+                                    <div class="text-danger small mt-2">
+                                        <i class="fas fa-exclamation-circle me-1"></i>
+                                        {{ form.imagenproducto.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Botones -->
+                        <div class="row mt-5">
+                            <div class="col-12">
+                                <div class="d-flex gap-3">
+                                    <a href="{% url 'stock:gestion_de_stock' %}" class="btn btn-outline-secondary btn-custom flex-fill">
+                                        <i class="fas fa-times"></i>
+                                        Cancelar
+                                    </a>
+                                    <button type="submit" class="btn btn-primary btn-custom flex-fill">
+                                        <i class="fas fa-save"></i>
+                                        Crear Producto
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
                 </div>
-
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label for="id_marcaproducto" class="form-label">Marca *</label>
-                        {{ form.marcaproducto }}
-                        {% if form.marcaproducto.errors %}
-                            <div class="text-danger">{{ form.marcaproducto.errors }}</div>
-                        {% endif %}
-                    </div>
-                    <div class="col-md-6">
-                        <label for="id_codigobarraproducto" class="form-label">Código de Barras *</label>
-                        {{ form.codigobarraproducto }}
-                        {% if form.codigobarraproducto.errors %}
-                            <div class="text-danger">{{ form.codigobarraproducto.errors }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label for="id_idcategoria" class="form-label">Categoría *</label>
-                        {{ form.idcategoria }}
-                        {% if form.idcategoria.errors %}
-                            <div class="text-danger">{{ form.idcategoria.errors }}</div>
-                        {% endif %}
-                    </div>
-                    <div class="col-md-6">
-                        <label for="proveedor" class="form-label">Proveedor</label>
-                        <select name="proveedor" id="proveedor" class="form-select">
-                            <option value="">Seleccionar proveedor</option>
-                            {% for proveedor in proveedores %}
-                                <option value="{{ proveedor.idproveedor }}">{{ proveedor.nombreproveedor }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label for="stock_inicial" class="form-label">Stock Inicial</label>
-                        <input type="number" name="stock_inicial" id="stock_inicial" class="form-control" value="0" min="0">
-                    </div>
-                    <div class="col-md-6">
-                        <label for="id_imagenproducto" class="form-label">Imagen del Producto</label>
-                        {{ form.imagenproducto }}
-                        {% if form.imagenproducto.errors %}
-                            <div class="text-danger">{{ form.imagenproducto.errors }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-primary btn-lg">Crear Producto</button>
-                    <a href="{% url 'stock:gestion_de_stock' %}" class="btn btn-outline-secondary">Cancelar</a>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Aplicar estilos personalizados a los campos del formulario automáticamente
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputs = document.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => {
+                if (!input.classList.contains('form-control') && !input.classList.contains('form-select')) {
+                    if (input.type === 'select' || input.tagName === 'SELECT') {
+                        input.classList.add('form-select');
+                    } else {
+                        input.classList.add('form-control');
+                    }
+                }
+            });
+
+            // Establecer fecha mínima para el campo de fecha (hoy)
+            const fechaField = document.getElementById('id_fechavencimiento');
+            if (fechaField) {
+                const today = new Date().toISOString().split('T')[0];
+                fechaField.min = today;
+                
+                // Si el campo está vacío, establecer placeholder
+                if (!fechaField.value) {
+                    fechaField.placeholder = 'DD/MM/AAAA';
+                }
+            }
+        });
+    </script>
 </body>
 </html>
