@@ -2188,3 +2188,148 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 }
 
 /* ===== FIN DE ESTILOS ADICIONALES ===== */
+
+/* ===== HORARIOS POR ROL MEJORADO ===== */
+.rol-horarios-section {
+    margin-bottom: 30px;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid #e9ecef;
+}
+
+.rol-horarios-titulo {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px 20px;
+    margin: 0;
+    font-size: 1.1em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.dias-horario-compacto {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px;
+    padding: 15px;
+    background: #f8f9fa;
+}
+
+.dia-horario-compacto {
+    background: white;
+    border-radius: 8px;
+    padding: 10px;
+    min-height: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border: 2px solid #dee2e6;
+    transition: all 0.3s ease;
+}
+
+.dia-horario-compacto.tiene-turno {
+    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+    border-color: #4caf50;
+}
+
+.dia-nombre-compacto {
+    font-weight: 700;
+    font-size: 0.85em;
+    color: #2c3e50;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.dia-turnos-compacto {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    width: 100%;
+}
+
+.turno-compacto {
+    background: white;
+    padding: 5px 8px;
+    border-radius: 6px;
+    font-size: 0.7em;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    justify-content: center;
+    color: #2e7d32;
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.turno-compacto i {
+    color: #4caf50;
+    font-size: 0.9em;
+}
+
+@media (max-width: 1024px) {
+    .dias-horario-compacto {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .dias-horario-compacto {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+
+/* ===== SELECTOR DE ROLES SIMPLIFICADO ===== */
+.rol-item {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.rol-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    transform: scaleY(0);
+    transition: transform 0.3s ease;
+}
+
+.rol-item:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+    transform: translateX(5px);
+}
+
+.rol-item.active {
+    background: linear-gradient(135deg, #e8f4ff 0%, #d4e9ff 100%);
+    border-color: #667eea;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.25);
+    transform: translateX(8px);
+}
+
+.rol-item.active::before {
+    transform: scaleY(1);
+}
+
+.rol-item i.fa-chevron-right {
+    color: #667eea;
+    transition: all 0.3s ease;
+}
+
+.rol-item.active i.fa-chevron-right {
+    transform: translateX(5px);
+}

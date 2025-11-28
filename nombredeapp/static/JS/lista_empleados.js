@@ -147,11 +147,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
             empleadosData = data.empleados;
             
-            // Cargar áreas únicas para el filtro
+            // ✅ CORREGIDO: Cargar TODAS las áreas únicas
             const areasUnicas = [...new Set(empleadosData
                 .map(e => e.area)
-                .filter(a => a))
-            ].sort();
+                .filter(a => a && a !== 'Sin área')  // ✅ Excluir "Sin área"
+            )].sort();
             
             filterArea.innerHTML = '<option value="all">Todas las áreas</option>';
             areasUnicas.forEach(area => {
@@ -160,7 +160,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 option.textContent = area;
                 filterArea.appendChild(option);
             });
-
+    
             applyFilters();
         } catch (error) {
             console.error('Error:', error);
@@ -449,15 +449,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    // ✅ NUEVO: Cargar todos los roles del empleado
     async function cargarRolesEmpleado(empleado) {
         try {
-            // Obtener todos los roles del empleado desde el backend
             const response = await fetch(`/api/empleados/${empleado.id}/roles/`);
             const data = await response.json();
             rolesEmpleado = data.roles || [];
             
-            // Renderizar selector de roles
+            // ✅ Renderizar selector de roles SIN toggle
             const rolesSelector = document.getElementById('roles-selector');
             rolesSelector.innerHTML = `
                 <label><i class="fas fa-briefcase"></i> Selecciona el rol a editar:</label>
@@ -468,10 +466,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <strong>${rol.nombrearea}</strong>
                                 <span>${rol.nombrerol}</span>
                             </div>
-                            <button type="button" class="btn-toggle-rol" data-rol-id="${rol.idroles}">
-                                <i class="fas fa-toggle-${index === 0 ? 'on' : 'off'}"></i>
-                                ${index === 0 ? 'Activo' : 'Inactivo'}
-                            </button>
+                            <i class="fas fa-chevron-right"></i>
                         </div>
                     `).join('')}
                 </div>
@@ -495,27 +490,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     // Cargar horarios de este rol
                     await cargarHorariosDelRol(empleado.id, rolId);
-                });
-            });
-            
-            // Event listeners para toggle activo/inactivo
-            document.querySelectorAll('.btn-toggle-rol').forEach(btn => {
-                btn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    const icon = this.querySelector('i');
-                    const isActive = icon.classList.contains('fa-toggle-on');
-                    
-                    if (isActive) {
-                        icon.classList.remove('fa-toggle-on');
-                        icon.classList.add('fa-toggle-off');
-                        this.innerHTML = '<i class="fas fa-toggle-off"></i> Inactivo';
-                    } else {
-                        icon.classList.remove('fa-toggle-off');
-                        icon.classList.add('fa-toggle-on');
-                        this.innerHTML = '<i class="fas fa-toggle-on"></i> Activo';
-                    }
-                    
-                    if (window.audioSystem) window.audioSystem.play('select');
                 });
             });
             

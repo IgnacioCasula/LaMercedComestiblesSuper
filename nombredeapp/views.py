@@ -998,6 +998,7 @@ def api_editar_area(request, area_nombre):
     return JsonResponse({'error': 'Método no permitido'}, status=405)
 
 
+@require_http_methods(['POST'])
 @transaction.atomic
 def api_crear_puesto_nuevo(request):
     """Crea un nuevo puesto con permisos y salario."""
@@ -1006,8 +1007,11 @@ def api_crear_puesto_nuevo(request):
             data = json.loads(request.body)
             nombre_puesto = data.get('nombre', '').strip()
             area_id = data.get('area_id')
-            permisos = data.get('permisos', [])
+            permisos = data.get('permisos', [])  # ✅ Ya está bien
             salario = data.get('salario', 0)
+            
+            # ✅ DEBUG: Verificar que llegan los permisos
+            print(f"📋 Permisos recibidos: {permisos}")
             
             if not all([nombre_puesto, area_id]):
                 return JsonResponse({'error': 'Faltan datos obligatorios.'}, status=400)
@@ -1032,14 +1036,21 @@ def api_crear_puesto_nuevo(request):
                 nombrerol__startswith='_placeholder_'
             ).delete()
             
+            # ✅ CORREGIDO: Guardar TODOS los permisos correctamente
             permisos_desc = ', '.join([p.replace('_', ' ').title() for p in permisos]) if permisos else 'Sin permisos'
-            descripcion = f'Puesto de {nombre_puesto} con permisos: {permisos_desc} | Salario: ${salario}'
+            
+            # ✅ NUEVO: Agregar permisos como JSON en la descripción
+            import json as json_lib
+            permisos_json = json_lib.dumps(permisos)
+            descripcion = f'Puesto de {nombre_puesto} | Permisos: {permisos_desc} | PermisosJSON: {permisos_json} | Salario: ${salario}'
             
             nuevo_puesto = Roles.objects.create(
                 nombrerol=nombre_puesto,
                 nombrearea=area_id,
                 descripcionrol=descripcion
             )
+            
+            print(f"✅ Puesto creado: {nuevo_puesto.nombrerol} con permisos: {permisos}")
             
             return JsonResponse({
                 'id': nuevo_puesto.idroles,
@@ -1051,9 +1062,10 @@ def api_crear_puesto_nuevo(request):
             
         except Exception as e:
             print(f"Error en api_crear_puesto_nuevo: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Método no permitido'}, status=405)
-
 
 @transaction.atomic
 def api_editar_puesto(request, puesto_id):
@@ -1557,7 +1569,7 @@ def api_detalle_empleado(request: HttpRequest, empleado_id: int) -> JsonResponse
         empleado = Empleados.objects.select_related('idusuarios').get(idempleado=empleado_id)
         usuario = empleado.idusuarios
         
-        # Obtener todos los roles
+        # ✅ Obtener TODOS los roles
         roles = Roles.objects.filter(usuxroles__idusuarios=usuario)
         roles_data = [{
             'id': rol.idroles,
@@ -1565,14 +1577,14 @@ def api_detalle_empleado(request: HttpRequest, empleado_id: int) -> JsonResponse
             'area': rol.nombrearea
         } for rol in roles]
         
-        # Obtener horarios (todos, organizados por rol)
+        # ✅ Obtener horarios con información del rol
         horarios = Horario.objects.filter(empleado=empleado).select_related('rol').values(
             'dia_semana',
             'semana_del_mes',
             'hora_inicio',
             'hora_fin',
             'rol_id',
-            'rol__nombrerol'
+            'rol__nombrerol'  # ✅ IMPORTANTE: incluir nombre del rol
         ).order_by('rol_id', 'semana_del_mes', 'dia_semana')
         
         data = {
@@ -1595,7 +1607,7 @@ def api_detalle_empleado(request: HttpRequest, empleado_id: int) -> JsonResponse
             'fecha_contratado': empleado.fechacontratado.isoformat() if empleado.fechacontratado else None,
             'fecha_registro': usuario.fecharegistrousuario.isoformat() if usuario.fecharegistrousuario else None,
             'usuario': usuario.nombreusuario,
-            'roles': roles_data,
+            'roles': roles_data,  # ✅ TODOS los roles
             'horarios': [
                 {
                     'dia_semana': h['dia_semana'],
@@ -1603,7 +1615,7 @@ def api_detalle_empleado(request: HttpRequest, empleado_id: int) -> JsonResponse
                     'hora_inicio': h['hora_inicio'].strftime('%H:%M') if h['hora_inicio'] else '',
                     'hora_fin': h['hora_fin'].strftime('%H:%M') if h['hora_fin'] else '',
                     'rol_id': h['rol_id'],
-                    'rol_nombre': h['rol__nombrerol']
+                    'rol_nombre': h['rol__nombrerol']  # ✅ Nombre del rol
                 }
                 for h in horarios
             ]
@@ -3057,3 +3069,79 @@ def api_nominas_registrar_pago_v2(request: HttpRequest) -> JsonResponse:
         import traceback
         traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
+    
+def generarVistaHorarios(horarios):
+    """Genera una vista mejorada de horarios agrupados por rol y semana"""
+    if not horarios:
+        return '<p class="no-horarios">No hay horarios asignados</p>'
+    
+    # Agrupar por rol primero
+    horarios_por_rol = {}
+    for h in horarios:
+        rol_nombre = h.get('rol_nombre', 'Sin Rol')
+        if rol_nombre not in horarios_por_rol:
+            horarios_por_rol[rol_nombre] = {}
+        
+        semana = h['semana_del_mes']
+        if semana not in horarios_por_rol[rol_nombre]:
+            horarios_por_rol[rol_nombre][semana] = {}
+        
+        dia = h['dia_semana']
+        if dia not in horarios_por_rol[rol_nombre][semana]:
+            horarios_por_rol[rol_nombre][semana][dia] = []
+        
+        horarios_por_rol[rol_nombre][semana][dia].append({
+            'inicio': h['hora_inicio'],
+            'fin': h['hora_fin']
+        })
+    
+    html = ''
+    for rol_nombre, semanas in horarios_por_rol.items():
+        html += f'''
+        <div class="rol-horarios-section">
+            <h4 class="rol-horarios-titulo">
+                <i class="fas fa-briefcase"></i> {rol_nombre}
+            </h4>
+        '''
+        
+        for semana, dias in semanas.items():
+            html += f'''
+            <div class="semana-horario">
+                <div class="semana-header">Semana {semana}</div>
+                <div class="dias-horario-compacto">
+            '''
+            
+            for dia in range(7):
+                nombreDia = getDiaNombre(dia)
+                turnosDia = dias.get(dia, [])
+                
+                html += f'''
+                <div class="dia-horario-compacto {'tiene-turno' if turnosDia else 'sin-turno'}">
+                    <div class="dia-nombre-compacto">{nombreDia[:3]}</div>
+                    <div class="dia-turnos-compacto">
+                '''
+                
+                if turnosDia:
+                    for turno in turnosDia:
+                        html += f'''
+                        <div class="turno-compacto">
+                            <i class="fas fa-clock"></i>
+                            <span>{turno['inicio'][:5]} - {turno['fin'][:5]}</span>
+                        </div>
+                        '''
+                else:
+                    html += '<span class="sin-turno-text">Libre</span>'
+                
+                html += '''
+                    </div>
+                </div>
+                '''
+            
+            html += '''
+                </div>
+            </div>
+            '''
+        
+        html += '</div>'
+    
+    return html
