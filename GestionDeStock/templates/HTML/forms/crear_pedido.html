@@ -1,0 +1,409 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Pedido - La Merced Comestibles</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+        .form-container {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            padding: 2.5rem;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            border-left: 5px solid #667eea;
+        }
+        .form-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px solid #f1f1f1;
+        }
+        .form-header h1 {
+            color: #2c3e50;
+            font-size: 2.2rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        .form-header h1 i {
+            color: #667eea;
+            font-size: 2.5rem;
+        }
+        .form-header p {
+            color: #6c757d;
+            font-size: 1.1rem;
+            margin: 0;
+        }
+        .form-label {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .form-label i {
+            color: #667eea;
+            font-size: 1.1rem;
+        }
+        .form-control, .form-select {
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+            transform: translateY(-2px);
+        }
+        .btn-custom {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+        .btn-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        }
+        .alert-custom {
+            border-radius: 12px;
+            border: none;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .items-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        .items-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e1e5e9;
+        }
+        .items-table tr:hover {
+            background: rgba(102, 126, 234, 0.05);
+        }
+        .total-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 20px;
+            text-align: right;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-12">
+                <div class="form-container">
+                    <!-- Header -->
+                    <div class="form-header">
+                        <h1><i class="fas fa-clipboard-list"></i> Nuevo Pedido</h1>
+                        <p>Complete la información del pedido</p>
+                    </div>
+
+                    <!-- Mensajes -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-custom alert-dismissible fade show" role="alert">
+                                <i class="fas fa-{% if message.tags == 'error' %}exclamation-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <!-- Formulario -->
+                    <form method="POST">
+                        {% csrf_token %}
+                        
+                        <!-- Información Básica del Pedido -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label for="id_sucursal" class="form-label">
+                                    <i class="fas fa-store"></i> Sucursal *
+                                </label>
+                                <select name="id_sucursal" id="id_sucursal" class="form-select" required>
+                                    <option value="">Seleccionar sucursal</option>
+                                    {% for sucursal in sucursales %}
+                                        <option value="{{ sucursal.id }}">{{ sucursal.nombre }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="id_usuario" class="form-label">
+                                    <i class="fas fa-user"></i> Usuario *
+                                </label>
+                                <select name="id_usuario" id="id_usuario" class="form-select" required>
+                                    <option value="">Seleccionar usuario</option>
+                                    {% for usuario in usuarios %}
+                                        <option value="{{ usuario.id }}">{{ usuario.nombre }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Fechas del Pedido -->
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <label for="fecha_pedido" class="form-label">
+                                    <i class="fas fa-calendar"></i> Fecha del Pedido *
+                                </label>
+                                <input type="datetime-local" name="fecha_pedido" id="fecha_pedido" class="form-control" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="fecha_max_retiro" class="form-label">
+                                    <i class="fas fa-clock"></i> Fecha Máx. Retiro *
+                                </label>
+                                <input type="datetime-local" name="fecha_max_retiro" id="fecha_max_retiro" class="form-control" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="codigo_retiro" class="form-label">
+                                    <i class="fas fa-barcode"></i> Código de Retiro
+                                </label>
+                                <input type="text" name="codigo_retiro" id="codigo_retiro" class="form-control" placeholder="Código automático">
+                                <small class="form-text text-muted">Se generará automáticamente si se deja vacío</small>
+                            </div>
+                        </div>
+
+                        <!-- Estado del Pedido -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <label for="estado_pedido" class="form-label">
+                                    <i class="fas fa-tasks"></i> Estado del Pedido *
+                                </label>
+                                <select name="estado_pedido" id="estado_pedido" class="form-select" required>
+                                    <option value="pendiente">Pendiente</option>
+                                    <option value="confirmado">Confirmado</option>
+                                    <option value="preparando">En Preparación</option>
+                                    <option value="listo">Listo para Retirar</option>
+                                    <option value="entregado">Entregado</option>
+                                    <option value="cancelado">Cancelado</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Productos del Pedido -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <label class="form-label">
+                                    <i class="fas fa-boxes"></i> Productos del Pedido
+                                </label>
+                                
+                                <!-- Formulario para agregar productos -->
+                                <div class="card mb-3">
+                                    <div class="card-body">
+                                        <div class="row g-3">
+                                            <div class="col-md-5">
+                                                <select name="producto" id="producto" class="form-select">
+                                                    <option value="">Seleccionar producto</option>
+                                                    {% for producto in productos %}
+                                                        <option value="{{ producto.id }}" data-precio="{{ producto.precioproducto }}">
+                                                            {{ producto.nombreproductos }} - ${{ producto.precioproducto }}
+                                                        </option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <input type="number" id="cantidad" class="form-control" placeholder="Cantidad" min="1" value="1">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <input type="number" id="precio_unitario" class="form-control" placeholder="Precio unitario" step="0.01" min="0">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <button type="button" class="btn btn-success w-100" id="agregar-producto">
+                                                    <i class="fas fa-plus"></i> Agregar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Tabla de productos agregados -->
+                                <div class="table-responsive">
+                                    <table class="items-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Producto</th>
+                                                <th width="100">Cantidad</th>
+                                                <th width="120">Precio Unit.</th>
+                                                <th width="120">Subtotal</th>
+                                                <th width="80">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="productos-agregados">
+                                            <!-- Los productos se agregarán aquí dinámicamente -->
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- Total -->
+                                <div class="total-section">
+                                    Total: $<span id="total-pedido">0.00</span>
+                                </div>
+
+                                <!-- Campo oculto para los productos -->
+                                <input type="hidden" name="productos_json" id="productos_json">
+                            </div>
+                        </div>
+
+                        <!-- Botones -->
+                        <div class="row mt-5">
+                            <div class="col-12">
+                                <div class="d-flex gap-3">
+                                    <a href="{% url 'stock:gestion_pedidos' %}" class="btn btn-outline-secondary btn-custom flex-fill">
+                                        <i class="fas fa-times"></i>
+                                        Cancelar
+                                    </a>
+                                    <button type="submit" class="btn btn-primary btn-custom flex-fill">
+                                        <i class="fas fa-save"></i>
+                                        Crear Pedido
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let productosPedido = [];
+        let totalPedido = 0;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const productoSelect = document.getElementById('producto');
+            const cantidadInput = document.getElementById('cantidad');
+            const precioInput = document.getElementById('precio_unitario');
+            const btnAgregar = document.getElementById('agregar-producto');
+            const tablaProductos = document.getElementById('productos-agregados');
+            const totalSpan = document.getElementById('total-pedido');
+            const productosJson = document.getElementById('productos_json');
+
+            // Auto-completar precio cuando se selecciona un producto
+            productoSelect.addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                const precio = selectedOption.getAttribute('data-precio');
+                if (precio) {
+                    precioInput.value = parseFloat(precio).toFixed(2);
+                }
+            });
+
+            // Agregar producto al pedido
+            btnAgregar.addEventListener('click', function() {
+                const productoId = productoSelect.value;
+                const productoNombre = productoSelect.options[productoSelect.selectedIndex].text;
+                const cantidad = parseInt(cantidadInput.value);
+                const precioUnitario = parseFloat(precioInput.value);
+
+                if (!productoId || !cantidad || !precioUnitario) {
+                    alert('Por favor complete todos los campos del producto');
+                    return;
+                }
+
+                if (cantidad <= 0) {
+                    alert('La cantidad debe ser mayor a 0');
+                    return;
+                }
+
+                const subtotal = cantidad * precioUnitario;
+
+                // Agregar a la lista
+                productosPedido.push({
+                    id: productoId,
+                    nombre: productoNombre.split(' - $')[0],
+                    cantidad: cantidad,
+                    precio_unitario: precioUnitario,
+                    subtotal: subtotal
+                });
+
+                // Actualizar tabla
+                actualizarTablaProductos();
+
+                // Limpiar campos
+                productoSelect.value = '';
+                cantidadInput.value = 1;
+                precioInput.value = '';
+            });
+
+            function actualizarTablaProductos() {
+                tablaProductos.innerHTML = '';
+                totalPedido = 0;
+
+                productosPedido.forEach((producto, index) => {
+                    totalPedido += producto.subtotal;
+
+                    const fila = document.createElement('tr');
+                    fila.innerHTML = `
+                        <td>${producto.nombre}</td>
+                        <td>${producto.cantidad}</td>
+                        <td>$${producto.precio_unitario.toFixed(2)}</td>
+                        <td>$${producto.subtotal.toFixed(2)}</td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-danger" onclick="eliminarProducto(${index})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    `;
+                    tablaProductos.appendChild(fila);
+                });
+
+                totalSpan.textContent = totalPedido.toFixed(2);
+                productosJson.value = JSON.stringify(productosPedido);
+            }
+
+            // Hacer la función eliminarProducto global
+            window.eliminarProducto = function(index) {
+                productosPedido.splice(index, 1);
+                actualizarTablaProductos();
+            };
+
+            // Establecer fecha actual por defecto
+            const now = new Date();
+            const fechaActual = now.toISOString().slice(0, 16);
+            document.getElementById('fecha_pedido').value = fechaActual;
+
+            // Establecer fecha máxima de retiro (3 días por defecto)
+            const fechaMaxRetiro = new Date(now);
+            fechaMaxRetiro.setDate(fechaMaxRetiro.getDate() + 3);
+            document.getElementById('fecha_max_retiro').value = fechaMaxRetiro.toISOString().slice(0, 16);
+        });
+    </script>
+</body>
+</html>

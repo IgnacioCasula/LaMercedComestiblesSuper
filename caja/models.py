@@ -54,6 +54,7 @@ class Productos(models.Model):
     codigobarraproducto = models.BigIntegerField(db_column='CodigoBarraProducto', unique=True)
     imagenproducto = models.TextField(db_column='ImagenProducto', blank=True, null=True)
     idcategoria = models.ForeignKey(Categorias, on_delete=models.CASCADE, db_column='IdCategoria')
+    fechavencimiento = models.DateField(db_column='FechaVencimiento', blank=True, null=True)
 
     class Meta:
         db_table = 'productos'
