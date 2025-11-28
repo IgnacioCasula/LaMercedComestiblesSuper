@@ -209,20 +209,31 @@ document.addEventListener('DOMContentLoaded', function() {
             const url = `${document.body.dataset.apiBuscarEmpleadosUrl}?q=${encodeURIComponent(query)}`;
             const response = await fetch(url);
             const data = await response.json();
-
+    
             if (data.length === 0) {
                 empleadosEncontrados.innerHTML = '<p style="text-align:center; color:#666;">No se encontraron empleados.</p>';
                 return;
             }
-
+    
             empleadosEncontrados.innerHTML = '';
             data.forEach(emp => {
                 const div = document.createElement('div');
                 div.className = 'empleado-item';
                 
-                const rolesHTML = emp.roles_actuales && emp.roles_actuales.length > 0
-                    ? emp.roles_actuales.map(r => `<span class="rol-badge">${r.nombrearea} - ${r.nombrerol}</span>`).join('')
-                    : '<span class="rol-badge">Sin roles</span>';
+                // ✅ CORREGIDO: Mostrar TODOS los roles correctamente
+                let rolesHTML = '';
+                if (emp.roles_actuales && emp.roles_actuales.length > 0) {
+                    rolesHTML = emp.roles_actuales.map(r => 
+                        `<span class="rol-badge" title="${r.nombrearea} - ${r.nombrerol}">
+                            <i class="fas fa-briefcase"></i>
+                            ${r.nombrearea}: ${r.nombrerol}
+                        </span>`
+                    ).join('');
+                    
+                    console.log(`✅ Mostrando ${emp.roles_actuales.length} roles para ${emp.nombre}`);
+                } else {
+                    rolesHTML = '<span class="rol-badge sin-roles">Sin roles asignados</span>';
+                }
                 
                 div.innerHTML = `
                     <div class="empleado-item-foto">
@@ -233,6 +244,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         <p><strong>DNI:</strong> ${emp.dni}</p>
                         <p><strong>Email:</strong> ${emp.email}</p>
                         <div class="empleado-item-roles">
+                            <strong style="display: block; margin-bottom: 8px;">
+                                <i class="fas fa-briefcase"></i> Roles actuales (${emp.total_roles || 0}):
+                            </strong>
                             ${rolesHTML}
                         </div>
                     </div>
@@ -274,25 +288,37 @@ document.addEventListener('DOMContentLoaded', function() {
         const textoBtnListo = document.getElementById('texto-btn-listo');
         const tituloSeccionLaboral = document.getElementById('titulo-seccion-laboral');
         const laboralDataSection = document.getElementById('laboral-data');
-
+    
         if (tituloPrincipal) tituloPrincipal.textContent = 'Asignar Nuevo Rol';
         if (seccionDatosPersonales) seccionDatosPersonales.style.display = 'none';
         if (empleadoBanner) empleadoBanner.style.display = 'block';
         if (textoBtnListo) textoBtnListo.textContent = 'Asignar Rol';
         if (tituloSeccionLaboral) tituloSeccionLaboral.textContent = 'Nuevo Rol Laboral';
         if (laboralDataSection) laboralDataSection.style.display = 'block';
-
+    
         if (bannerFoto) bannerFoto.src = emp.imagen || '/static/iconos/default-avatar.png';
         if (bannerNombre) bannerNombre.textContent = `${emp.nombre} ${emp.apellido}`;
         if (bannerDni) bannerDni.innerHTML = `<i class="fas fa-id-card"></i> DNI: ${emp.dni}`;
         if (bannerEmail) bannerEmail.innerHTML = `<i class="fas fa-envelope"></i> ${emp.email}`;
         
+        // ✅ CORREGIDO: Mostrar TODOS los roles actuales correctamente
         if (bannerRolesList && emp.roles_actuales) {
-            bannerRolesList.innerHTML = emp.roles_actuales.map(r => 
-                `<div class="rol-actual-badge">
-                    <i class="fas fa-briefcase"></i> ${r.nombrearea} - ${r.nombrerol}
-                </div>`
-            ).join('');
+            if (emp.roles_actuales.length === 0) {
+                bannerRolesList.innerHTML = `
+                    <div class="rol-actual-badge sin-roles">
+                        <i class="fas fa-info-circle"></i> Sin roles asignados actualmente
+                    </div>
+                `;
+            } else {
+                bannerRolesList.innerHTML = emp.roles_actuales.map(r => 
+                    `<div class="rol-actual-badge" title="Rol existente">
+                        <i class="fas fa-briefcase"></i> 
+                        <strong>${r.nombrearea}</strong> - ${r.nombrerol}
+                    </div>`
+                ).join('');
+            }
+            
+            console.log(`✅ Banner mostrando ${emp.roles_actuales.length} roles para ${emp.nombre}`);
         }
     }
 

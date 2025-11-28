@@ -5,7 +5,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentPage = 1;
     const itemsPerPage = 12;
     let currentEditId = null;
-    let horariosEdit = []; // Almacenar horarios en edición
+    let horariosEdit = [];
+    let rolesEmpleado = []; // ✅ NUEVO: Almacenar todos los roles del empleado
+    let rolSeleccionadoEdicion = null; // ✅ NUEVO: Rol que se está editando
 
     // ===== ELEMENTOS DEL DOM =====
     const searchInput = document.getElementById('search-input');
@@ -402,7 +404,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    // ===== EDITAR EMPLEADO =====
+    // ===== EDITAR EMPLEADO (RENOVADO) =====
     window.editarEmpleado = async function(empleadoId) {
         if (window.audioSystem) window.audioSystem.play('select');
         currentEditId = empleadoId;
@@ -413,38 +415,32 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const empleado = await response.json();
             
-            // Llenar formulario
+            // ✅ Llenar campos personales (NUEVO: más campos)
             document.getElementById('edit-nombre').value = empleado.nombre;
             document.getElementById('edit-apellido').value = empleado.apellido;
             document.getElementById('edit-dni').value = empleado.dni;
             document.getElementById('edit-email').value = empleado.email;
             document.getElementById('edit-telefono').value = empleado.telefono || '';
+            document.getElementById('edit-direccion').value = empleado.direccion || '';
+            document.getElementById('edit-fecha-nacimiento').value = empleado.fecha_nacimiento || '';
+            document.getElementById('edit-cod-pais').value = empleado.codigo_telefonico || '+54';
             document.getElementById('edit-salario').value = empleado.salario;
             document.getElementById('edit-estado').value = empleado.estado;
             
-            // Cargar áreas y puestos
-            await cargarAreasParaEdicion();
-            document.getElementById('edit-area').value = empleado.area_id || '';
-            
-            if (empleado.area_id) {
-                await cargarPuestosParaEdicion(empleado.area_id);
-                document.getElementById('edit-puesto').value = empleado.puesto_id || '';
+            // ✅ NUEVO: Mostrar foto actual
+            const photoPreview = document.getElementById('edit-photo-preview');
+            if (empleado.imagen) {
+                photoPreview.style.backgroundImage = `url('${empleado.imagen}')`;
+                photoPreview.innerHTML = '';
+            } else {
+                photoPreview.style.backgroundImage = '';
+                photoPreview.innerHTML = `<i class="fas fa-user"></i>`;
             }
             
-            // Setup change listener para área
-            document.getElementById('edit-area').onchange = async function() {
-                const areaId = this.value;
-                if (areaId) {
-                    await cargarPuestosParaEdicion(areaId);
-                } else {
-                    document.getElementById('edit-puesto').innerHTML = '<option value="">Seleccionar puesto</option>';
-                }
-            };
+            // ✅ NUEVO: Cargar todos los roles del empleado
+            await cargarRolesEmpleado(empleado);
             
-            // Cargar horarios
-            horariosEdit = empleado.horarios || [];
-            renderHorariosEdit();
-            
+            // Abrir modal
             abrirModal(modalEditar);
         } catch (error) {
             console.error('Error:', error);
@@ -453,41 +449,108 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    async function cargarAreasParaEdicion() {
+    // ✅ NUEVO: Cargar todos los roles del empleado
+    async function cargarRolesEmpleado(empleado) {
         try {
-            const response = await fetch('/api/areas/');
-            const areas = await response.json();
+            // Obtener todos los roles del empleado desde el backend
+            const response = await fetch(`/api/empleados/${empleado.id}/roles/`);
+            const data = await response.json();
+            rolesEmpleado = data.roles || [];
             
-            const selectArea = document.getElementById('edit-area');
-            selectArea.innerHTML = '<option value="">Seleccionar área</option>';
-            areas.forEach(area => {
-                const option = document.createElement('option');
-                option.value = area.id;
-                option.textContent = area.nombre;
-                selectArea.appendChild(option);
+            // Renderizar selector de roles
+            const rolesSelector = document.getElementById('roles-selector');
+            rolesSelector.innerHTML = `
+                <label><i class="fas fa-briefcase"></i> Selecciona el rol a editar:</label>
+                <div class="roles-list">
+                    ${rolesEmpleado.map((rol, index) => `
+                        <div class="rol-item ${index === 0 ? 'active' : ''}" data-rol-id="${rol.idroles}">
+                            <div class="rol-info">
+                                <strong>${rol.nombrearea}</strong>
+                                <span>${rol.nombrerol}</span>
+                            </div>
+                            <button type="button" class="btn-toggle-rol" data-rol-id="${rol.idroles}">
+                                <i class="fas fa-toggle-${index === 0 ? 'on' : 'off'}"></i>
+                                ${index === 0 ? 'Activo' : 'Inactivo'}
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            // Seleccionar el primer rol por defecto
+            if (rolesEmpleado.length > 0) {
+                rolSeleccionadoEdicion = rolesEmpleado[0].idroles;
+                await cargarHorariosDelRol(empleado.id, rolSeleccionadoEdicion);
+            }
+            
+            // Event listeners para cambiar de rol
+            document.querySelectorAll('.rol-item').forEach(item => {
+                item.addEventListener('click', async function() {
+                    const rolId = this.dataset.rolId;
+                    rolSeleccionadoEdicion = parseInt(rolId);
+                    
+                    // Actualizar UI
+                    document.querySelectorAll('.rol-item').forEach(r => r.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Cargar horarios de este rol
+                    await cargarHorariosDelRol(empleado.id, rolId);
+                });
             });
+            
+            // Event listeners para toggle activo/inactivo
+            document.querySelectorAll('.btn-toggle-rol').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const icon = this.querySelector('i');
+                    const isActive = icon.classList.contains('fa-toggle-on');
+                    
+                    if (isActive) {
+                        icon.classList.remove('fa-toggle-on');
+                        icon.classList.add('fa-toggle-off');
+                        this.innerHTML = '<i class="fas fa-toggle-off"></i> Inactivo';
+                    } else {
+                        icon.classList.remove('fa-toggle-off');
+                        icon.classList.add('fa-toggle-on');
+                        this.innerHTML = '<i class="fas fa-toggle-on"></i> Activo';
+                    }
+                    
+                    if (window.audioSystem) window.audioSystem.play('select');
+                });
+            });
+            
         } catch (error) {
-            console.error('Error cargando áreas:', error);
+            console.error('Error cargando roles:', error);
         }
     }
 
-    async function cargarPuestosParaEdicion(areaId) {
+    // ✅ NUEVO: Cargar horarios específicos de un rol
+    async function cargarHorariosDelRol(empleadoId, rolId) {
         try {
-            const response = await fetch(`/api/puestos/${areaId}/`);
-            const puestos = await response.json();
+            const response = await fetch(`/api/empleados/${empleadoId}/`);
+            const empleado = await response.json();
             
-            const selectPuesto = document.getElementById('edit-puesto');
-            selectPuesto.innerHTML = '<option value="">Seleccionar puesto</option>';
-            puestos.forEach(puesto => {
-                const option = document.createElement('option');
-                option.value = puesto.id;
-                option.textContent = puesto.nombre;
-                selectPuesto.appendChild(option);
-            });
+            // Filtrar horarios del rol seleccionado
+            horariosEdit = empleado.horarios.filter(h => h.rol_id === parseInt(rolId)) || [];
+            renderHorariosEdit();
         } catch (error) {
-            console.error('Error cargando puestos:', error);
+            console.error('Error cargando horarios del rol:', error);
         }
     }
+
+    // ✅ NUEVO: Event listener para cambio de foto
+    document.getElementById('edit-photo-input').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const preview = document.getElementById('edit-photo-preview');
+                preview.style.backgroundImage = `url('${event.target.result}')`;
+                preview.innerHTML = '';
+            };
+            reader.readAsDataURL(file);
+        }
+    });
 
     // ===== GESTIÓN DE HORARIOS EN EDICIÓN =====
     function renderHorariosEdit() {
@@ -506,7 +569,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const numSemanas = Object.keys(semanas).length;
         if (numSemanas === 0) {
-            container.innerHTML = '<p class="no-horarios-edit">No hay horarios asignados. Agrega una semana para comenzar.</p>';
+            container.innerHTML = '<p class="no-horarios-edit">No hay horarios asignados para este rol. Agrega una semana para comenzar.</p>';
             return;
         }
 
@@ -654,7 +717,8 @@ document.addEventListener('DOMContentLoaded', function() {
             semana_del_mes: nuevaSemana,
             dia_semana: 0,
             hora_inicio: '09:00',
-            hora_fin: '18:00'
+            hora_fin: '18:00',
+            rol_id: rolSeleccionadoEdicion
         });
 
         renderHorariosEdit();
@@ -685,7 +749,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 semana_del_mes: semana,
                 dia_semana: dia,
                 hora_inicio: '09:00',
-                hora_fin: '18:00'
+                hora_fin: '18:00',
+                rol_id: rolSeleccionadoEdicion
             });
         }
 
@@ -698,7 +763,8 @@ document.addEventListener('DOMContentLoaded', function() {
             semana_del_mes: semana,
             dia_semana: dia,
             hora_inicio: '09:00',
-            hora_fin: '18:00'
+            hora_fin: '18:00',
+            rol_id: rolSeleccionadoEdicion
         });
         renderHorariosEdit();
         if (window.audioSystem) window.audioSystem.play('positive');
@@ -723,158 +789,187 @@ document.addEventListener('DOMContentLoaded', function() {
         saveBtn.disabled = true;
         saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
         
+        // ✅ Recopilar TODOS los datos (incluyendo nuevos campos)
         const data = {
             nombre: document.getElementById('edit-nombre').value.trim(),
             apellido: document.getElementById('edit-apellido').value.trim(),
             dni: document.getElementById('edit-dni').value.trim(),
             email: document.getElementById('edit-email').value.trim(),
             telefono: document.getElementById('edit-telefono').value.trim(),
-            area_id: document.getElementById('edit-area').value,
-            puesto_id: document.getElementById('edit-puesto').value,
+            direccion: document.getElementById('edit-direccion').value.trim(),
+            fecha_nacimiento: document.getElementById('edit-fecha-nacimiento').value.trim(),
+            codigo_telefonico: document.getElementById('edit-cod-pais').value.trim(),
             salario: parseFloat(document.getElementById('edit-salario').value) || 0,
             estado: document.getElementById('edit-estado').value,
-            horarios: horariosEdit
+            rol_editado: rolSeleccionadoEdicion,
+            horarios: horariosEdit,
+            roles_activos: [] // IDs de roles que están activos
         };
-
-try {
-    const response = await fetch(`/api/empleados/${currentEditId}/editar/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify(data)
-    });
-    
-    const result = await response.json();
-    
-    if (response.ok) {
-        if (window.audioSystem) window.audioSystem.play('positive');
-        cerrarModal(modalEditar);
-        await cargarEmpleados();
-    } else {
-        errorMsg.textContent = result.error || 'Error al guardar los cambios';
-        errorMsg.classList.add('show');
-        if (window.audioSystem) window.audioSystem.play('error');
-    }
-} catch (error) {
-    console.error('Error:', error);
-    errorMsg.textContent = 'Error de red. Inténtalo de nuevo.';
-    errorMsg.classList.add('show');
-    if (window.audioSystem) window.audioSystem.play('error');
-} finally {
-    saveBtn.disabled = false;
-    saveBtn.innerHTML = '<i class="fas fa-save"></i> Guardar Cambios';
-}
-}
-
-// ===== UTILIDADES =====
-function abrirModal(modal) {
-modal.classList.add('show');
-if (window.audioSystem) window.audioSystem.play('positive');
-}
-
-function cerrarModal(modal) {
-modal.classList.remove('show');
-if (window.audioSystem) window.audioSystem.play('select');
-}
-
-function getInitials(nombre, apellido) {
-return (nombre.charAt(0) + apellido.charAt(0)).toUpperCase();
-}
-
-function formatDate(dateString) {
-if (!dateString) return 'N/A';
-const date = new Date(dateString);
-return date.toLocaleDateString('es-AR');
-}
-
-function getDiaNombre(dia) {
-const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-return dias[dia] || 'N/A';
-}
-
-function generarVistaHorarios(horarios) {
-// Organizar horarios por semana
-const semanas = {};
-horarios.forEach(h => {
-    if (!semanas[h.semana_del_mes]) {
-        semanas[h.semana_del_mes] = {};
-    }
-    if (!semanas[h.semana_del_mes][h.dia_semana]) {
-        semanas[h.semana_del_mes][h.dia_semana] = [];
-    }
-    semanas[h.semana_del_mes][h.dia_semana].push({
-        inicio: h.hora_inicio,
-        fin: h.hora_fin
-    });
-});
-
-let html = '';
-const numSemanas = Object.keys(semanas).length;
-
-for (let semana in semanas) {
-    html += `
-        <div class="semana-horario">
-            <div class="semana-header">Semana ${semana}</div>
-            <div class="dias-horario">
-    `;
-    
-    for (let dia = 0; dia < 7; dia++) {
-        const nombreDia = getDiaNombre(dia);
-        const turnosDia = semanas[semana][dia] || [];
         
-        html += `
-            <div class="dia-horario ${turnosDia.length > 0 ? 'tiene-turno' : 'sin-turno'}">
-                <div class="dia-nombre">${nombreDia.substring(0, 3)}</div>
-                <div class="dia-turnos">
-                    ${turnosDia.length > 0 
-                        ? turnosDia.map(t => `
-                            <div class="turno">
-                                <i class="fas fa-clock"></i>
-                                <span>${t.inicio.substring(0,5)} - ${t.fin.substring(0,5)}</span>
-                            </div>
-                        `).join('')
-                        : '<span class="sin-turno-text">Libre</span>'
-                    }
-                </div>
-            </div>
-        `;
-    }
-    
-    html += `
-            </div>
-        </div>
-    `;
-}
-
-return html || '<p class="no-horarios">No hay horarios asignados</p>';
-}
-
-function debounce(func, wait) {
-let timeout;
-return function executedFunction(...args) {
-    const later = () => {
-        clearTimeout(timeout);
-        func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-};
-}
-
-function getCookie(name) {
-let cookieValue = null;
-if (document.cookie && document.cookie !== '') {
-    const cookies = document.cookie.split(';');
-    for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i].trim();
-        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-            break;
+        // ✅ Recopilar estados de roles
+        document.querySelectorAll('.btn-toggle-rol').forEach(btn => {
+            const icon = btn.querySelector('i');
+            const isActive = icon.classList.contains('fa-toggle-on');
+            const rolId = parseInt(btn.dataset.rolId);
+            if (isActive) {
+                data.roles_activos.push(rolId);
+            }
+        });
+        
+        // ✅ Foto
+        const photoInput = document.getElementById('edit-photo-input');
+        if (photoInput.files[0]) {
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                data.foto = e.target.result;
+                await enviarDatosEdicion(data, errorMsg, saveBtn);
+            };
+            reader.readAsDataURL(photoInput.files[0]);
+        } else {
+            await enviarDatosEdicion(data, errorMsg, saveBtn);
         }
     }
-}
-return cookieValue;
-}
+    
+    async function enviarDatosEdicion(data, errorMsg, saveBtn) {
+        try {
+            const response = await fetch(`/api/empleados/${currentEditId}/editar/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                if (window.audioSystem) window.audioSystem.play('positive');
+                cerrarModal(modalEditar);
+                await cargarEmpleados();
+            } else {
+                errorMsg.textContent = result.error || 'Error al guardar los cambios';
+                errorMsg.classList.add('show');
+                if (window.audioSystem) window.audioSystem.play('error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            errorMsg.textContent = 'Error de red. Inténtalo de nuevo.';
+            errorMsg.classList.add('show');
+            if (window.audioSystem) window.audioSystem.play('error');
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-save"></i> Guardar Cambios';
+        }
+    }
+
+    // ===== UTILIDADES =====
+    function abrirModal(modal) {
+        modal.classList.add('show');
+        if (window.audioSystem) window.audioSystem.play('positive');
+    }
+
+    function cerrarModal(modal) {
+        modal.classList.remove('show');
+        if (window.audioSystem) window.audioSystem.play('select');
+    }
+
+    function getInitials(nombre, apellido) {
+        return (nombre.charAt(0) + apellido.charAt(0)).toUpperCase();
+    }
+
+    function formatDate(dateString) {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('es-AR');
+    }
+
+    function getDiaNombre(dia) {
+        const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+        return dias[dia] || 'N/A';
+    }
+
+    function generarVistaHorarios(horarios) {
+        // Organizar horarios por semana
+        const semanas = {};
+        horarios.forEach(h => {
+            if (!semanas[h.semana_del_mes]) {
+                semanas[h.semana_del_mes] = {};
+            }
+            if (!semanas[h.semana_del_mes][h.dia_semana]) {
+                semanas[h.semana_del_mes][h.dia_semana] = [];
+            }
+            semanas[h.semana_del_mes][h.dia_semana].push({
+                inicio: h.hora_inicio,
+                fin: h.hora_fin
+            });
+        });
+
+        let html = '';
+        const numSemanas = Object.keys(semanas).length;
+
+        for (let semana in semanas) {
+            html += `
+                <div class="semana-horario">
+                    <div class="semana-header">Semana ${semana}</div>
+                    <div class="dias-horario">
+            `;
+            
+            for (let dia = 0; dia < 7; dia++) {
+                const nombreDia = getDiaNombre(dia);
+                const turnosDia = semanas[semana][dia] || [];
+                
+                html += `
+                    <div class="dia-horario ${turnosDia.length > 0 ? 'tiene-turno' : 'sin-turno'}">
+                        <div class="dia-nombre">${nombreDia.substring(0, 3)}</div>
+                        <div class="dia-turnos">
+                            ${turnosDia.length > 0 
+                                ? turnosDia.map(t => `
+                                    <div class="turno">
+                                        <i class="fas fa-clock"></i>
+                                        <span>${t.inicio.substring(0,5)} - ${t.fin.substring(0,5)}</span>
+                                    </div>
+                                `).join('')
+                                : '<span class="sin-turno-text">Libre</span>'
+                            }
+                        </div>
+                    </div>
+                `;
+            }
+            
+            html += `
+                    </div>
+                </div>
+            `;
+        }
+
+        return html || '<p class="no-horarios">No hay horarios asignados</p>';
+    }
+
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
 });

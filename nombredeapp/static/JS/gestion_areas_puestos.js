@@ -113,6 +113,7 @@ function setupEventListeners() {
         btnPuestoGuardar.addEventListener('click', guardarPuesto);
     }
 
+    // ✅ EVENTO PARA CHECKBOXES DE PERMISOS
     document.querySelectorAll('input[name="permiso"]').forEach(checkbox => {
         checkbox.addEventListener('change', () => {
             if (window.audioSystem) window.audioSystem.play('select');
@@ -149,7 +150,7 @@ async function cargarAreas() {
             });
         });
         
-        console.log('Áreas cargadas con salarios:', areasData);
+        console.log('Áreas cargadas:', areasData);
         renderAreas();
     } catch (error) {
         console.error('Error al cargar áreas:', error);
@@ -326,6 +327,7 @@ function abrirModalPuesto(modo, areaId, puestoId = null) {
         if (puesto) {
             inputNombre.value = puesto.nombre;
             inputSalario.value = puesto.salario || 0;
+            // ✅ CORREGIDO: Marcar múltiples permisos
             checkboxes.forEach(cb => {
                 cb.checked = puesto.permisos.includes(cb.value);
             });
@@ -413,7 +415,12 @@ async function guardarPuesto() {
     
     const nombre = inputNombre.value.trim();
     const salario = inputSalario.value.trim();
-    const permisos = Array.from(document.querySelectorAll('input[name="permiso"]:checked')).map(cb => cb.value);
+    
+    // ✅ CORREGIDO: Obtener TODOS los permisos seleccionados
+    const permisos = Array.from(document.querySelectorAll('input[name="permiso"]:checked'))
+        .map(cb => cb.value);
+    
+    console.log('Permisos seleccionados:', permisos); // Debug
     
     if (!nombre) {
         errorMsg.textContent = 'El nombre del puesto es obligatorio';
@@ -438,18 +445,22 @@ async function guardarPuesto() {
             ? '/api/areas-puestos/crear-puesto/' 
             : `/api/areas-puestos/editar-puesto/${currentPuestoId}/`;
         
+        const dataToSend = { 
+            nombre, 
+            area_id: currentAreaId,
+            permisos, // ✅ Array de permisos
+            salario: parseFloat(salario)
+        };
+        
+        console.log('Datos enviados:', dataToSend); // Debug
+        
         const response = await fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCookie('csrftoken')
             },
-            body: JSON.stringify({ 
-                nombre, 
-                area_id: currentAreaId,
-                permisos,
-                salario: parseFloat(salario)
-            })
+            body: JSON.stringify(dataToSend)
         });
 
         const data = await response.json();

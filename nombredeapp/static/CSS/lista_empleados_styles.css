@@ -1836,3 +1836,355 @@ input:focus-visible {
 }
 
 /* ===== FIN DEL ARCHIVO ===== */
+
+/* ===== ESTILOS ADICIONALES PARA EDICIÓN MEJORADA ===== */
+
+/* Contenedor de foto de perfil en edición */
+.photo-edit-container {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    border-radius: 12px;
+    border: 2px solid #e9ecef;
+}
+
+.photo-preview {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 48px;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    background-size: cover;
+    background-position: center;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.photo-preview::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 100%);
+    pointer-events: none;
+}
+
+.photo-preview:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+/* Selector de roles */
+#roles-selector {
+    margin-top: 15px;
+}
+
+#roles-selector label {
+    display: block;
+    margin-bottom: 15px;
+    font-weight: 600;
+    font-size: 15px;
+    color: #495057;
+}
+
+.roles-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.rol-item {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.rol-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    transform: scaleY(0);
+    transition: transform 0.3s ease;
+}
+
+.rol-item:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+    transform: translateX(5px);
+}
+
+.rol-item.active {
+    background: linear-gradient(135deg, #e8f4ff 0%, #d4e9ff 100%);
+    border-color: #667eea;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.25);
+    transform: translateX(8px);
+}
+
+.rol-item.active::before {
+    transform: scaleY(1);
+}
+
+.rol-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.rol-info strong {
+    color: #2c3e50;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.rol-info span {
+    color: #6c757d;
+    font-size: 13px;
+}
+
+.btn-toggle-rol {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 2px solid #dee2e6;
+    border-radius: 10px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-weight: 600;
+    font-size: 13px;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-toggle-rol:hover {
+    background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-toggle-rol i.fa-toggle-on {
+    color: #28a745;
+    font-size: 16px;
+}
+
+.btn-toggle-rol i.fa-toggle-off {
+    color: #6c757d;
+    font-size: 16px;
+}
+
+/* Mejoras en el grid de formulario */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 18px;
+}
+
+/* Mejora en inputs de fecha */
+input[type="date"] {
+    padding: 12px 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    background-color: #ffffff;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    color: #495057;
+    cursor: pointer;
+}
+
+input[type="date"]:hover {
+    border-color: #667eea;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+}
+
+input[type="date"]:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 4px;
+    transition: all 0.2s ease;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    background-color: rgba(102, 126, 234, 0.1);
+}
+
+/* Animación para cambio de rol */
+@keyframes roleSwitch {
+    0% {
+        opacity: 0.5;
+        transform: translateY(-10px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.semanas-edit-container.switching {
+    animation: roleSwitch 0.4s ease-out;
+}
+
+/* Mejora en las tarjetas de semana de edición */
+.semana-edit-card {
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-bottom: 20px;
+}
+
+.semana-edit-card:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    transform: translateY(-3px);
+}
+
+/* Mejora del mensaje de info */
+.info-text {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    padding: 14px 18px;
+    border-radius: 10px;
+    border-left: 4px solid #2196f3;
+    color: #1565c0;
+    font-size: 14px;
+    margin-bottom: 25px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    animation: fadeIn 0.5s ease-out;
+    line-height: 1.5;
+}
+
+.info-text i {
+    color: #2196f3;
+    font-size: 18px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+/* Responsive mejorado */
+@media (max-width: 768px) {
+    .photo-edit-container {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .rol-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    
+    .btn-toggle-rol {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Indicador de carga para cambio de rol */
+.loading-horarios {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6c757d;
+}
+
+.loading-horarios i {
+    font-size: 2em;
+    margin-bottom: 10px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Mejora en el botón de guardar */
+#save-editar {
+    position: relative;
+    overflow: hidden;
+}
+
+#save-editar::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+#save-editar:active::before {
+    width: 300px;
+    height: 300px;
+}
+
+/* Tooltips mejorados */
+[title] {
+    position: relative;
+}
+
+[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease-out;
+}
+
+/* Estado del formulario */
+.form-section.disabled {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.form-section.disabled::after {
+    content: 'Selecciona un rol para editar sus horarios';
+    display: block;
+    text-align: center;
+    padding: 20px;
+    color: #6c757d;
+    font-style: italic;
+    font-size: 14px;
+}
+
+/* ===== FIN DE ESTILOS ADICIONALES ===== */

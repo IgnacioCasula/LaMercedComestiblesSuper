@@ -1155,7 +1155,7 @@ def api_puestos_por_area_con_permisos(request, area_id):
 @transaction.atomic
 def api_registrar_empleado_actualizado(request):
     """
-    ⭐ Registra un nuevo empleado con fecha de inicio.
+    ✅ Registra un nuevo empleado con fecha de inicio.
     LA FECHA DE INICIO ES OBLIGATORIA Y SINCRONIZADA CON ASISTENCIAS.
     """
     if request.method != 'POST':
@@ -1175,7 +1175,7 @@ def api_registrar_empleado_actualizado(request):
         foto_base64 = personal_data.get('foto')
         fecha_inicio = data.get('fecha_inicio', '').strip()
 
-        print(f"🔍 DEBUG - Datos recibidos:")
+        print(f"📝 DEBUG - Datos recibidos:")
         print(f"  - Nombre: {nombre}")
         print(f"  - Apellido: {apellido}")
         print(f"  - Email: {email}")
@@ -1186,7 +1186,7 @@ def api_registrar_empleado_actualizado(request):
         if not all([nombre, apellido, email, dni]):
             return JsonResponse({'error': 'Faltan datos personales obligatorios.'}, status=400)
         
-        # ⭐ VALIDACIÓN CRÍTICA: Fecha de inicio OBLIGATORIA
+        # ✅ VALIDACIÓN CRÍTICA: Fecha de inicio OBLIGATORIA
         if not fecha_inicio:
             print("❌ ERROR: Fecha de inicio vacía")
             return JsonResponse({
@@ -1208,8 +1208,12 @@ def api_registrar_empleado_actualizado(request):
         if Usuarios.objects.filter(dniusuario=dni).exists():
             return JsonResponse({'error': 'El DNI ya está registrado.'}, status=400)
 
-        # Generar username
-        username = (nombre.split(' ')[0] + apellido.replace(' ', '')).lower()
+        # ✅ CORREGIDO: Generar username solo con el PRIMER NOMBRE + APELLIDO
+        primer_nombre = nombre.split()[0] if ' ' in nombre else nombre
+        username = (primer_nombre + apellido.replace(' ', '')).lower()
+        
+        print(f"🔧 Username generado: {username}")
+        
         temp_username = username
         counter = 1
         while Usuarios.objects.filter(nombreusuario=temp_username).exists():
@@ -1219,10 +1223,10 @@ def api_registrar_empleado_actualizado(request):
         
         password = ''.join(random.choices(string.digits, k=5))
 
-        # Crear usuario
+        # ✅ CORREGIDO: Crear usuario con nombre y apellido SEPARADOS
         nuevo_usuario = Usuarios.objects.create(
-            nombreusuario=username,
-            apellidousuario=apellido,
+            nombreusuario=nombre,  # ✅ Solo el nombre
+            apellidousuario=apellido,  # ✅ Solo el apellido
             emailusuario=email,
             passwordusuario=password,
             dniusuario=dni,
@@ -1230,6 +1234,8 @@ def api_registrar_empleado_actualizado(request):
             fecharegistrousuario=timezone.now().date(),
             imagenusuario=foto_base64
         )
+        
+        print(f"✅ Usuario creado: {nuevo_usuario.nombreusuario} {nuevo_usuario.apellidousuario}")
 
         # Obtener salario del puesto
         puesto_seleccionado = data.get('puesto', {}) or {}
@@ -1248,12 +1254,12 @@ def api_registrar_empleado_actualizado(request):
             except Roles.DoesNotExist:
                 pass
         
-        # ⭐ CREAR EMPLEADO CON FECHA DE INICIO
+        # ✅ CREAR EMPLEADO CON FECHA DE INICIO
         nuevo_empleado = Empleados.objects.create(
             idusuarios=nuevo_usuario,
             cargoempleado=puesto_seleccionado.get('nombre', 'Sin Puesto'),
             salarioempleado=salario_puesto,
-            fechacontratado=fecha_inicio_obj,  # ⭐ FECHA DE INICIO
+            fechacontratado=fecha_inicio_obj,  # ✅ FECHA DE INICIO
             estado='Trabajando'
         )
         
@@ -1546,19 +1552,28 @@ def api_lista_empleados(request: HttpRequest) -> JsonResponse:
 
 @require_http_methods(['GET'])
 def api_detalle_empleado(request: HttpRequest, empleado_id: int) -> JsonResponse:
-    """API para obtener el detalle completo de un empleado."""
+    """API mejorada para obtener el detalle completo de un empleado."""
     try:
         empleado = Empleados.objects.select_related('idusuarios').get(idempleado=empleado_id)
         usuario = empleado.idusuarios
         
-        rol = Roles.objects.filter(usuxroles__idusuarios=usuario).first()
+        # Obtener todos los roles
+        roles = Roles.objects.filter(usuxroles__idusuarios=usuario)
+        roles_data = [{
+            'id': rol.idroles,
+            'nombre': rol.nombrerol,
+            'area': rol.nombrearea
+        } for rol in roles]
         
-        horarios = Horario.objects.filter(empleado=empleado).values(
+        # Obtener horarios (todos, organizados por rol)
+        horarios = Horario.objects.filter(empleado=empleado).select_related('rol').values(
             'dia_semana',
             'semana_del_mes',
             'hora_inicio',
-            'hora_fin'
-        ).order_by('semana_del_mes', 'dia_semana')
+            'hora_fin',
+            'rol_id',
+            'rol__nombrerol'
+        ).order_by('rol_id', 'semana_del_mes', 'dia_semana')
         
         data = {
             'id': empleado.idempleado,
@@ -1570,21 +1585,25 @@ def api_detalle_empleado(request: HttpRequest, empleado_id: int) -> JsonResponse
             'imagen': usuario.imagenusuario,
             'direccion': getattr(usuario, 'direccion', '') or '',
             'fecha_nacimiento': str(getattr(usuario, 'fecha_nacimiento', '')) if getattr(usuario, 'fecha_nacimiento', None) else '',
+            'codigo_telefonico': getattr(usuario, 'codigo_telefonico', '+54'),
             'puesto': empleado.cargoempleado,
-            'area': rol.nombrearea if rol else 'Sin área',
-            'area_id': rol.nombrearea if rol else None,
-            'puesto_id': rol.idroles if rol else None,
+            'area': roles[0].nombrearea if roles else 'Sin área',
+            'area_id': roles[0].nombrearea if roles else None,
+            'puesto_id': roles[0].idroles if roles else None,
             'salario': float(empleado.salarioempleado),
             'estado': empleado.estado,
             'fecha_contratado': empleado.fechacontratado.isoformat() if empleado.fechacontratado else None,
             'fecha_registro': usuario.fecharegistrousuario.isoformat() if usuario.fecharegistrousuario else None,
             'usuario': usuario.nombreusuario,
+            'roles': roles_data,
             'horarios': [
                 {
                     'dia_semana': h['dia_semana'],
                     'semana_del_mes': h['semana_del_mes'],
                     'hora_inicio': h['hora_inicio'].strftime('%H:%M') if h['hora_inicio'] else '',
-                    'hora_fin': h['hora_fin'].strftime('%H:%M') if h['hora_fin'] else ''
+                    'hora_fin': h['hora_fin'].strftime('%H:%M') if h['hora_fin'] else '',
+                    'rol_id': h['rol_id'],
+                    'rol_nombre': h['rol__nombrerol']
                 }
                 for h in horarios
             ]
@@ -1595,16 +1614,20 @@ def api_detalle_empleado(request: HttpRequest, empleado_id: int) -> JsonResponse
     except Empleados.DoesNotExist:
         return JsonResponse({'error': 'Empleado no encontrado'}, status=404)
     except Exception as e:
+        print(f"Error en api_detalle_empleado: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
 
 
 @require_http_methods(['POST'])
 @transaction.atomic
 def api_editar_empleado(request: HttpRequest, empleado_id: int) -> JsonResponse:
-    """API para editar un empleado."""
+    """API mejorada para editar un empleado con soporte para múltiples roles."""
     try:
         data = json.loads(request.body)
         
+        # Validaciones básicas
         nombre = data.get('nombre', '').strip()
         apellido = data.get('apellido', '').strip()
         dni = data.get('dni', '').strip()
@@ -1613,55 +1636,95 @@ def api_editar_empleado(request: HttpRequest, empleado_id: int) -> JsonResponse:
         if not all([nombre, apellido, dni, email]):
             return JsonResponse({'error': 'Faltan datos obligatorios'}, status=400)
         
+        # Obtener empleado y usuario
         empleado = Empleados.objects.select_related('idusuarios').get(idempleado=empleado_id)
         usuario = empleado.idusuarios
         
+        # Validar unicidad de email y DNI
         if Usuarios.objects.filter(emailusuario=email).exclude(idusuarios=usuario.idusuarios).exists():
             return JsonResponse({'error': 'El email ya está en uso por otro empleado'}, status=400)
         
         if Usuarios.objects.filter(dniusuario=dni).exclude(idusuarios=usuario.idusuarios).exists():
             return JsonResponse({'error': 'El DNI ya está registrado por otro empleado'}, status=400)
         
+        # ✅ Actualizar datos personales (incluyendo nuevos campos)
         usuario.nombreusuario = nombre
         usuario.apellidousuario = apellido
         usuario.dniusuario = dni
         usuario.emailusuario = email
         usuario.telefono = data.get('telefono', '')
+        
+        # ✅ NUEVO: Actualizar campos adicionales
+        if 'direccion' in data:
+            # Nota: Necesitas agregar este campo al modelo Usuarios si no existe
+            setattr(usuario, 'direccion', data.get('direccion', ''))
+        
+        if 'fecha_nacimiento' in data and data.get('fecha_nacimiento'):
+            try:
+                fecha_nac = datetime.strptime(data.get('fecha_nacimiento'), '%Y-%m-%d').date()
+                setattr(usuario, 'fecha_nacimiento', fecha_nac)
+            except:
+                pass
+        
+        if 'codigo_telefonico' in data:
+            setattr(usuario, 'codigo_telefonico', data.get('codigo_telefonico', '+54'))
+        
+        # ✅ NUEVO: Actualizar foto si se envió
+        if 'foto' in data and data.get('foto'):
+            usuario.imagenusuario = data.get('foto')
+        
         usuario.save()
         
-        empleado.salarioempleado = float(data.get('salario', 0))
-        estado_anterior = empleado.estado
-        empleado.estado = data.get('estado', 'Trabajando')
-        
-        puesto_id = data.get('puesto_id')
-        if puesto_id:
-            try:
-                nuevo_rol = Roles.objects.get(idroles=puesto_id)
-                empleado.cargoempleado = nuevo_rol.nombrerol
-                
-                UsuxRoles.objects.filter(idusuarios=usuario).delete()
-                UsuxRoles.objects.create(idusuarios=usuario, idroles=nuevo_rol)
-                
-            except Roles.DoesNotExist:
-                return JsonResponse({'error': 'El puesto seleccionado no existe'}, status=400)
-        
+        # Actualizar datos laborales
+        empleado.salarioempleado = float(data.get('salario', empleado.salarioempleado))
+        empleado.estado = data.get('estado', empleado.estado)
         empleado.save()
         
-        horarios_data = data.get('horarios', [])
-        if horarios_data is not None:
-            Horario.objects.filter(empleado=empleado).delete()
+        # ✅ NUEVO: Gestionar roles activos/inactivos
+        roles_activos = data.get('roles_activos', [])
+        if roles_activos:
+            # Obtener todos los roles del usuario
+            todos_roles = UsuxRoles.objects.filter(idusuarios=usuario)
             
+            # Desactivar roles que no están en la lista de activos
+            # (Implementación depende de si tienes un campo 'activo' en UsuxRoles)
+            # Por ahora, solo eliminamos los que no están activos
+            for rol_rel in todos_roles:
+                if rol_rel.idroles.idroles not in roles_activos:
+                    rol_rel.delete()
+        
+        # ✅ NUEVO: Actualizar horarios del rol específico que se está editando
+        rol_editado = data.get('rol_editado')
+        horarios_data = data.get('horarios', [])
+        
+        if rol_editado and horarios_data is not None:
+            # Eliminar horarios antiguos de este rol específico
+            Horario.objects.filter(empleado=empleado, rol_id=rol_editado).delete()
+            
+            # Crear nuevos horarios
             if horarios_data:
-                rol_actual = Roles.objects.filter(usuxroles__idusuarios=usuario).first()
+                rol_obj = Roles.objects.get(idroles=rol_editado)
                 for horario in horarios_data:
                     Horario.objects.create(
                         empleado=empleado,
-                        rol=rol_actual,
+                        rol=rol_obj,
                         dia_semana=horario.get('dia_semana'),
                         semana_del_mes=horario.get('semana_del_mes'),
                         hora_inicio=horario.get('hora_inicio'),
                         hora_fin=horario.get('hora_fin')
                     )
+        
+        # Registrar actividad
+        registrar_actividad(
+            request,
+            'EDITAR_EMPLEADO',
+            f'Edición de empleado: {nombre} {apellido}',
+            detalles={
+                'empleado_id': empleado.idempleado,
+                'rol_editado': rol_editado,
+                'estado': empleado.estado
+            }
+        )
         
         return JsonResponse({
             'message': 'Empleado actualizado correctamente',
@@ -1676,7 +1739,12 @@ def api_editar_empleado(request: HttpRequest, empleado_id: int) -> JsonResponse:
         
     except Empleados.DoesNotExist:
         return JsonResponse({'error': 'Empleado no encontrado'}, status=404)
+    except Roles.DoesNotExist:
+        return JsonResponse({'error': 'Rol no encontrado'}, status=404)
     except Exception as e:
+        print(f"Error en api_editar_empleado: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return JsonResponse({'error': f'Error al actualizar: {str(e)}'}, status=500)
 
 
@@ -1900,9 +1968,14 @@ def get_nivel_display_name(nivel):
 
 # Agregar estos nuevos endpoints al archivo views.py
 
+# ✅ REEMPLAZAR la función api_buscar_empleados en views.py con esta versión mejorada
+
 @require_http_methods(['GET'])
 def api_buscar_empleados(request: HttpRequest) -> JsonResponse:
-    """API para buscar empleados existentes por nombre, apellido o DNI."""
+    """
+    API MEJORADA para buscar empleados existentes por nombre, apellido o DNI.
+    Ahora muestra correctamente TODOS los roles de cada empleado.
+    """
     query = request.GET.get('q', '').strip()
     
     if not query or len(query) < 2:
@@ -1920,12 +1993,22 @@ def api_buscar_empleados(request: HttpRequest) -> JsonResponse:
         for emp in empleados:
             usuario = emp.idusuarios
             
-            # Obtener todos los roles actuales del empleado
-            roles_actuales = list(
-                Roles.objects.filter(usuxroles__idusuarios=usuario).values(
-                    'idroles', 'nombrerol', 'nombrearea'
-                )
-            )
+            # ✅ CORREGIDO: Obtener TODOS los roles actuales del empleado correctamente
+            roles_query = Roles.objects.filter(
+                usuxroles__idusuarios=usuario
+            ).distinct()  # ✅ Importante: distinct() para evitar duplicados
+            
+            roles_actuales = []
+            for rol in roles_query:
+                roles_actuales.append({
+                    'idroles': rol.idroles,
+                    'nombrerol': rol.nombrerol,
+                    'nombrearea': rol.nombrearea
+                })
+            
+            print(f"🔍 Empleado {usuario.nombreusuario}: {len(roles_actuales)} roles encontrados")
+            for rol in roles_actuales:
+                print(f"   - {rol['nombrearea']}: {rol['nombrerol']}")
             
             resultado.append({
                 'id': emp.idempleado,
@@ -1936,55 +2019,98 @@ def api_buscar_empleados(request: HttpRequest) -> JsonResponse:
                 'email': usuario.emailusuario,
                 'telefono': usuario.telefono or '',
                 'imagen': usuario.imagenusuario,
-                'roles_actuales': roles_actuales,
-                'estado': emp.estado
+                'roles_actuales': roles_actuales,  # ✅ Lista completa de roles
+                'estado': emp.estado,
+                'total_roles': len(roles_actuales)  # ✅ Para debug
             })
         
         return JsonResponse(resultado, safe=False)
         
     except Exception as e:
+        print(f"❌ Error en api_buscar_empleados: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
 
 
 @require_http_methods(['GET'])
 def api_roles_empleado(request: HttpRequest, empleado_id: int) -> JsonResponse:
-    """API para obtener todos los roles de un empleado."""
+    """API mejorada para obtener todos los roles de un empleado con sus horarios."""
     try:
         empleado = Empleados.objects.select_related('idusuarios').get(idempleado=empleado_id)
         usuario = empleado.idusuarios
         
+        # Obtener todos los roles del empleado con información completa
         roles = Roles.objects.filter(usuxroles__idusuarios=usuario).values(
             'idroles', 'nombrerol', 'nombrearea', 'descripcionrol'
         )
         
+        # Para cada rol, obtener sus horarios
+        roles_data = []
+        for rol in roles:
+            horarios_rol = Horario.objects.filter(
+                empleado=empleado,
+                rol_id=rol['idroles']
+            ).values(
+                'dia_semana',
+                'semana_del_mes',
+                'hora_inicio',
+                'hora_fin'
+            ).order_by('semana_del_mes', 'dia_semana')
+            
+            roles_data.append({
+                'idroles': rol['idroles'],
+                'nombrerol': rol['nombrerol'],
+                'nombrearea': rol['nombrearea'],
+                'descripcionrol': rol['descripcionrol'],
+                'horarios': [
+                    {
+                        'dia_semana': h['dia_semana'],
+                        'semana_del_mes': h['semana_del_mes'],
+                        'hora_inicio': h['hora_inicio'].strftime('%H:%M') if h['hora_inicio'] else '',
+                        'hora_fin': h['hora_fin'].strftime('%H:%M') if h['hora_fin'] else '',
+                        'rol_id': rol['idroles']
+                    }
+                    for h in horarios_rol
+                ]
+            })
+        
         return JsonResponse({
             'empleado_id': empleado.idempleado,
             'nombre_completo': f"{usuario.nombreusuario} {usuario.apellidousuario}",
-            'roles': list(roles)
+            'roles': roles_data
         })
         
     except Empleados.DoesNotExist:
         return JsonResponse({'error': 'Empleado no encontrado'}, status=404)
     except Exception as e:
+        print(f"Error en api_roles_empleado: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
 
+
+# ✅ REEMPLAZAR la función api_asignar_nuevo_rol en views.py con esta versión corregida
 
 @require_http_methods(['POST'])
 @transaction.atomic
 def api_asignar_nuevo_rol(request: HttpRequest) -> JsonResponse:
-    """API para asignar un nuevo rol/área a un empleado existente."""
+    """
+    API CORREGIDA para asignar un nuevo rol/área a un empleado existente.
+    AHORA mantiene correctamente los roles existentes sin mezclarlos.
+    """
     try:
         data = json.loads(request.body)
         
         empleado_id = data.get('empleado_id')
         puesto_id = data.get('puesto_id')
         horario_data = data.get('horario', {})
-        fecha_inicio = data.get('fecha_inicio', '').strip()  # ⭐ NUEVO
+        fecha_inicio = data.get('fecha_inicio', '').strip()
         
         if not empleado_id or not puesto_id:
             return JsonResponse({'error': 'Faltan datos obligatorios'}, status=400)
         
-        # ⭐ NUEVO: Validar fecha de inicio
+        # ✅ Validar fecha de inicio
         if not fecha_inicio:
             return JsonResponse({'error': 'La fecha de inicio es obligatoria.'}, status=400)
         
@@ -2000,16 +2126,18 @@ def api_asignar_nuevo_rol(request: HttpRequest) -> JsonResponse:
         # Verificar que el puesto existe
         nuevo_rol = Roles.objects.get(idroles=puesto_id)
         
-        # Verificar que el empleado no tenga ya este rol asignado
+        # ✅ CORREGIDO: Verificar que el empleado no tenga ya este rol asignado
         if UsuxRoles.objects.filter(idusuarios=usuario, idroles=nuevo_rol).exists():
             return JsonResponse({
-                'error': f'El empleado ya tiene asignado el puesto "{nuevo_rol.nombrerol}"'
+                'error': f'El empleado ya tiene asignado el puesto "{nuevo_rol.nombrerol}" en el área "{nuevo_rol.nombrearea}"'
             }, status=400)
         
-        # Asignar el nuevo rol
+        # ✅ CORREGIDO: Asignar el nuevo rol SIN tocar los existentes
         UsuxRoles.objects.create(idusuarios=usuario, idroles=nuevo_rol)
         
-        # Procesar horarios si se proporcionaron
+        print(f"✅ Rol adicional asignado: {nuevo_rol.nombrerol} a {usuario.nombreusuario}")
+        
+        # ✅ Procesar horarios SOLO para este nuevo rol
         if horario_data:
             dias_semana_map = {'Lu': 0, 'Ma': 1, 'Mi': 2, 'Ju': 3, 'Vi': 4, 'Sa': 5, 'Do': 6}
             day_color_map = horario_data.get('dayColorMap', {})
@@ -2029,7 +2157,7 @@ def api_asignar_nuevo_rol(request: HttpRequest) -> JsonResponse:
                     week_id_map[week_id] = current_week_number
                     current_week_number += 1
             
-            # Crear horarios
+            # Crear horarios específicos para este rol
             for composite_key, color in day_color_map.items():
                 parts = composite_key.split('-')
                 if len(parts) == 2:
@@ -2047,24 +2175,35 @@ def api_asignar_nuevo_rol(request: HttpRequest) -> JsonResponse:
                         if tramo.get('start') and tramo.get('end'):
                             Horario.objects.create(
                                 empleado=empleado,
-                                rol=nuevo_rol,
+                                rol=nuevo_rol,  # ✅ Asociado específicamente a este rol
                                 dia_semana=day,
                                 semana_del_mes=week_number,
                                 hora_inicio=tramo['start'],
                                 hora_fin=tramo['end']
                             )
         
+        # ✅ NUEVO: Verificar cuántos roles tiene ahora el empleado
+        total_roles = UsuxRoles.objects.filter(idusuarios=usuario).count()
+        roles_actuales = Roles.objects.filter(usuxroles__idusuarios=usuario).values(
+            'idroles', 'nombrerol', 'nombrearea'
+        )
+        
+        print(f"✅ Total de roles del empleado ahora: {total_roles}")
+        for rol in roles_actuales:
+            print(f"   - {rol['nombrearea']}: {rol['nombrerol']}")
+        
         # Registrar actividad
         registrar_actividad(
             request,
             'ASIGNAR_ROL',
-            f'Se asignó el rol "{nuevo_rol.nombrerol}" al empleado {usuario.nombreusuario} {usuario.apellidousuario}',
+            f'Se asignó el rol "{nuevo_rol.nombrerol}" ({nuevo_rol.nombrearea}) al empleado {usuario.nombreusuario} {usuario.apellidousuario}',
             detalles={
                 'empleado_id': empleado.idempleado,
                 'rol_id': nuevo_rol.idroles,
                 'rol_nombre': nuevo_rol.nombrerol,
                 'area': nuevo_rol.nombrearea,
-                'fecha_inicio': fecha_inicio
+                'fecha_inicio': fecha_inicio,
+                'total_roles_ahora': total_roles
             }
         )
         
@@ -2079,7 +2218,9 @@ def api_asignar_nuevo_rol(request: HttpRequest) -> JsonResponse:
                 'nombre': nuevo_rol.nombrerol,
                 'area': nuevo_rol.nombrearea
             },
-            'fecha_inicio': fecha_inicio
+            'fecha_inicio': fecha_inicio,
+            'total_roles': total_roles,  # ✅ Para debug
+            'roles_actuales': list(roles_actuales)  # ✅ Para debug
         }, status=201)
         
     except Empleados.DoesNotExist:
@@ -2087,6 +2228,9 @@ def api_asignar_nuevo_rol(request: HttpRequest) -> JsonResponse:
     except Roles.DoesNotExist:
         return JsonResponse({'error': 'Puesto no encontrado'}, status=404)
     except Exception as e:
+        print(f"❌ Error en api_asignar_nuevo_rol: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return JsonResponse({'error': f'Error al asignar rol: {str(e)}'}, status=500)
 
 # También agregar import al inicio del archivo:

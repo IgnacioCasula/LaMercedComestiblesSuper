@@ -108,6 +108,9 @@ class Usuarios(models.Model):
     imagenusuario = models.TextField(db_column='ImagenUsuario', blank=True, null=True)
     telefono = models.CharField(max_length=20, blank=True, null=True)
     roles = models.ManyToManyField(Roles, through='UsuxRoles')
+    direccion = models.CharField(max_length=255, blank=True, null=True)
+    fecha_nacimiento = models.DateField(blank=True, null=True)
+    codigo_telefonico = models.CharField(max_length=10, default='+54')
 
     class Meta:
         db_table = 'usuarios'
