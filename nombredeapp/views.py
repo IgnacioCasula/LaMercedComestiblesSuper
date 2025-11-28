@@ -1186,12 +1186,18 @@ def api_registrar_empleado_actualizado(request):
         dni = personal_data.get('dni')
         foto_base64 = personal_data.get('foto')
         fecha_inicio = data.get('fecha_inicio', '').strip()
+        
+        # ✅ NUEVOS CAMPOS
+        direccion = personal_data.get('direccion', '').strip()
+        fecha_nacimiento_str = personal_data.get('fecha_nacimiento', '').strip()
 
-        print(f"📝 DEBUG - Datos recibidos:")
+        print(f"📋 DEBUG - Datos recibidos:")
         print(f"  - Nombre: {nombre}")
         print(f"  - Apellido: {apellido}")
         print(f"  - Email: {email}")
         print(f"  - DNI: {dni}")
+        print(f"  - Dirección: {direccion}")
+        print(f"  - Fecha nacimiento: {fecha_nacimiento_str}")
         print(f"  - Fecha inicio: '{fecha_inicio}'")
 
         # Validaciones básicas
@@ -1205,13 +1211,29 @@ def api_registrar_empleado_actualizado(request):
                 'error': '⚠️ La fecha de inicio es obligatoria. Esta fecha determina desde cuándo el empleado podrá registrar asistencias.'
             }, status=400)
         
-        # Validar formato de fecha
+        # Validar formato de fecha de inicio
         try:
             fecha_inicio_obj = datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
-            print(f"✅ Fecha parseada correctamente: {fecha_inicio_obj}")
+            print(f"✅ Fecha de inicio parseada correctamente: {fecha_inicio_obj}")
         except ValueError as e:
-            print(f"❌ ERROR: Formato de fecha inválido: {e}")
-            return JsonResponse({'error': 'Formato de fecha inválido. Use YYYY-MM-DD'}, status=400)
+            print(f"❌ ERROR: Formato de fecha de inicio inválido: {e}")
+            return JsonResponse({'error': 'Formato de fecha de inicio inválido. Use YYYY-MM-DD'}, status=400)
+
+        # ✅ PROCESAR FECHA DE NACIMIENTO (OPCIONAL)
+        fecha_nacimiento_obj = None
+        if fecha_nacimiento_str:
+            try:
+                # Si viene en formato DD/MM/YYYY (del frontend)
+                if '/' in fecha_nacimiento_str:
+                    fecha_nacimiento_obj = datetime.strptime(fecha_nacimiento_str, '%d/%m/%Y').date()
+                # Si viene en formato YYYY-MM-DD
+                else:
+                    fecha_nacimiento_obj = datetime.strptime(fecha_nacimiento_str, '%Y-%m-%d').date()
+                print(f"✅ Fecha de nacimiento parseada: {fecha_nacimiento_obj}")
+            except ValueError as e:
+                print(f"⚠️ Error al parsear fecha de nacimiento: {e}")
+                # No es crítico, continuamos sin la fecha
+                fecha_nacimiento_obj = None
 
         # Validar unicidad
         if Usuarios.objects.filter(emailusuario__iexact=email).exists():
@@ -1235,7 +1257,7 @@ def api_registrar_empleado_actualizado(request):
         
         password = ''.join(random.choices(string.digits, k=5))
 
-        # ✅ CORREGIDO: Crear usuario con nombre y apellido SEPARADOS
+        # ✅ CREAR USUARIO CON TODOS LOS CAMPOS
         nuevo_usuario = Usuarios.objects.create(
             nombreusuario=nombre,  # ✅ Solo el nombre
             apellidousuario=apellido,  # ✅ Solo el apellido
@@ -1243,11 +1265,19 @@ def api_registrar_empleado_actualizado(request):
             passwordusuario=password,
             dniusuario=dni,
             telefono=personal_data.get('telefono') or '',
+            codigo_telefonico=personal_data.get('codigo_telefonico', '+54'),
             fecharegistrousuario=timezone.now().date(),
-            imagenusuario=foto_base64
+            imagenusuario=foto_base64,
+            # ✅ NUEVOS CAMPOS
+            direccion=direccion or None,  # Guardar None si está vacío
+            fecha_nacimiento=fecha_nacimiento_obj  # Guardar objeto date o None
         )
         
         print(f"✅ Usuario creado: {nuevo_usuario.nombreusuario} {nuevo_usuario.apellidousuario}")
+        if direccion:
+            print(f"📍 Dirección guardada: {direccion}")
+        if fecha_nacimiento_obj:
+            print(f"🎂 Fecha de nacimiento guardada: {fecha_nacimiento_obj}")
 
         # Obtener salario del puesto
         puesto_seleccionado = data.get('puesto', {}) or {}
@@ -1330,7 +1360,9 @@ def api_registrar_empleado_actualizado(request):
                 detalles={
                     'empleado_id': nuevo_empleado.idempleado,
                     'puesto': puesto_seleccionado.get('nombre'),
-                    'fecha_inicio': fecha_inicio
+                    'fecha_inicio': fecha_inicio,
+                    'direccion': direccion or 'No especificada',
+                    'fecha_nacimiento': str(fecha_nacimiento_obj) if fecha_nacimiento_obj else 'No especificada'
                 }
             )
             
@@ -1348,7 +1380,9 @@ def api_registrar_empleado_actualizado(request):
             'message': f'¡Empleado {nombre} {apellido} creado exitosamente!',
             'username': username,
             'salario': salario_puesto,
-            'fecha_inicio': fecha_inicio_obj.strftime('%d/%m/%Y')
+            'fecha_inicio': fecha_inicio_obj.strftime('%d/%m/%Y'),
+            'direccion': direccion or 'No especificada',
+            'fecha_nacimiento': fecha_nacimiento_obj.strftime('%d/%m/%Y') if fecha_nacimiento_obj else 'No especificada'
         }, status=201)
 
     except Exception as e:
