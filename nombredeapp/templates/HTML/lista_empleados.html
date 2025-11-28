@@ -115,6 +115,21 @@
             </div>
             <div class="modal-body">
                 <form id="form-editar-empleado">
+                    <!-- ✅ NUEVA SECCIÓN: FOTO DE PERFIL -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-camera"></i> Foto de Perfil</h3>
+                        <div class="photo-edit-container">
+                            <div class="photo-preview" id="edit-photo-preview">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <input type="file" id="edit-photo-input" accept="image/*" style="display: none;">
+                            <button type="button" class="btn btn-light" onclick="document.getElementById('edit-photo-input').click()">
+                                <i class="fas fa-upload"></i> Cambiar Foto
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- SECCIÓN: DATOS PERSONALES (AMPLIADA) -->
                     <div class="form-section">
                         <h3><i class="fas fa-user"></i> Datos Personales</h3>
                         <div class="form-grid">
@@ -135,29 +150,30 @@
                                 <input type="email" id="edit-email" required>
                             </div>
                             <div class="form-group">
+                                <label>Código Telefónico:</label>
+                                <input type="text" id="edit-cod-pais" value="+54">
+                            </div>
+                            <div class="form-group">
                                 <label>Teléfono:</label>
                                 <input type="text" id="edit-telefono">
+                            </div>
+                            <div class="form-group">
+                                <label>Dirección:</label>
+                                <input type="text" id="edit-direccion">
+                            </div>
+                            <div class="form-group">
+                                <label>Fecha de Nacimiento:</label>
+                                <input type="date" id="edit-fecha-nacimiento">
                             </div>
                         </div>
                     </div>
 
+                    <!-- SECCIÓN: DATOS LABORALES -->
                     <div class="form-section">
                         <h3><i class="fas fa-briefcase"></i> Datos Laborales</h3>
                         <div class="form-grid">
                             <div class="form-group">
-                                <label>Área:</label>
-                                <select id="edit-area" required>
-                                    <option value="">Seleccionar área</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Puesto:</label>
-                                <select id="edit-puesto" required>
-                                    <option value="">Seleccionar puesto</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Salario:</label>
+                                <label>Salario por Hora:</label>
                                 <input type="number" id="edit-salario" min="0" step="0.01">
                             </div>
                             <div class="form-group">
@@ -171,8 +187,17 @@
                         </div>
                     </div>
 
+                    <!-- ✅ NUEVA SECCIÓN: SELECCIÓN DE ROL A EDITAR -->
                     <div class="form-section">
-                        <h3><i class="fas fa-calendar-week"></i> Horarios</h3>
+                        <h3><i class="fas fa-briefcase"></i> Roles del Empleado</h3>
+                        <div id="roles-selector">
+                            <!-- Se llena dinámicamente con JS -->
+                        </div>
+                    </div>
+
+                    <!-- SECCIÓN: HORARIOS DEL ROL SELECCIONADO -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-calendar-week"></i> Horarios del Rol Seleccionado</h3>
                         <div class="horario-edit-container" id="horario-edit-container">
                             <p class="info-text">
                                 <i class="fas fa-info-circle"></i>
